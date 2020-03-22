@@ -1,5 +1,13 @@
 {
   "dependencies": {
-    "caffeine-script": "^0.72.1"
+    "art-testbench": "^1.17.2",
+    "caffeine-script": "^0.72.1",
+    "chai": "^4.2.0",
+    "mocha": "^7.1.1",
+    "neptune-namespaces": "^4.0.0",
+    "shell-escape": "^0.2.0"
+  },
+  "scripts": {
+    "test": "nn -s;mocha -u tdd"
   }
 }

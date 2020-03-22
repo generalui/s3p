@@ -1,0 +1,1 @@
+require('caffeine-script/register')

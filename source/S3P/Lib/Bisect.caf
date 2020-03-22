@@ -1,0 +1,25 @@
+
+{}
+  keyChars =
+    " -/0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz"
+
+  middleChar = keyChars[keyChars.length / 2 | 0]
+
+  # OUT: null if they are equal
+  getBisectKey = (startAfter, stopAt) -> unless startAfter == stopAt
+    i = 0
+    while startAfter[i] == stopAt[i]
+      i++
+    i1 = keyChars.indexOf startAfter[i]
+    i2 = keyChars.indexOf stopAt[i]
+    if i2 <= i1
+      log.error {} i1, i2, i, startAfter, stopAt
+      throw new Error "FAIL #{i1} < {i2} is false"
+
+    if i1 + 1 == i2
+      startAfter.slice 0, i1
+      + middleChar
+
+    else
+      startAfter.slice 0, i1 - 1
+      + keyChars[(i1 + i2) / 2 | 0]
