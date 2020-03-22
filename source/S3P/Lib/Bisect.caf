@@ -1,25 +1,43 @@
+import &StandardImport
 
 {}
-  keyChars =
+  supportedKeyChars =
     " -/0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz"
 
-  middleChar = keyChars[keyChars.length / 2 | 0]
+  middleKeyChar = supportedKeyChars[supportedKeyChars.length / 2 | 0]
 
-  # OUT: null if they are equal
-  getBisectKey = (startAfter, stopAt) -> unless startAfter == stopAt
+  ##
+    IN:
+      startAfter: <String>
+      stopAt:     <String>
+    OUT:
+      if stopAt <= startAfter,
+        NULL
+      else
+        <String> new Key
+          startAfter < Key
+          Key < stopAt
+  getBisectKey = (startAfter, stopAt) -> if startAfter < stopAt
     i = 0
     while startAfter[i] == stopAt[i]
       i++
-    i1 = keyChars.indexOf startAfter[i]
-    i2 = keyChars.indexOf stopAt[i]
-    if i2 <= i1
-      log.error {} i1, i2, i, startAfter, stopAt
-      throw new Error "FAIL #{i1} < {i2} is false"
+    charIndex1 = supportedKeyChars.indexOf startAfter[i]
+    charIndex2 = supportedKeyChars.indexOf stopAt[i]
 
-    if i1 + 1 == i2
-      startAfter.slice 0, i1
-      + middleChar
+    if charIndex1 < 0 || charIndex2 < 0
+      throw new Error "Invalid character found in inputs:\n" + formattedInspect {} startAfter, stopAt, i, charIndex1, charIndex2, supportedKeyChars
+
+    else if charIndex1 + 1 == charIndex2
+      # log one-different: startAfter, stopAt, i, charIndex1, charIndex2
+      startAfter.slice 0, i
+      + middleKeyChar
+
+    else if charIndex1 < charIndex2
+      # log more-than-one-different: startAfter, stopAt, i, charIndex1, charIndex2
+      startAfter.slice 0, i
+      + supportedKeyChars[(charIndex1 + charIndex2) / 2 | 0]
 
     else
-      startAfter.slice 0, i1 - 1
-      + keyChars[(i1 + i2) / 2 | 0]
+      # should be impossible to reach here
+      throw new Error "FAIL #{charIndex1} < #{charIndex2} is false:\n" + formattedInspect {} startAfter, stopAt, i, charIndex1, charIndex2, supportedKeyChars
+

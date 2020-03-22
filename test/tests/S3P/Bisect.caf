@@ -1,5 +1,34 @@
 import &StandardImport
 
-suite: ->
-  test :getBisectKey ->
-    getBisectKey()
+suite: getBisectKey: ->
+  test
+    "" matching returns null
+    -> assert.notPresent getBisectKey :a :a
+
+  test
+    "" invalid char in first param
+    -> assert.throws -> getBisectKey "\n" :a
+
+  test
+    "" invalid char in second param
+    -> assert.throws -> getBisectKey :b :😀
+
+  test
+    "" revrese-order returns null
+    -> assert.notPresent getBisectKey :b :a
+
+  test
+    "" :a, :c -> :b
+    -> assert.eq :b getBisectKey :a :c
+
+  test
+    "" :aa, :ac -> :ab
+    -> assert.eq "a#{middleKeyChar}" getBisectKey :aa :ab
+
+  test
+    "" with spaces
+    -> assert.eq
+      "" My c
+      getBisectKey
+        "My Other thing.bar"
+        "My report.foo"
