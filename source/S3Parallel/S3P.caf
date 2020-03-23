@@ -5,30 +5,40 @@ escapeKey = (key) ->
     "" "#{key}"
   else key
 
+padKey = (key) ->
+  pad key, 20 * Math.ceil key.length / 20
+
 debugKey = (key) ->
   if key?
     tail = 0
     i = lastIndex = key.length - 1
     while key[i] == lastKeyChar do i--
 
-    switch
-    when key == ''
-      "''"
-    when i < lastIndex
-      escapeKey key.slice 0, i + 1
-      + "(#{lastKeyChar}*#{lastIndex - i})"
-    else
-      pad
+    padKey
+      switch
+      when key == ''
+        "''"
+      when i < lastIndex
+        escapeKey key.slice 0, i + 1
+        + "(#{lastKeyChar}*#{lastIndex - i})"
+      else
         escapeKey key
-        20 * Math.ceil key.length / 20
+
 
   else "(#{'' + key})"
 
 class S3P
 
+  @getBucketSummary: (options) =>
+    size = 0
+    @each options, ({Size}) -> size += Size
+    .then (count) ->
+      {} count, size
+
   ##
     IN:
       options:
+        aggressive: false - if true, will make a little more S3 requests to increase parallelism
         debug: false
         showProgress: <Bool/false> log progress
         prefix: <String/NULL> only scan within a given prefix
@@ -43,11 +53,12 @@ class S3P
         requestsUsed
 
   @each: (options, f = (->), S3 = &Lib/S3) =>
-    options extract bucket, limit = 1000, maxRequests, prefix = '', showProgress, debug
+    options extract bucket, limit = 1000, maxRequests, prefix = '', showProgress, debug, aggressive
 
-    itemsFound = 0
-    requestsUsed = 0
-    outstanding = 0
+    itemsFound =
+    requestsUsed =
+    maxOutstanding = outstanding = 0
+
 
     if showProgress
       startTime = currentSecond()
@@ -79,10 +90,11 @@ class S3P
         f item
       .then -> count
 
-    eachRecursive = (startAfter, stopAt, usePrefixBisect = false) =>
+    eachRecursive = (startAfter, stopAt, usePrefixBisect = false, debugContext) =>
       return Promise.resolve(0) if requestsUsed >= maxRequests || startAfter >= stopAt
 
-      outstanding++
+
+      maxOutstanding = Math.max outstanding, maxOutstanding
 
       middleKey = getBisectKey startAfter, stopAt, usePrefixBisect
 
@@ -91,17 +103,20 @@ class S3P
       # if debug == :verbose
       #   log """ -------------------------------------------------------------
 
-      # debug && log "" debug: START: startAfter: #{debugKey startAfter}  middleKey: #{debugKey middleKey}  stopAt: #{debugKey stopAt}
+      debug && log "" debug: START: #{pad debugContext ? :root, 10} startAfter: #{debugKey startAfter}  middleKey: #{debugKey middleKey}  stopAt: #{debugKey stopAt}  usePrefixBisect: #{usePrefixBisect}
 
       report() if showProgress == :verbose
 
       lastLeftKey = lastRightKey = undefined
 
       rawLeftCount = rawRightCount = null
+      outstanding += 2
 
       Promise.all []
         S3.list {} bucket, limit, startAfter
         S3.list {} bucket, limit, startAfter: middleKey
+
+      .finally -> outstanding -= 2
 
       .then ([rawLeftItems, rawRightItems]) ->
         rawLeftCount  = rawLeftItems?.length
@@ -118,67 +133,75 @@ class S3P
           applyF rightItems
 
       .then ([leftCount, rightCount]) ->
-        # debug && log eachRecursive: {} startAfter, middleKey, stopAt, leftItems, rightItems, usePrefixBisect, leftCount, rightCount
-        # debug && log "leftItems:\n  " +
-        #   array {Key} in leftItems with Key
-        #   .join "\n  "
-        # debug && log "rightItems:\n  " +
-        #   array {Key} in rightItems with Key
-        #   .join "\n  "
         recurseLeft = leftCount >= limit
         recurseRight = rightCount >= limit
-        usePrefixBisect = rightCount == 0 && leftCount >= limit #  <-- SPECIAL CASE: usePrefixBisect!
 
-        debug && log
-          if debug == :verbose
+        leftStartAfter = lastLeftKey
+        leftStopAt = middleKey
+        rightStartAfter = lastRightKey
+        rightStopAt = stopAt
+
+        leftUsePrefixBisect = rightCount == 0
+
+        # OPTIMIZATION: The code will work without this, but this lets us skip one recursion step. It may speed things up, but it appears to actually use more calls.
+        if aggressive && leftCount == 0 && recurseRight
+          recurseLeft = true
+          leftUsePrefixBisect = true
+          leftStartAfter = lastRightKey
+          leftStopAt = newMiddleKey = getBisectKey lastRightKey, rightStopAt
+          rightStartAfter = newMiddleKey
+
+        recurse = if recurseLeft then if recurseRight then :both else :left else :right
+        if debug == :verbose
+          log
             """
               -------------------------------------------------------------
-              debug: RESULTS:
-                startAfter:       #{debugKey startAfter}
-                middleKey:        #{debugKey middleKey}
-                stopAt:           #{debugKey stopAt}
-                overlap:          #{if lastLeftKey < middleKey then :no else if lastLeftKey == lastRightKey then :full else :partial}
-                lastLeftKey:      #{debugKey lastLeftKey}
-                lastRightKey:     #{debugKey lastRightKey}
-                counts:           applied: [#{leftCount}, #{rightCount}] raw: [#{rawLeftCount}, #{rawRightCount}]
-                recurseLeft:      #{recurseLeft}
-                recurseRight:     #{recurseRight}
-                usePrefixBisect:  #{usePrefixBisect}
-
-          else
-            "" debug: RESULTS: startAfter: #{debugKey startAfter}  middleKey: #{debugKey middleKey}  stopAt: #{debugKey stopAt}  counts: [#{leftCount}  #{rightCount}]  lastLeftKey: #{debugKey lastLeftKey}  lastRightKey: #{debugKey lastRightKey}
+              debug:
+                INPUTS:
+                  startAfter:       #{debugKey startAfter}
+                  middleKey:        #{debugKey middleKey}
+                  stopAt:           #{debugKey stopAt}
+                  usePrefixBisect:  #{usePrefixBisect}
+                RESULTS: (before recursion)
+                  overlap:          #{if lastLeftKey < middleKey then :no else if lastLeftKey == lastRightKey then :full else :partial}
+                  lastLeftKey:      #{debugKey lastLeftKey}
+                  lastRightKey:     #{debugKey lastRightKey}
+                  counts:           applied: [#{leftCount}, #{rightCount}] raw: [#{rawLeftCount}, #{rawRightCount}]
+                PLAN:
+                  recurse:              #{recurse}
+                  leftStartAfter:       #{recurseLeft && debugKey leftStartAfter}
+                  leftStopAt:           #{recurseLeft && debugKey leftStopAt}
+                  leftUsePrefixBisect:  #{recurseLeft && leftUsePrefixBisect}
+                  rightStartAfter:      #{recurseRight && debugKey rightStartAfter}
+                  rightStopAt:          #{recurseRight && debugKey rightStopAt}
 
         Promise.all []
           if recurseLeft
-            debug && log "" debug: recurseLeft:  startAfter: #{debugKey lastLeftKey}   stopAt: #{debugKey middleKey}   usePrefixBisect: #{usePrefixBisect}
-            eachRecursive
-              lastLeftKey         # startAfter
-              middleKey           # stopAt
-              usePrefixBisect
+            eachRecursive leftStartAfter,   leftStopAt,   leftUsePrefixBisect,  if recurseRight then :recurse-BL else :recurse-L
             .then (c) -> c + leftCount
-
           else leftCount
 
           if recurseRight
-            debug && log "" debug: recurseRight: startAfter: #{debugKey lastRightKey}   stopAt: #{debugKey stopAt}
-            eachRecursive
-              lastRightKey        # startAfter
-              stopAt              # stopAt
+            eachRecursive rightStartAfter,  rightStopAt,  false,                if recurseLeft then :recurse-BR else :recurse-R
             .then (c) -> c + rightCount
-
           else rightCount
 
         .then ([leftCount, rightCount]) -> leftCount + rightCount
 
       .tapCatch (error) -> log.error eachRecursive: {} startAfter, stopAt, usePrefixBisect, error
-      .finally -> outstanding--
 
     eachRecursive prefix, prefix + lastKeyChar.repeat 1024 - prefix.length
     .finally -> progressReporter?.stop()
     .then (count) ->
       report? :DONE
       # multibar.stop() if showProgress
-      info = {} itemsFound, requestsUsed, options
+      info = {}
+        itemsFound, requestsUsed, options, maxOutstanding
+        averageItemsPerRequest: (itemsFound / requestsUsed)
+        elapsedSeconds =  currentSecond() - startTime
+        itemsPerSecond: itemsFound / elapsedSeconds
+        requestsPerSecond: requestsUsed / elapsedSeconds
+
       if requestsUsed > maxRequests
         e = Error "S3Tools.each maxRequestsReached:\n" + formattedInspect info
         e.info = info
