@@ -21,20 +21,29 @@ class S3P
   @each: (options, f, S3 = &Lib/S3) =>
     options extract bucket, limit = 1000, maxRequests, prefix = '', showProgress, debug
 
-    if showProgress
-      startTime = currentSecond()
-      multibar = new &cliProgress.MultiBar
-        clearOnComplete: false
-        hideCursor: true
-        &cliProgress.Presets.shades_grey
-
-      itemBar = multibar.create 100, 0
-      requestBar = multibar.create 100, 0
-      rateBar = multibar.create 100, 0
-      efficiencyBar = multibar.create 100, 0
-
     itemsFound = 0
     requestsUsed = 0
+
+    if showProgress
+      startTime = currentSecond()
+      report = ->
+        duration = currentSecond() - startTime
+        itemsPerSecond = (itemsFound / duration)
+        efficiency = (itemsFound / (requestsUsed * limit)) * 100 | 0
+
+        log "items: #{itemsFound}, requests: #{requestsUsed}, items/s: #{itemsPerSecond | 0}, efficiency: #{efficiency}%, duration: #{durationString duration}"
+      progressReporter = interval 10, report
+
+      # multibar = new &cliProgress.MultiBar
+      #   clearOnComplete: false
+      #   hideCursor: true
+      #   format: "" items:    {value} progress [{bar}] {percentage}%
+      #   &cliProgress.Presets.shades_grey
+
+      # itemBar       = multibar.create 100, 0 format: "" items:    {value} progress [{bar}] {percentage}%
+      # requestBar    = multibar.create 100, 0 format: "" requests: {value} progress [{bar}] {percentage}%
+      # rateBar       = multibar.create 100, 0
+      # efficiencyBar = multibar.create 100, 0
 
     # OUT: count times applied
     applyF = (items, thisStopAt) ->
@@ -46,7 +55,7 @@ class S3P
       .then -> count
 
     eachRecursive = (startAfter, stopAt, usePrefixBisect = false) =>
-      return 0 if requestsUsed > maxRequests
+      return 0 if requestsUsed > maxRequests || startAfter >= stopAt
 
       middleKey = getBisectKey startAfter, stopAt, usePrefixBisect
 
@@ -63,7 +72,14 @@ class S3P
           applyF rightItems, stopAt
 
         .then ([leftCount, rightCount]) ->
-          debug && log eachRecursive: {} startAfter, middleKey, stopAt, leftItems, rightItems, usePrefixBisect, leftCount, rightCount
+          # debug && log eachRecursive: {} startAfter, middleKey, stopAt, leftItems, rightItems, usePrefixBisect, leftCount, rightCount
+          debug && log "leftItems:\n  " +
+            array {Key} in leftItems with Key
+            .join "\n  "
+          debug && log "rightItems:\n  " +
+            array {Key} in rightItems with Key
+            .join "\n  "
+          debug && log "" startAfter=#{startAfter}, middleKey=#{middleKey}, stopAt=#{stopAt}, lastRightKey=#{lastRightKey} [#{leftCount}, #{rightCount}]
 
           count = leftCount + rightCount
 
@@ -97,21 +113,12 @@ class S3P
                 stopAt              # stopAt
             .then ([leftCount, rightCount]) -> leftCount + rightCount + count
 
-      .tap ->
-        if showProgress
-          duration = currentSecond() - startTime
-          itemsPerSecond = (itemsFound / duration) | 0
 
-          itemBar.update itemsFound, items: itemsFound
-          requestBar.update requestsUsed, requests: requestsUsed
-          rateBar.update itemsPerSecond, {} itemsPerSecond
-          efficiencyBar.update
-            efficiency = (itemsFound / (requestsUsed * 1000)) * 100 | 0
-            {} efficiency
-
-    eachRecursive prefix, prefix + 'z'.repeat 1024 - prefix.length
+    eachRecursive prefix, prefix + lastKeyChar.repeat 1024 - prefix.length
     .then (count) ->
-      multibar.stop() if showProgress
+      progressReporter?.stop()
+      report?()
+      # multibar.stop() if showProgress
       info = {} itemsFound, requestsUsed, options
       if requestsUsed > maxRequests
         e = Error "S3Tools.each maxRequestsReached:\n" + formattedInspect info

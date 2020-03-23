@@ -7,12 +7,13 @@ mockS3 = (files...) ->
     compactFlatten files
     .sort()
 
-  list: ({bucket, limit=1000, startAfter}) ->
+  list: ({limit=1000, startAfter}) ->
     count = 0
-    array file in files when file > startAfter && count < limit
-      count++
-      Key: file
-      Size: 1
+    Promise.then ->
+      array file in files when file > startAfter && count < limit
+        count++
+        Key: file
+        Size: 1
 
 suite: each: ->
   test :S3P.each ->
@@ -43,6 +44,21 @@ suite: each: ->
       assert.selectedEq
         itemsFound: 3
         requestsUsed: 4
+        out
+
+  test "S3P.each limit:1 large common prefix"->
+    S3P.each
+      limit: 1
+      noop
+      mockS3
+        :some/path/to/my/files/alpha
+        :some/path/to/my/files/beta
+        :some/path/to/my/files/gamma
+
+    .then (out) ->
+      assert.selectedEq
+        itemsFound: 3
+        requestsUsed: 8
         out
 
   test :S3P.each_custom_count_3 ->
@@ -81,3 +97,27 @@ suite: each: ->
     .then (out) ->
       assert.eq files.length, count
       assert.eq out.itemsFound, count
+
+  test :bigTest ->
+    shellExec 'find .'
+    .then (out) ->
+      files =
+        out.trim().split "\n"
+        .sort()
+      # log {} files.length, first: files[0], last: peek files
+
+      # mockS3 files
+      # .list startAfter: :./.git/objects/17/3d216b08fff7c71eeb7bf1c7d5e8aef789461e
+      # .then (result) ->
+      #   each {Key} from result
+      #     log Key
+
+      S3P.each
+        limit: 10
+        # showProgress: true
+        # debug: true
+        noop
+        mockS3 files
+
+      .then (out) ->
+        assert.eq files.length, out.itemsFound

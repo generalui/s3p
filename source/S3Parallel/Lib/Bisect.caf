@@ -2,11 +2,18 @@ import &StandardImport
 
 {}
   supportedKeyChars =
-    " -/0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz"
+    "" \_!"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~
 
+  lastKeyChar = peek supportedKeyChars
   middleKeyChar = supportedKeyChars[supportedKeyChars.length / 2 | 0]
-  getKeyCharIndex = (character) -> supportedKeyChars.indexOf character
+
+  getKeyCharIndex = (character) -> if character then supportedKeyChars.indexOf character else 0
   getNextKeyChar = (character) -> supportedKeyChars[1 + getKeyCharIndex character]
+
+  getBisectChar = (c1, c2) ->
+    i1 = if present c1 then getKeyCharIndex c1 else 0
+    i2 = if present c2 then getKeyCharIndex c2 else supportedKeyChars.length - 1
+    supportedKeyChars[(i1 + i2) / 2 | 0]
 
   ##
     IN:
@@ -29,21 +36,27 @@ import &StandardImport
     if charIndex1 < 0 || charIndex2 < 0
       throw new Error "Invalid character found in inputs:\n" + formattedInspect {} startAfter, stopAt, i, charIndex1, charIndex2, supportedKeyChars
 
-    switch
-    when bisectPrefix &&
-        i < prefixBisectI = (i + startAfter.length) / 2 | 0
-        && nextKeyChar = getNextKeyChar startAfter[prefixBisectI]
+    bisectKey =
+      switch
+      when bisectPrefix &&
+          i < prefixBisectI = (i + startAfter.length) / 2 | 0
+          && nextKeyChar = getNextKeyChar startAfter[prefixBisectI]
 
-      # log bisectPrefix: startAfter, stopAt, i, charIndex1, charIndex2, prefixBisectI, nextKeyChar
-      startAfter.slice 0, prefixBisectI
-      + nextKeyChar
+        # log bisectPrefix: startAfter, stopAt, i, charIndex1, charIndex2, prefixBisectI, nextKeyChar
+        startAfter.slice 0, prefixBisectI
+        + nextKeyChar
 
-    when charIndex1 + 1 == charIndex2
-      # log one-different: startAfter, stopAt, i, charIndex1, charIndex2
-      startAfter.slice 0, i + 1
-      + middleKeyChar
+      when charIndex1 + 1 == charIndex2
+        # log one-different: startAfter, stopAt, i, charIndex1, charIndex2
+        startAfter.slice 0, i + 1
+        + supportedKeyChars[(supportedKeyChars.length - 1 +  getKeyCharIndex startAfter[i + 1]) / 2 | 0]
 
-    else
-      # log more-than-one-different: startAfter, stopAt, i, charIndex1, charIndex2
-      startAfter.slice 0, i
-      + supportedKeyChars[(charIndex1 + charIndex2) / 2 | 0]
+      else
+        # log more-than-one-different: startAfter, stopAt, i, charIndex1, charIndex2
+        startAfter.slice 0, i
+        + supportedKeyChars[(charIndex1 + charIndex2) / 2 | 0]
+
+    if bisectKey < startAfter || bisectKey > stopAt
+      throw new Error "Whoops! #{startAfter} <= #{bisectKey} <= #{stopAt} -- something's not right"
+
+    bisectKey

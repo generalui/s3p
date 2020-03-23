@@ -1,2 +1,8 @@
+exec = &util.promisify &child_process.exec
+
 []
   &Bisect
+  shellExec: (command) ->
+    exec command
+    .then ({stdout}) -> stdout
+

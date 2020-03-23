@@ -22,7 +22,7 @@ suite: getBisectKey:
   basic: ->
     test
       "" :alpha :alphadude -> :b
-      -> assert.eq :alphaI getBisectKey :alpha :alphadude
+      -> assert.eq :alphaB getBisectKey :alpha :alphadude
 
     test
       "" "alpha" "alpha me" -> "alpha "
@@ -47,7 +47,7 @@ suite: getBisectKey:
     test
       "" with spaces
       -> assert.eq
-        "" My c
+        "" My `
         getBisectKey
           "My Other thing.bar"
           "My report.foo"
@@ -63,7 +63,7 @@ suite: getBisectKey:
 
     test
       "" :alpha :alphadude -> :b
-      -> assert.eq :alphaI getBisectKey :alpha :alphadude true
+      -> assert.eq :alphaB getBisectKey :alpha :alphadude true
 
     test
       "" :alphabet :c -> :alphb
@@ -79,8 +79,9 @@ suite: getBisectKey:
       -> assert.notPresent getBisectKey :alpha :T
 
     test
-      "" :alpha :alphb -> :alphaU
-      -> assert.eq :alphaU getBisectKey :alpha :alphb
-  # startAfter: :alpha
-  # middleKey:  :alphU
-  # stopAt:     :alphb
+      "" :alpha :alphb -> :alpha#{middleKeyChar}
+      -> assert.eq "alpha#{middleKeyChar}" getBisectKey :alpha :alphb
+
+    test
+      "" :./.git/objects/17/3d216b08fff7c71eeb7bf1c7d5e8aef789461e :./.git/obk -> :./.git/objq
+      -> assert.eq :./.git/objq getBisectKey :./.git/objects/17/3d216b08fff7c71eeb7bf1c7d5e8aef789461e :./.git/obk
