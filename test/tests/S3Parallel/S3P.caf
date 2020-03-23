@@ -15,109 +15,137 @@ mockS3 = (files...) ->
         Key: file
         Size: 1
 
-suite: each: ->
-  test :S3P.each ->
-    S3P.each
-      limit: 1
-      noop
-      mockS3
-        :alpha
-        :beta
-        :gamma
-
-    .then (out) ->
-      assert.selectedEq
-        itemsFound: 3
-        requestsUsed: 8
-        out
-
-  test "S3P.each limit:2"->
-    S3P.each
-      limit: 2
-      noop
-      mockS3
-        :alpha
-        :beta
-        :gamma
-
-    .then (out) ->
-      assert.selectedEq
-        itemsFound: 3
-        requestsUsed: 4
-        out
-
-  test "S3P.each limit:1 large common prefix"->
-    S3P.each
-      limit: 1
-      noop
-      mockS3
-        :some/path/to/my/files/alpha
-        :some/path/to/my/files/beta
-        :some/path/to/my/files/gamma
-
-    .then (out) ->
-      assert.selectedEq
-        itemsFound: 3
-        requestsUsed: 8
-        out
-
-  test :S3P.each_custom_count_3 ->
-    count = 0
-    f = -> count++
-    S3P.each
-      limit: 1
-      f
-      mockS3 files =
-        :alpha
-        :beta
-        :gamma
-
-    .then (out) ->
-      assert.eq files.length, count
-      assert.eq out.itemsFound, count
-
-  test :S3P.each_custom_count_10 ->
-    count = 0
-    f = -> count++
-    S3P.each
-      limit: 1
-      f
-      mockS3 files =
-        :059
-        :0934t09g
-        :alpha
-        :alpha123
-        :alpha9
-        :as09df
-        :asd
-        :asdf
-        :beta
-        :gamma
-
-    .then (out) ->
-      assert.eq files.length, count
-      assert.eq out.itemsFound, count
-
-  test :bigTest ->
-    shellExec 'find .'
-    .then (out) ->
-      files =
-        out.trim().split "\n"
-        .sort()
-      # log {} files.length, first: files[0], last: peek files
-
-      # mockS3 files
-      # .list startAfter: :./.git/objects/17/3d216b08fff7c71eeb7bf1c7d5e8aef789461e
-      # .then (result) ->
-      #   each {Key} from result
-      #     log Key
-
+suite:
+  each: ->
+    test :S3P.each ->
       S3P.each
-        limit: 10
-        # showProgress: true
-        # debug: true
+        limit: 1
         noop
-        mockS3 files
+        mockS3
+          :alpha
+          :beta
+          :gamma
 
       .then (out) ->
-        assert.eq files.length, out.itemsFound
+        assert.selectedEq
+          itemsFound: 3
+          requestsUsed: 8
+          out
+
+    test "S3P.each limit:2"->
+      S3P.each
+        limit: 2
+        noop
+        mockS3
+          :alpha
+          :beta
+          :gamma
+
+      .then (out) ->
+        assert.selectedEq
+          itemsFound: 3
+          requestsUsed: 4
+          out
+
+    test "S3P.each limit:1 large common prefix"->
+      S3P.each
+        limit: 1
+        noop
+        mockS3
+          :some/path/to/my/files/alpha
+          :some/path/to/my/files/beta
+          :some/path/to/my/files/gamma
+
+      .then (out) ->
+        assert.selectedEq
+          itemsFound: 3
+          requestsUsed: 8
+          out
+
+    test :S3P.each_custom_count_3 ->
+      count = 0
+      f = -> count++
+      S3P.each
+        limit: 1
+        f
+        mockS3 files =
+          :alpha
+          :beta
+          :gamma
+
+      .then (out) ->
+        assert.eq files.length, count
+        assert.eq out.itemsFound, count
+
+    test :S3P.each_custom_count_10 ->
+      count = 0
+      f = -> count++
+      S3P.each
+        limit: 1
+        f
+        mockS3 files =
+          :059
+          :0934t09g
+          :alpha
+          :alpha123
+          :alpha9
+          :as09df
+          :asd
+          :asdf
+          :beta
+          :gamma
+
+      .then (out) ->
+        assert.eq files.length, count
+        assert.eq out.itemsFound, count
+
+
+    test :bigTest ->
+      shellExec 'find .'
+      .then (out) ->
+        files =
+          out.trim().split "\n"
+          .sort()
+        # log {} files.length, first: files[0], last: peek files
+
+        # mockS3 files
+        # .list startAfter: :./.git/objects/17/3d216b08fff7c71eeb7bf1c7d5e8aef789461e
+        # .then (result) ->
+        #   each {Key} from result
+        #     log Key
+
+        S3P.each
+          limit: 10
+          # showProgress: true
+          # debug: true
+          noop
+          mockS3 files
+
+        .then (out) ->
+          assert.eq files.length, out.itemsFound
+
+  regressions: ->
+    @timeout 100000
+    test :lims ->
+      Promise.resolve '' + &fs.readFileSync "lims-filesystem-regression.txt"
+      .then (out) ->
+        files =
+          out.trim().split "\n"
+          .sort()
+        # log {} files.length, first: files[0], last: peek files
+
+        # mockS3 files
+        # .list startAfter: :./.git/objects/17/3d216b08fff7c71eeb7bf1c7d5e8aef789461e
+        # .then (result) ->
+        #   each {Key} from result
+        #     log Key
+
+        S3P.each
+          limit: 1000
+          # showProgress: :verbose
+          # debug: true
+          noop
+          mockS3 files
+
+        .then (out) ->
+          assert.eq files.length, out.itemsFound

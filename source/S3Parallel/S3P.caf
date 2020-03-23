@@ -1,5 +1,16 @@
 import &ArtStandardLib, &ArtClassSystem, &Lib
 
+debugKey = (key) ->
+  if key?
+    tail = 0
+    i = lastIndex = key.length - 1
+    while key[i] == lastKeyChar do i--
+    if i < lastIndex
+      key.slice 0, i + 1
+      + "(#{lastKeyChar}*#{lastIndex - i})"
+    else key
+  else "(#{'' + key})"
+
 class S3P
 
   ##
@@ -23,16 +34,17 @@ class S3P
 
     itemsFound = 0
     requestsUsed = 0
+    outstanding = 0
 
     if showProgress
       startTime = currentSecond()
-      report = ->
+      report = (message) ->
         duration = currentSecond() - startTime
         itemsPerSecond = (itemsFound / duration)
         efficiency = (itemsFound / (requestsUsed * limit)) * 100 | 0
 
-        log "items: #{itemsFound}, requests: #{requestsUsed}, items/s: #{itemsPerSecond | 0}, efficiency: #{efficiency}%, duration: #{durationString duration}"
-      progressReporter = interval 10, report
+        log "progress: items: #{itemsFound}, requests: #{requestsUsed}, items/s: #{itemsPerSecond | 0}, efficiency: #{efficiency}%, outstanding: #{outstanding}, duration: #{durationString duration}  #{message}"
+      progressReporter = interval 1000, report
 
       # multibar = new &cliProgress.MultiBar
       #   clearOnComplete: false
@@ -57,7 +69,16 @@ class S3P
     eachRecursive = (startAfter, stopAt, usePrefixBisect = false) =>
       return 0 if requestsUsed > maxRequests || startAfter >= stopAt
 
+      outstanding++
+
       middleKey = getBisectKey startAfter, stopAt, usePrefixBisect
+
+      requestsUsed += 2
+      debug && log "" debug: startAfter: #{debugKey startAfter}, middleKey: #{debugKey middleKey}, stopAt: #{debugKey stopAt}
+
+      report() if showProgress == :verbose
+
+      lastLeftKey = lastRightKey = undefined
 
       Promise.all []
         S3.list {} bucket, limit, startAfter
@@ -66,58 +87,72 @@ class S3P
         lastLeftKey = peek(leftItems)?.Key
         lastRightKey = peek(rightItems)?.Key
 
-        requestsUsed += 2
         Promise.all []
           applyF leftItems, middleKey
           applyF rightItems, stopAt
 
-        .then ([leftCount, rightCount]) ->
-          # debug && log eachRecursive: {} startAfter, middleKey, stopAt, leftItems, rightItems, usePrefixBisect, leftCount, rightCount
-          debug && log "leftItems:\n  " +
-            array {Key} in leftItems with Key
-            .join "\n  "
-          debug && log "rightItems:\n  " +
-            array {Key} in rightItems with Key
-            .join "\n  "
-          debug && log "" startAfter=#{startAfter}, middleKey=#{middleKey}, stopAt=#{stopAt}, lastRightKey=#{lastRightKey} [#{leftCount}, #{rightCount}]
+      .then ([leftCount, rightCount]) ->
+        # debug && log eachRecursive: {} startAfter, middleKey, stopAt, leftItems, rightItems, usePrefixBisect, leftCount, rightCount
+        # debug && log "leftItems:\n  " +
+        #   array {Key} in leftItems with Key
+        #   .join "\n  "
+        # debug && log "rightItems:\n  " +
+        #   array {Key} in rightItems with Key
+        #   .join "\n  "
+        debug && log
+          if debug == :verbose
+            """
+              -------------------------------------------------------------
+              debug:
+                startAfter:    #{debugKey startAfter}
+                middleKey:     #{debugKey middleKey}
+                stopAt:        #{debugKey stopAt}
+                lastLeftKey:   #{debugKey lastLeftKey}
+                lastRightKey:  #{debugKey lastRightKey}
+                counts:        [#{leftCount}, #{rightCount}]
 
-          count = leftCount + rightCount
+          else
+            "" debug: startAfter: #{debugKey startAfter}, middleKey: #{debugKey middleKey}, stopAt: #{debugKey stopAt}, counts: [#{leftCount}, #{rightCount}], lastLeftKey: #{debugKey lastLeftKey}, lastRightKey: #{debugKey lastRightKey}
 
-          switch
-          when leftCount < limit && rightCount == limit # happens if they both get the same result-set
-            debug && log :R1
-            eachRecursive
-              lastRightKey        # startAfter
-              stopAt              # stopAt
-            .then (c) -> count + c
+        count = leftCount + rightCount
 
-          when leftCount < limit
-            count
+        switch
+        when leftCount < limit && rightCount >= limit # happens when their lists overlap
+          debug && log "" debug: recurse only (lastRightKey, stopAt)
+          eachRecursive
+            lastRightKey        # startAfter
+            stopAt              # stopAt
+          .then (c) -> count + c
 
-          when rightCount == 0
-            debug && log :R2
+        when leftCount < limit # rightCount < limit, by definition
+          debug && log "" debug: done! leftCount < limit, no need to recurse, we got them all
+          count
+
+        when rightCount == 0 # leftCount >= limit, by definition <-- SPECIAL CASE: usePrefixBisect!
+          debug && log "" debug: recurse only (lastLeftKey, middleKey, usePrefixBisect)
+          eachRecursive
+            lastLeftKey         # startAfter
+            middleKey           # stopAt
+            true                # usePrefixBisect
+          .then (c) -> count + c
+
+        else
+          debug && log "" debug: recurse both (lastLeftKey, middleKey) and (lastRightKey, stopAt)
+          Promise.all []
             eachRecursive
               lastLeftKey         # startAfter
               middleKey           # stopAt
-              true                # usePrefixBisect
-            .then (c) -> count + c
-
-          else
-            debug && log :R3_and_4
-            Promise.all []
-              eachRecursive
-                lastLeftKey         # startAfter
-                middleKey           # stopAt
-              eachRecursive
-                lastRightKey        # startAfter
-                stopAt              # stopAt
-            .then ([leftCount, rightCount]) -> leftCount + rightCount + count
-
+            eachRecursive
+              lastRightKey        # startAfter
+              stopAt              # stopAt
+          .then ([leftCount, rightCount]) -> leftCount + rightCount + count
+      .tapCatch (error) -> log.error eachRecursive: {} startAfter, stopAt, usePrefixBisect, error
+      .finally -> outstanding--
 
     eachRecursive prefix, prefix + lastKeyChar.repeat 1024 - prefix.length
     .then (count) ->
       progressReporter?.stop()
-      report?()
+      report? :DONE
       # multibar.stop() if showProgress
       info = {} itemsFound, requestsUsed, options
       if requestsUsed > maxRequests

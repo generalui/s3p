@@ -11,10 +11,21 @@ lostObjectsV2 = promisify s3.listObjectsV2
 class S3
 
   @list: ({bucket, prefix, limit=1000, startAfter}) ->
+    startTime = currentSecond()
     s3.listObjectsV2
       Bucket:     bucket
       Prefix:     prefix
       MaxKeys:    limit
       StartAfter: startAfter
     .promise()
-    .then ({Contents}) -> Contents
+    .tapCatch (error) ->
+      log.error S3.list: {} bucket, prefix, startAfter, limit, error
+    .then (results) ->
+      duration = currentSecond() - startTime
+      if !(results.Contents is Array)
+        log.warn S3.list: {} bucket, prefix, startAfter, limit, duration, results
+
+      else if duration > 10
+        log.warn S3.list: {} bucket, prefix, startAfter, limit, duration, results: merge results, Content: "Array #{results.Content.length}"
+
+      results.Contents
