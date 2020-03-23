@@ -56,7 +56,7 @@ import &StandardImport
         startAfter.slice 0, i
         + supportedKeyChars[(charIndex1 + charIndex2) / 2 | 0]
 
-    if bisectKey < startAfter || bisectKey > stopAt
+    unless startAfter <= bisectKey && bisectKey <= stopAt
       throw new Error "Whoops! #{startAfter} <= #{bisectKey} <= #{stopAt} -- something's not right"
 
     bisectKey

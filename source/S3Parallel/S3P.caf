@@ -1,14 +1,27 @@
 import &ArtStandardLib, &ArtClassSystem, &Lib
 
+escapeKey = (key) ->
+  if /[\s()]/.test key
+    "" "#{key}"
+  else key
+
 debugKey = (key) ->
   if key?
     tail = 0
     i = lastIndex = key.length - 1
     while key[i] == lastKeyChar do i--
-    if i < lastIndex
-      key.slice 0, i + 1
+
+    switch
+    when key == ''
+      "''"
+    when i < lastIndex
+      escapeKey key.slice 0, i + 1
       + "(#{lastKeyChar}*#{lastIndex - i})"
-    else key
+    else
+      pad
+        escapeKey key
+        20 * Math.ceil key.length / 20
+
   else "(#{'' + key})"
 
 class S3P
@@ -29,7 +42,7 @@ class S3P
         itemsProcessed
         requestsUsed
 
-  @each: (options, f, S3 = &Lib/S3) =>
+  @each: (options, f = (->), S3 = &Lib/S3) =>
     options extract bucket, limit = 1000, maxRequests, prefix = '', showProgress, debug
 
     itemsFound = 0
@@ -58,38 +71,51 @@ class S3P
       # efficiencyBar = multibar.create 100, 0
 
     # OUT: count times applied
-    applyF = (items, thisStopAt) ->
+    applyF = (items) ->
       count = 0
-      Promise.all array item in items when item.Key <= thisStopAt
+      Promise.all array item in items
         count++
         itemsFound++
         f item
       .then -> count
 
     eachRecursive = (startAfter, stopAt, usePrefixBisect = false) =>
-      return 0 if requestsUsed > maxRequests || startAfter >= stopAt
+      return Promise.resolve(0) if requestsUsed >= maxRequests || startAfter >= stopAt
 
       outstanding++
 
       middleKey = getBisectKey startAfter, stopAt, usePrefixBisect
 
       requestsUsed += 2
-      debug && log "" debug: startAfter: #{debugKey startAfter}, middleKey: #{debugKey middleKey}, stopAt: #{debugKey stopAt}
+
+      # if debug == :verbose
+      #   log """ -------------------------------------------------------------
+
+      # debug && log "" debug: START: startAfter: #{debugKey startAfter}  middleKey: #{debugKey middleKey}  stopAt: #{debugKey stopAt}
 
       report() if showProgress == :verbose
 
       lastLeftKey = lastRightKey = undefined
 
+      rawLeftCount = rawRightCount = null
+
       Promise.all []
         S3.list {} bucket, limit, startAfter
         S3.list {} bucket, limit, startAfter: middleKey
-      .then ([leftItems, rightItems]) ->
-        lastLeftKey = peek(leftItems)?.Key
+
+      .then ([rawLeftItems, rawRightItems]) ->
+        rawLeftCount  = rawLeftItems?.length
+        rawRightCount = rawRightItems?.length
+
+        leftItems = array item in rawLeftItems when item.Key <= middleKey
+        rightItems = array item in rawRightItems when item.Key <= stopAt
+
+        lastLeftKey  = peek(leftItems)?.Key
         lastRightKey = peek(rightItems)?.Key
 
         Promise.all []
-          applyF leftItems, middleKey
-          applyF rightItems, stopAt
+          applyF leftItems
+          applyF rightItems
 
       .then ([leftCount, rightCount]) ->
         # debug && log eachRecursive: {} startAfter, middleKey, stopAt, leftItems, rightItems, usePrefixBisect, leftCount, rightCount
@@ -107,23 +133,24 @@ class S3P
           if debug == :verbose
             """
               -------------------------------------------------------------
-              debug:
+              debug: RESULTS:
                 startAfter:       #{debugKey startAfter}
                 middleKey:        #{debugKey middleKey}
                 stopAt:           #{debugKey stopAt}
+                overlap:          #{if lastLeftKey < middleKey then :no else if lastLeftKey == lastRightKey then :full else :partial}
                 lastLeftKey:      #{debugKey lastLeftKey}
                 lastRightKey:     #{debugKey lastRightKey}
-                counts:           [#{leftCount}, #{rightCount}]
+                counts:           applied: [#{leftCount}, #{rightCount}] raw: [#{rawLeftCount}, #{rawRightCount}]
                 recurseLeft:      #{recurseLeft}
                 recurseRight:     #{recurseRight}
                 usePrefixBisect:  #{usePrefixBisect}
 
           else
-            "" debug: startAfter: #{debugKey startAfter}, middleKey: #{debugKey middleKey}, stopAt: #{debugKey stopAt}, counts: [#{leftCount}, #{rightCount}], lastLeftKey: #{debugKey lastLeftKey}, lastRightKey: #{debugKey lastRightKey}
+            "" debug: RESULTS: startAfter: #{debugKey startAfter}  middleKey: #{debugKey middleKey}  stopAt: #{debugKey stopAt}  counts: [#{leftCount}  #{rightCount}]  lastLeftKey: #{debugKey lastLeftKey}  lastRightKey: #{debugKey lastRightKey}
 
         Promise.all []
           if recurseLeft
-            debug && log "" debug: recurseLeft: #{debugKey lastLeftKey} - #{debugKey middleKey} (usePrefixBisect: #{usePrefixBisect})
+            debug && log "" debug: recurseLeft:  startAfter: #{debugKey lastLeftKey}   stopAt: #{debugKey middleKey}   usePrefixBisect: #{usePrefixBisect}
             eachRecursive
               lastLeftKey         # startAfter
               middleKey           # stopAt
@@ -133,7 +160,7 @@ class S3P
           else leftCount
 
           if recurseRight
-            debug && log "" debug: recurseRight: #{debugKey lastRightKey} - #{debugKey stopAt}
+            debug && log "" debug: recurseRight: startAfter: #{debugKey lastRightKey}   stopAt: #{debugKey stopAt}
             eachRecursive
               lastRightKey        # startAfter
               stopAt              # stopAt
@@ -147,8 +174,8 @@ class S3P
       .finally -> outstanding--
 
     eachRecursive prefix, prefix + lastKeyChar.repeat 1024 - prefix.length
+    .finally -> progressReporter?.stop()
     .then (count) ->
-      progressReporter?.stop()
       report? :DONE
       # multibar.stop() if showProgress
       info = {} itemsFound, requestsUsed, options

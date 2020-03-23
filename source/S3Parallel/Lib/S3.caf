@@ -25,7 +25,7 @@ class S3
       duration = currentSecond() - startTime
       unless results.Contents is Array
         log.warn S3.list-no-Contents: {} bucket, prefix, startAfter, limit, duration, results
-        throw new Error "S#.list: Contents is not an array"
+        throw new Error "S3.list: Contents is not an array"
 
       else if duration > 10
         log.warn S3.list-slow: {} bucket, prefix, startAfter, limit, duration, results: merge results, Contents: "Array #{results.Contents.length}"
