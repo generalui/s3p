@@ -99,53 +99,50 @@ class S3P
         # debug && log "rightItems:\n  " +
         #   array {Key} in rightItems with Key
         #   .join "\n  "
+        recurseLeft = leftCount >= limit
+        recurseRight = rightCount >= limit
+        usePrefixBisect = rightCount == 0 && leftCount >= limit #  <-- SPECIAL CASE: usePrefixBisect!
+
         debug && log
           if debug == :verbose
             """
               -------------------------------------------------------------
               debug:
-                startAfter:    #{debugKey startAfter}
-                middleKey:     #{debugKey middleKey}
-                stopAt:        #{debugKey stopAt}
-                lastLeftKey:   #{debugKey lastLeftKey}
-                lastRightKey:  #{debugKey lastRightKey}
-                counts:        [#{leftCount}, #{rightCount}]
+                startAfter:       #{debugKey startAfter}
+                middleKey:        #{debugKey middleKey}
+                stopAt:           #{debugKey stopAt}
+                lastLeftKey:      #{debugKey lastLeftKey}
+                lastRightKey:     #{debugKey lastRightKey}
+                counts:           [#{leftCount}, #{rightCount}]
+                recurseLeft:      #{recurseLeft}
+                recurseRight:     #{recurseRight}
+                usePrefixBisect:  #{usePrefixBisect}
 
           else
             "" debug: startAfter: #{debugKey startAfter}, middleKey: #{debugKey middleKey}, stopAt: #{debugKey stopAt}, counts: [#{leftCount}, #{rightCount}], lastLeftKey: #{debugKey lastLeftKey}, lastRightKey: #{debugKey lastRightKey}
 
-        count = leftCount + rightCount
-
-        switch
-        when leftCount < limit && rightCount >= limit # happens when their lists overlap
-          debug && log "" debug: recurse only (lastRightKey, stopAt)
-          eachRecursive
-            lastRightKey        # startAfter
-            stopAt              # stopAt
-          .then (c) -> count + c
-
-        when leftCount < limit # rightCount < limit, by definition
-          debug && log "" debug: done! leftCount < limit, no need to recurse, we got them all
-          count
-
-        when rightCount == 0 # leftCount >= limit, by definition <-- SPECIAL CASE: usePrefixBisect!
-          debug && log "" debug: recurse only (lastLeftKey, middleKey, usePrefixBisect)
-          eachRecursive
-            lastLeftKey         # startAfter
-            middleKey           # stopAt
-            true                # usePrefixBisect
-          .then (c) -> count + c
-
-        else
-          debug && log "" debug: recurse both (lastLeftKey, middleKey) and (lastRightKey, stopAt)
-          Promise.all []
+        Promise.all []
+          if recurseLeft
+            debug && log "" debug: recurseLeft: #{debugKey lastLeftKey} - #{debugKey middleKey} (usePrefixBisect: #{usePrefixBisect})
             eachRecursive
               lastLeftKey         # startAfter
               middleKey           # stopAt
+              usePrefixBisect
+            .then (c) -> c + leftCount
+
+          else leftCount
+
+          if recurseRight
+            debug && log "" debug: recurseRight: #{debugKey lastRightKey} - #{debugKey stopAt}
             eachRecursive
               lastRightKey        # startAfter
               stopAt              # stopAt
-          .then ([leftCount, rightCount]) -> leftCount + rightCount + count
+            .then (c) -> c + rightCount
+
+          else rightCount
+
+        .then ([leftCount, rightCount]) -> leftCount + rightCount
+
       .tapCatch (error) -> log.error eachRecursive: {} startAfter, stopAt, usePrefixBisect, error
       .finally -> outstanding--
 

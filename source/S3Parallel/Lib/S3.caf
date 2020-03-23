@@ -19,13 +19,15 @@ class S3
       StartAfter: startAfter
     .promise()
     .tapCatch (error) ->
-      log.error S3.list: {} bucket, prefix, startAfter, limit, error
+      log.error S3.list-error: {} bucket, prefix, startAfter, limit, error
+
     .then (results) ->
       duration = currentSecond() - startTime
-      if !(results.Contents is Array)
-        log.warn S3.list: {} bucket, prefix, startAfter, limit, duration, results
+      unless results.Contents is Array
+        log.warn S3.list-no-Contents: {} bucket, prefix, startAfter, limit, duration, results
+        throw new Error "S#.list: Contents is not an array"
 
       else if duration > 10
-        log.warn S3.list: {} bucket, prefix, startAfter, limit, duration, results: merge results, Content: "Array #{results.Content.length}"
+        log.warn S3.list-slow: {} bucket, prefix, startAfter, limit, duration, results: merge results, Contents: "Array #{results.Contents.length}"
 
       results.Contents
