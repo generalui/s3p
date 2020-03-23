@@ -1,0 +1,86 @@
+import &StandardImport
+
+suite: getBisectKey:
+
+  nulls_and_errors: ->
+    test
+      "" matching returns null
+      -> assert.notPresent getBisectKey :a :a
+
+    test
+      "" invalid char in first param
+      -> assert.throws -> getBisectKey "\n" :a
+
+    test
+      "" invalid char in second param
+      -> assert.throws -> getBisectKey :b :😀
+
+    test
+      "" reverse-order returns null
+      -> assert.notPresent getBisectKey :b :a
+
+  basic: ->
+    test
+      "" :alpha :alphadude -> :b
+      -> assert.eq :alphaI getBisectKey :alpha :alphadude
+
+    test
+      "" "alpha" "alpha me" -> "alpha "
+      -> assert.eq "alpha " getBisectKey :alpha "alpha me"
+
+    test
+      "" "alpha" "alpha " -> "alpha "
+      -> assert.eq "alpha " getBisectKey :alpha "alpha "
+
+    test
+      "" :a :c -> :b
+      -> assert.eq :b getBisectKey :a :c
+
+    test
+      "" :alphabet :c -> :b
+      -> assert.eq :b getBisectKey :alphabet :c
+
+    test
+      "" :aa :ac -> :ab
+      -> assert.eq "aa#{middleKeyChar}" getBisectKey :aa :ab
+
+    test
+      "" with spaces
+      -> assert.eq
+        "" My c
+        getBisectKey
+          "My Other thing.bar"
+          "My report.foo"
+
+  bisectPrefix: ->
+    test
+      "" :a :c -> :b
+      -> assert.eq :b getBisectKey :a :c true
+
+    test
+      "" "alpha" "alpha me" -> "alpha "
+      -> assert.eq "alpha " getBisectKey :alpha "alpha me" true
+
+    test
+      "" :alpha :alphadude -> :b
+      -> assert.eq :alphaI getBisectKey :alpha :alphadude true
+
+    test
+      "" :alphabet :c -> :alphb
+      -> assert.eq :alphb getBisectKey :alphabet :c true
+
+    test
+      "" :alphabet :alpi -> :alphac
+      -> assert.eq :alphac getBisectKey :alphabet :alpi true
+
+  regressions: ->
+    test
+      "" :alpha :T -> notPresent
+      -> assert.notPresent getBisectKey :alpha :T
+
+    test
+      "" :alpha :alphb -> :alphaU
+      -> assert.eq :alphaU getBisectKey :alpha :alphb
+  # startAfter: :alpha
+  # middleKey:  :alphU
+  # stopAt:     :alphb

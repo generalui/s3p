@@ -1,0 +1,126 @@
+import &ArtStandardLib, &ArtClassSystem, &Lib
+
+class S3P
+
+  ##
+    IN:
+      options:
+        debug: false
+        showProgress: <Bool/false> log progress
+        prefix: <String/NULL> only scan within a given prefix
+        limit: <Number/1000> limit items per call; generally the default of 1000 is best (max allowed by AWS is 1000)
+        bucket:
+        maxRequests: <Number> limit how many requests will be used - aborts nicely if reached
+          nicely: finishes current function calls, logs message, does no more work, throws error
+    OUT:
+      {}}
+        itemsFound
+        itemsProcessed
+        requestsUsed
+
+  @each: (options, f, S3 = &Lib/S3) =>
+    options extract bucket, limit = 1000, maxRequests, prefix = '', showProgress, debug
+
+    if showProgress
+      startTime = currentSecond()
+      multibar = new &cliProgress.MultiBar
+        clearOnComplete: false
+        hideCursor: true
+        &cliProgress.Presets.shades_grey
+
+      itemBar = multibar.create 100, 0
+      requestBar = multibar.create 100, 0
+      rateBar = multibar.create 100, 0
+      efficiencyBar = multibar.create 100, 0
+
+    itemsFound = 0
+    requestsUsed = 0
+
+    # OUT: count times applied
+    applyF = (items, thisStopAt) ->
+      count = 0
+      Promise.all array item in items when item.Key <= thisStopAt
+        count++
+        itemsFound++
+        f item
+      .then -> count
+
+    eachRecursive = (startAfter, stopAt, usePrefixBisect = false) =>
+      return 0 if requestsUsed > maxRequests
+
+      middleKey = getBisectKey startAfter, stopAt, usePrefixBisect
+
+      Promise.all []
+        S3.list {} bucket, limit, startAfter
+        S3.list {} bucket, limit, startAfter: middleKey
+      .then ([leftItems, rightItems]) ->
+        lastLeftKey = peek(leftItems)?.Key
+        lastRightKey = peek(rightItems)?.Key
+
+        requestsUsed += 2
+        Promise.all []
+          applyF leftItems, middleKey
+          applyF rightItems, stopAt
+
+        .then ([leftCount, rightCount]) ->
+          debug && log eachRecursive: {} startAfter, middleKey, stopAt, leftItems, rightItems, usePrefixBisect, leftCount, rightCount
+
+          count = leftCount + rightCount
+
+          switch
+          when leftCount < limit && rightCount == limit # happens if they both get the same result-set
+            debug && log :R1
+            eachRecursive
+              lastRightKey        # startAfter
+              stopAt              # stopAt
+            .then (c) -> count + c
+
+          when leftCount < limit
+            count
+
+          when rightCount == 0
+            debug && log :R2
+            eachRecursive
+              lastLeftKey         # startAfter
+              middleKey           # stopAt
+              true                # usePrefixBisect
+            .then (c) -> count + c
+
+          else
+            debug && log :R3_and_4
+            Promise.all []
+              eachRecursive
+                lastLeftKey         # startAfter
+                middleKey           # stopAt
+              eachRecursive
+                lastRightKey        # startAfter
+                stopAt              # stopAt
+            .then ([leftCount, rightCount]) -> leftCount + rightCount + count
+
+      .tap ->
+        if showProgress
+          duration = currentSecond() - startTime
+          itemsPerSecond = (itemsFound / duration) | 0
+
+          itemBar.update itemsFound, items: itemsFound
+          requestBar.update requestsUsed, requests: requestsUsed
+          rateBar.update itemsPerSecond, {} itemsPerSecond
+          efficiencyBar.update
+            efficiency = (itemsFound / (requestsUsed * 1000)) * 100 | 0
+            {} efficiency
+
+    eachRecursive prefix, prefix + 'z'.repeat 1024 - prefix.length
+    .then (count) ->
+      multibar.stop() if showProgress
+      info = {} itemsFound, requestsUsed, options
+      if requestsUsed > maxRequests
+        e = Error "S3Tools.each maxRequestsReached:\n" + formattedInspect info
+        e.info = info
+        throw e
+      else info
+
+  @summarize: (options) =>
+    size = count = 0
+    @each options, ({Size}) ->
+      count++
+      size += Size

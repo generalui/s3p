@@ -5,6 +5,8 @@ import &StandardImport
     " -/0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz"
 
   middleKeyChar = supportedKeyChars[supportedKeyChars.length / 2 | 0]
+  getKeyCharIndex = (character) -> supportedKeyChars.indexOf character
+  getNextKeyChar = (character) -> supportedKeyChars[1 + getKeyCharIndex character]
 
   ##
     IN:
@@ -17,27 +19,31 @@ import &StandardImport
         <String> new Key
           startAfter < Key
           Key < stopAt
-  getBisectKey = (startAfter, stopAt) -> if startAfter < stopAt
+  getBisectKey = (startAfter, stopAt, bisectPrefix) -> if startAfter < stopAt
     i = 0
-    while startAfter[i] == stopAt[i]
-      i++
-    charIndex1 = supportedKeyChars.indexOf startAfter[i]
-    charIndex2 = supportedKeyChars.indexOf stopAt[i]
+    while startAfter[i] == stopAt[i] do i++
+
+    charIndex1 = if i ==  startAfter.length then 0 else getKeyCharIndex startAfter[i]
+    charIndex2 = getKeyCharIndex stopAt[i]
 
     if charIndex1 < 0 || charIndex2 < 0
       throw new Error "Invalid character found in inputs:\n" + formattedInspect {} startAfter, stopAt, i, charIndex1, charIndex2, supportedKeyChars
 
-    else if charIndex1 + 1 == charIndex2
+    switch
+    when bisectPrefix &&
+        i < prefixBisectI = (i + startAfter.length) / 2 | 0
+        && nextKeyChar = getNextKeyChar startAfter[prefixBisectI]
+
+      # log bisectPrefix: startAfter, stopAt, i, charIndex1, charIndex2, prefixBisectI, nextKeyChar
+      startAfter.slice 0, prefixBisectI
+      + nextKeyChar
+
+    when charIndex1 + 1 == charIndex2
       # log one-different: startAfter, stopAt, i, charIndex1, charIndex2
-      startAfter.slice 0, i
+      startAfter.slice 0, i + 1
       + middleKeyChar
 
-    else if charIndex1 < charIndex2
+    else
       # log more-than-one-different: startAfter, stopAt, i, charIndex1, charIndex2
       startAfter.slice 0, i
       + supportedKeyChars[(charIndex1 + charIndex2) / 2 | 0]
-
-    else
-      # should be impossible to reach here
-      throw new Error "FAIL #{charIndex1} < #{charIndex2} is false:\n" + formattedInspect {} startAfter, stopAt, i, charIndex1, charIndex2, supportedKeyChars
-

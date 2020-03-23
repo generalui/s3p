@@ -1,1 +1,1 @@
-module.exports = require('./S3P');
+module.exports = require('./S3Parallel');

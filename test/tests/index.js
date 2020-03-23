@@ -6,4 +6,4 @@
 .addModules({
   StandardImport: require('./StandardImport')
 });
-require('./S3P');
+require('./S3Parallel');

@@ -6,4 +6,4 @@ module.exports = require('neptune-namespaces').addNamespace(
   (class Tests extends Neptune.PackageNamespace {})
   ._configureNamespace(require('../../package.json'))
 );
-require('./S3P/namespace');
+require('./S3Parallel/namespace');

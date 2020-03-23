@@ -1,0 +1,20 @@
+import &ArtStandardLib, &ArtClassSystem, {} &util.promisify
+exec = promisify &child_process.exec
+shellEscape = &shellEscape
+escape = (single) -> shellEscape [] single
+
+&AwsSdk.config.setPromisesDependency &bluebird
+s3 = new &AwsSdk.S3()
+
+lostObjectsV2 = promisify s3.listObjectsV2
+
+class S3
+
+  @list: ({bucket, prefix, limit=1000, startAfter}) ->
+    s3.listObjectsV2
+      Bucket:     bucket
+      Prefix:     prefix
+      MaxKeys:    limit
+      StartAfter: startAfter
+    .promise()
+    .then ({Contents}) -> Contents
