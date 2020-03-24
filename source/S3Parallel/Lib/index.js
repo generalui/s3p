@@ -6,5 +6,6 @@
 .addModules({
   Bisect:            require('./Bisect'),
   PromiseWorkerPool: require('./PromiseWorkerPool'),
-  S3:                require('./S3')
+  S3:                require('./S3'),
+  S3Keys:            require('./S3Keys')
 });

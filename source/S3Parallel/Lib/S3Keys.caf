@@ -1,0 +1,31 @@
+import &StandardImport, &Bisect
+
+{}
+  escapeKey = (key) ->
+    if /[\s()]/.test key
+      "" "#{key}"
+    else key
+
+  padKey = (key) ->
+    pad key, 20 * Math.ceil key.length / 20
+
+  getLastKeyWithPrefix = (prefix) ->
+    prefix + lastKeyChar.repeat 1024 - prefix.length
+
+  debugKey = (key) ->
+    if key?
+      tail = 0
+      i = lastIndex = key.length - 1
+      while key[i] == lastKeyChar do i--
+
+      padKey
+        switch
+        when key == ''
+          "''"
+        when i < lastIndex
+          escapeKey key.slice 0, i + 1
+          + "(#{lastKeyChar}*#{lastIndex - i})"
+        else
+          escapeKey key
+
+    else "(#{'' + key})"

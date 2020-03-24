@@ -1,32 +1,5 @@
 import &ArtStandardLib, &ArtClassSystem, &Lib
 
-escapeKey = (key) ->
-  if /[\s()]/.test key
-    "" "#{key}"
-  else key
-
-padKey = (key) ->
-  pad key, 20 * Math.ceil key.length / 20
-
-debugKey = (key) ->
-  if key?
-    tail = 0
-    i = lastIndex = key.length - 1
-    while key[i] == lastKeyChar do i--
-
-    padKey
-      switch
-      when key == ''
-        "''"
-      when i < lastIndex
-        escapeKey key.slice 0, i + 1
-        + "(#{lastKeyChar}*#{lastIndex - i})"
-      else
-        escapeKey key
-
-
-  else "(#{'' + key})"
-
 class S3P
 
   @getBucketSummary: (options) =>
@@ -51,7 +24,6 @@ class S3P
         itemsFound
         itemsProcessed
         requestsUsed
-
   @each: (options) =>
     options extract
       bucket, limit = 1000, maxRequests, prefix = '', showProgress
@@ -61,10 +33,11 @@ class S3P
 
     _reduce = options.reduce
 
+    # statistics
     itemsFound =
     requestsUsed =
-    maxOutstanding = outstanding = 0
-
+    maxOutstanding =
+    outstanding = 0
 
     if showProgress
       startTime = currentSecond()
@@ -76,47 +49,28 @@ class S3P
         log "progress: items: #{itemsFound}, requests: #{requestsUsed}, items/s: #{itemsPerSecond | 0}, efficiency: #{efficiency}%, outstanding: #{outstanding}, duration: #{durationString duration}  #{message}"
       progressReporter = interval 1000, report
 
-      # multibar = new &cliProgress.MultiBar
-      #   clearOnComplete: false
-      #   hideCursor: true
-      #   format: "" items:    {value} progress [{bar}] {percentage}%
-      #   &cliProgress.Presets.shades_grey
-
-      # itemBar       = multibar.create 100, 0 format: "" items:    {value} progress [{bar}] {percentage}%
-      # requestBar    = multibar.create 100, 0 format: "" requests: {value} progress [{bar}] {percentage}%
-      # rateBar       = multibar.create 100, 0
-      # efficiencyBar = multibar.create 100, 0
-
-    # OUT: count times applied
+    # OUT: count of times map was applied
     applyF = (items) ->
       itemsFound += items.length
       unless map
         Promise.resolve items.length
       else
-        Promise.all items.map map
+        Promise.all each a in-array items with map a
         .then -> items.length
 
     eachRecursive = (startAfter, stopAt, usePrefixBisect = false, debugContext) =>
       return Promise.resolve(0) if requestsUsed >= maxRequests || startAfter >= stopAt
 
-
-      maxOutstanding = Math.max outstanding, maxOutstanding
-
       middleKey = getBisectKey startAfter, stopAt, usePrefixBisect
 
-      requestsUsed += 2
-
-      # if debug == :verbose
-      #   log """ -------------------------------------------------------------
-
+      report() if showProgress == :verbose
       debug && log "" debug: START: #{pad debugContext ? :root, 10} startAfter: #{debugKey startAfter}  middleKey: #{debugKey middleKey}  stopAt: #{debugKey stopAt}  usePrefixBisect: #{usePrefixBisect}
 
-      report() if showProgress == :verbose
-
       lastLeftKey = lastRightKey = undefined
-
       rawLeftCount = rawRightCount = null
-      outstanding += 2
+
+      requestsUsed += 2
+      maxOutstanding = Math.max maxOutstanding, outstanding += 2
 
       Promise.all []
         s3.list {} bucket, limit, startAfter
@@ -128,8 +82,8 @@ class S3P
         rawLeftCount  = rawLeftItems?.length
         rawRightCount = rawRightItems?.length
 
-        leftItems = array item in rawLeftItems when item.Key <= middleKey
-        rightItems = array item in rawRightItems when item.Key <= stopAt
+        leftItems   = array item in-array rawLeftItems  when item.Key <= middleKey
+        rightItems  = array item in-array rawRightItems when item.Key <= stopAt
 
         lastLeftKey  = peek(leftItems)?.Key
         lastRightKey = peek(rightItems)?.Key
@@ -139,13 +93,13 @@ class S3P
           applyF rightItems
 
       .then ([leftCount, rightCount]) ->
-        recurseLeft = leftCount >= limit
-        recurseRight = rightCount >= limit
+        recurseLeft     = leftCount >= limit
+        recurseRight    = rightCount >= limit
 
-        leftStartAfter = lastLeftKey
-        leftStopAt = middleKey
+        leftStartAfter  = lastLeftKey
+        leftStopAt      = middleKey
         rightStartAfter = lastRightKey
-        rightStopAt = stopAt
+        rightStopAt     = stopAt
 
         leftUsePrefixBisect = rightCount == 0
 
@@ -196,22 +150,22 @@ class S3P
 
       .tapCatch (error) -> log.error eachRecursive: {} startAfter, stopAt, usePrefixBisect, error
 
-    eachRecursive prefix, prefix + lastKeyChar.repeat 1024 - prefix.length
+    eachRecursive prefix, getLastKeyWithPrefix prefix
     .finally -> progressReporter?.stop()
     .then (count) ->
       report? :DONE
-      # multibar.stop() if showProgress
       info = {}
         itemsFound, requestsUsed, options, maxOutstanding
         averageItemsPerRequest: (itemsFound / requestsUsed)
-        elapsedSeconds =  currentSecond() - startTime
-        itemsPerSecond: itemsFound / elapsedSeconds
-        requestsPerSecond: requestsUsed / elapsedSeconds
+        elapsedSeconds =        currentSecond() - startTime
+        itemsPerSecond:         itemsFound / elapsedSeconds
+        requestsPerSecond:      requestsUsed / elapsedSeconds
 
       if requestsUsed > maxRequests
         e = Error "S3Tools.each maxRequestsReached:\n" + formattedInspect info
         e.info = info
         throw e
+
       else info
 
   @summarize: (options) =>
