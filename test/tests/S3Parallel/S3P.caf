@@ -20,8 +20,7 @@ suite:
     test :S3P.each ->
       S3P.each
         limit: 2
-        noop
-        mockS3
+        s3: mockS3
           :alpha
           :beta
           :gamma
@@ -35,8 +34,7 @@ suite:
     test "S3P.each limit:3"->
       S3P.each
         limit: 3
-        noop
-        mockS3
+        s3: mockS3
           :alpha
           :beta
           :gamma
@@ -51,8 +49,7 @@ suite:
     test "S3P.each limit:4"->
       S3P.each
         limit: 4
-        noop
-        mockS3
+        s3: mockS3
           :alpha
           :beta
           :gamma
@@ -66,8 +63,7 @@ suite:
     test "S3P.each limit:2 large common prefix"->
       S3P.each
         limit: 2
-        noop
-        mockS3
+        s3: mockS3
           :some/path/to/my/files/alpha
           :some/path/to/my/files/beta
           :some/path/to/my/files/gamma
@@ -80,11 +76,10 @@ suite:
 
     test :S3P.each_custom_count_3 ->
       count = 0
-      f = -> count++
       S3P.each
         limit: 2
-        f
-        mockS3 files =
+        map: -> count++
+        s3: mockS3 files =
           :alpha
           :beta
           :gamma
@@ -95,11 +90,10 @@ suite:
 
     test :S3P.each_custom_count_10 ->
       count = 0
-      f = -> count++
       S3P.each
         limit: 2
-        f
-        mockS3 files =
+        map: -> count++
+        s3: mockS3 files =
           :059
           :0934t09g
           :alpha
@@ -127,8 +121,7 @@ suite:
           limit: 10
           # showProgress: true
           # debug: true
-          noop
-          mockS3 files
+          s3: mockS3 files
 
         .then (out) ->
           # log {} out

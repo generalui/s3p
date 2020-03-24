@@ -52,8 +52,14 @@ class S3P
         itemsProcessed
         requestsUsed
 
-  @each: (options, f = (->), S3 = &Lib/S3) =>
-    options extract bucket, limit = 1000, maxRequests, prefix = '', showProgress, debug, aggressive
+  @each: (options) =>
+    options extract
+      bucket, limit = 1000, maxRequests, prefix = '', showProgress
+      debug, aggressive
+      map
+      s3 = &Lib/S3
+
+    _reduce = options.reduce
 
     itemsFound =
     requestsUsed =
@@ -83,12 +89,12 @@ class S3P
 
     # OUT: count times applied
     applyF = (items) ->
-      count = 0
-      Promise.all array item in items
-        count++
-        itemsFound++
-        f item
-      .then -> count
+      itemsFound += items.length
+      unless map
+        Promise.resolve items.length
+      else
+        Promise.all items.map map
+        .then -> items.length
 
     eachRecursive = (startAfter, stopAt, usePrefixBisect = false, debugContext) =>
       return Promise.resolve(0) if requestsUsed >= maxRequests || startAfter >= stopAt
@@ -113,8 +119,8 @@ class S3P
       outstanding += 2
 
       Promise.all []
-        S3.list {} bucket, limit, startAfter
-        S3.list {} bucket, limit, startAfter: middleKey
+        s3.list {} bucket, limit, startAfter
+        s3.list {} bucket, limit, startAfter: middleKey
 
       .finally -> outstanding -= 2
 
