@@ -2,12 +2,31 @@ import &ArtStandardLib, &ArtClassSystem, &Lib
 
 class S3P
 
+  logGroups =
+    :bytes
+    :kilobytes
+    :megabytes
+    :gigabytes
+    :terabytes
+    :petabytes
+    :exabytes
+    :zetabytes
+
+
   @summarize: (options) =>
     summary =
       size: 0
       maxSize: null
       minSize: null
+      sizeHistogram: {}
     @each merge options, map: ({Size}) ->
+      floorSize = humanByteSize
+        Math.pow 2, 1 + logSize = (Math.log(Size) / Math.log(2)) | 0
+        0
+      group = logGroups[((logSize + 1)/10) | 0] ? "big"
+      g = summary.sizeHistogram[group]?={}
+      g[floorSize] = (g[floorSize] | 0) + 1
+
       summary.size += Size
       summary.maxSize = Math.max
         summary.maxSize ? Size
@@ -21,19 +40,19 @@ class S3P
         summary
         {}
           count: stats.itemsFound
-          human: object v in summary with humanByteSize v
+          human: object v, k in summary with humanByteSize v when /size$/i.test k
           stats
 
-  humanByteSize = (bytes) ->
+  humanByteSize = (bytes, decimals = 2) ->
     switch
     when bytes == 1       then "" 1byte
     when bytes < 1024     then "" #{bytes/1024**0 | 0}bytes
-    when bytes < 1024**2  then "" #{(bytes/1024**1).toFixed 2}kB
-    when bytes < 1024**3  then "" #{(bytes/1024**2).toFixed 2}mB
-    when bytes < 1024**4  then "" #{(bytes/1024**3).toFixed 2}gB
-    when bytes < 1024**5  then "" #{(bytes/1024**4).toFixed 2}tB
-    when bytes < 1024**6  then "" #{(bytes/1024**5).toFixed 2}pB
-    else                       "" #{(bytes/1024**6).toFixed 2}eB
+    when bytes < 1024**2  then "" #{(bytes/1024**1).toFixed decimals}kB
+    when bytes < 1024**3  then "" #{(bytes/1024**2).toFixed decimals}mB
+    when bytes < 1024**4  then "" #{(bytes/1024**3).toFixed decimals}gB
+    when bytes < 1024**5  then "" #{(bytes/1024**4).toFixed decimals}tB
+    when bytes < 1024**6  then "" #{(bytes/1024**5).toFixed decimals}pB
+    else                       "" #{(bytes/1024**6).toFixed decimals}eB
 
   ##
     IN: options:
