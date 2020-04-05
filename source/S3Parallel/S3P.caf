@@ -12,7 +12,6 @@ class S3P
     :exabytes
     :zetabytes
 
-
   @summarize: (options) =>
     summary =
       size: 0
@@ -37,9 +36,9 @@ class S3P
 
     .then (stats) ->
       merge
+        {} stats.items
         summary
         {}
-          count: stats.itemsFound
           human: object v, k in summary with humanByteSize v when /size$/i.test k
           stats
 
@@ -271,7 +270,7 @@ class S3P
     maxOutstanding =
     outstanding = 0
     startTime = currentSecond()
-    matchingItems = if _when then 0 else null # if when is provided, this counts the number of times when is true
+    matchingItems = if _when then 0 else undefined # if when is provided, this counts the number of times when is true
 
     if showProgress
       report = (message) ->
