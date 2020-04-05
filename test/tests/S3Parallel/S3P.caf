@@ -13,9 +13,40 @@ mockS3 = (files...) ->
       array file in files when file > startAfter && count < limit
         count++
         Key: file
-        Size: 1
+        Size: file.length # string length
+
+_getLargeFileListP = null
+getLargeFileList = ->
+  _getLargeFileListP ?=
+    shellExec 'find .'
+    .then (out) ->
+      out.trim().split "\n"
+      .sort()
 
 suite:
+  getBucketSummary: ->
+    test :3-items ->
+      S3P.getBucketSummary
+        limit: 2
+        s3: mockS3
+          :alpha
+          :beta
+          :gamma
+      .then ({count, size}) ->
+        assert.eq 3, count
+        assert.eq 14, size
+
+    test :many-items ->
+      getLargeFileList()
+      .then (files) ->
+        S3P.getBucketSummary
+          limit: 100
+          s3: mockS3 files
+        .then ({count, size}) ->
+          assert.eq files.length, count
+          assert.lt files.length, size
+          assert.eq files.join('').length, size
+
   each: ->
     test :S3P.each ->
       S3P.each
@@ -109,13 +140,11 @@ suite:
         assert.eq files.length, count
         assert.eq out.itemsFound, count
 
+    @timeout 10000
 
     test :bigTest ->
-      shellExec 'find .'
-      .then (out) ->
-        files =
-          out.trim().split "\n"
-          .sort()
+      getLargeFileList()
+      .then (files) ->
 
         S3P.each
           limit: 10
@@ -127,19 +156,23 @@ suite:
           # log {} out
           assert.eq files.length, out.itemsFound
 
-  # regressions: ->
-  #   @timeout 100000
-  #   test :lims ->
-  #     Promise.resolve '' + &fs.readFileSync "lims-filesystem-regression.txt"
-  #     .then (out) ->
-  #       files =
-  #         out.trim().split "\n"
-  #         .sort()
+  regressions: ->
+    @timeout 10000
+    test :lims ->
+      Promise.resolve '' + &fs.readFileSync "test/data/large-list.txt"
+      .then (out) ->
+        files =
+          out.trim().split "\n"
+          .sort()
 
-  #       S3P.each
-  #         limit: 1000
-  #         noop
-  #         mockS3 files
+        S3P.each
+          limit: 1000
+          # progress: true
+          # debug: true
+          # prefix: :run2/pipeline-output-index/
+          # aggressive: true
+          s3: mockS3 files
 
-  #       .then (out) ->
-  #         assert.eq files.length, out.itemsFound
+        .then (out) ->
+          # log {} out
+          # assert.eq files.length, out.itemsFound

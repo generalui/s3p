@@ -2,34 +2,247 @@ import &ArtStandardLib, &ArtClassSystem, &Lib
 
 class S3P
 
-  @getBucketSummary: (options) =>
-    size = 0
-    @each options, ({Size}) -> size += Size
-    .then (count) ->
-      {} count, size
+  @summarize: (options) =>
+    summary =
+      size: 0
+      maxSize: null
+      minSize: null
+    @each merge options, map: ({Size}) ->
+      summary.size += Size
+      summary.maxSize = Math.max
+        summary.maxSize ? Size
+        Size
+      summary.minSize = Math.min
+        summary.minSize ? Size
+        Size
+
+    .then (stats) ->
+      merge
+        summary
+        {}
+          count: stats.itemsFound
+          human: object v in summary with humanByteSize v
+          stats
+
+  humanByteSize = (bytes) ->
+    switch
+    when bytes == 1       then "" 1byte
+    when bytes < 1024     then "" #{bytes/1024**0 | 0}bytes
+    when bytes < 1024**2  then "" #{(bytes/1024**1).toFixed 2}kB
+    when bytes < 1024**3  then "" #{(bytes/1024**2).toFixed 2}mB
+    when bytes < 1024**4  then "" #{(bytes/1024**3).toFixed 2}gB
+    when bytes < 1024**5  then "" #{(bytes/1024**4).toFixed 2}tB
+    when bytes < 1024**6  then "" #{(bytes/1024**5).toFixed 2}pB
+    else                       "" #{(bytes/1024**6).toFixed 2}eB
+
+  ##
+    IN: options:
+      all the each options plus:
+      toBucket: <String> [Default: options.bucket] - target bucket
+      toPrefix: <String> optional - prepend to key for toKey
+  @copy: (options) =>
+    options extract s3 = &Lib/S3
+    bytesCopied = 0
+    bytesStarted = 0
+    filesStarted = 0
+    filesCopied = 0
+
+    throw new Error "toBucket required" unless present options.toBucket
+    @eachPromises merge options,
+      getProgress: (duration) ->
+        "" copied #{filesCopied}/#{filesStarted} #{humanByteSize bytesCopied}/#{humanByteSize bytesStarted} (#{humanByteSize bytesCopied / duration}/s)
+
+      map: ({Key: key, Size}) ->
+
+        filesStarted++
+        bytesStarted += Size
+        s3.copy {}
+          options.bucket
+          options.toBucket
+          key
+          toKey: "" #{options.toPrefix}#{key}
+        .then ->
+          filesCopied++
+          bytesCopied += Size
+
+    .then (stats) ->
+      merge {}
+        stats
+        bytesCopied
+        bytesPerSecond: bytesCopied / stats.duration
+        human:
+          bytesCopied: humanByteSize bytesCopied
+          bytesPerSecond: humanByteSize bytesCopied / stats.duration
+
+  ##
+    wrapper around each that returns a list of promise failures rather than failing
+  @eachPromises: (options) =>
+    failed = null
+    options extract map
+    _when = options.when
+
+    throw new Error "Expecting options.map" unless map is Function
+
+    @each merge options,
+      mapList: (items) ->
+        Promise.all array item in-array items
+          Promise.then -> map item
+          .catch (error) ->
+            log {} item.key, error
+            failed?=[]
+            .push item.key
+    .then (result) ->
+      merge result, {} failed
+
+  itemsByKey = (itemList, prefix) ->
+    object item in-array itemList with-key
+      key = item.Key
+      if (l = prefix?.length) > 0
+        key.slice l, key.length
+      else key
+
+  ##
+    IN
+      @each options
+      required: toBucket
+
+  @compare: (options) =>
+    unless options.toBucket
+      throw new Error "toBucket required"
+    @each merge
+      options,
+      returning: stats =
+        addedCount: 0
+        removedCount: 0
+        changed: 0
+        unchanged: 0
+
+      compare: true
+      mapList: (sourceItems, targetItems) ->
+
+        sourceItems = itemsByKey sourceItems  # , options.prefix # right now these are somewhat asymetric - the source prefix is mainatined when copying to a prefix
+        targetItems = itemsByKey targetItems, options.toPrefix
+
+        sKeys = Object.keys(sourceItems).sort()
+        log sourceItems:
+          source:
+            first: sourceItems[0]
+            last: peek(sourceItems)
+          target:
+            first: targetItems[0]
+            last: peek(targetItems)
+
+        # log :sourceItems
+        # log Object.keys(sourceItems).join "\n"
+        # log :targetItems
+        # log Object.keys(targetItems).join "\n"
+
+        objectDiff
+          sourceItems
+          targetItems
+          (added) -> stats.addedCount++
+          (removed...) ->
+            # log {} removed
+            stats.removedCount++
+          (changed...) ->
+            log "" changed #{changed[0]}
+            stats.changed++
+          -> stats.unchanged++
+          (a, b) ->
+            # ETag is essentialy an MD5 of the object - https://teppen.io/2018/06/23/aws_s3_etags/
+            # a.ETag == b.ETag &&
+            a.Size == b.Size
+
+  ##
+    return first item found
+    IN: each options plus
+  @find: (options) =>
+    _with = options.with ? options.map ? (a) -> a
+    @each merge options, with: (item) -> throw found: _with item
+    .catch (error) -> error.found || throw error
+
+  ## return array of items found
+  @array: (options) =>
+    _with = options.with ? options.map ? (a) -> a
+    @each merge
+      options
+      into: _into = options.into ? []
+      with: (item) -> _into.push _with item
+
+  ## return an object mapping item.Keys to items found
+  @object: (options) =>
+    _with = options.with ? options.map ? (a) -> a
+    @each merge
+      options
+      into:     _into = options.into ? []
+      with:     (item) -> _into.push _with item
+      withKey:  options.withKey ? ({Key}) -> Key
+
+  @list: (options) =>
+    @each merge options,
+      returning: list = []
+      mapList: (l) -> array from-array l into list
+    # .tap (result) ->
+    #   log {}
+    #     list: options
+    #     result
+
 
   ##
     IN:
       options:
-        aggressive: false - if true, will make a little more S3 requests to increase parallelism
-        debug: false
-        showProgress: <Bool/false> log progress
-        prefix: <String/NULL> only scan within a given prefix
-        limit: <Number/1000> limit items per call; generally the default of 1000 is best (max allowed by AWS is 1000)
+        aggressive:   false - if true, will make a little more S3 requests to increase parallelism
+        debug:        false
+        showProgress: true - log progress once a second
+        verboseProgress: false
+        prefix:       <String/NULL> only scan within a given prefix
+        startAfter:   <String/NULL> Keys starting with and including this key will be passed to map/mapList - overrides prefix
+        stopAt:       <String/NULL> Keys up to but not including this one will be passed to map/mapList - overrides prefix
+        limit:        <Number/1000> limit items per call; generally the default of 1000 is best (max allowed by AWS is 1000)
         bucket:
+        toBucket:     <String> bucket name to compare with - if present, will run the same s3:list operations on the target bucket and pass matching lists to mapList as the second argument (map not supported)
+        getProgress: <(duration) -> <String>> optional - if provided and showProgress is true, will append to the progress string
         maxRequests: <Number> limit how many requests will be used - aborts nicely if reached
           nicely: finishes current function calls, logs message, does no more work, throws error
+
+        pattern: only yield items who's keys match this pattern (creates a 'when' clause)
+
+        COMPREHENSION
+        with: (Item) -> ignored - alais of `map`
+        when: (Item) -> T/F - if true, pass it on to `map`, else skip
+        returning:    if present, return this value instead of stats
+        into:         <ALIAS: returning>
     OUT:
-      {}}
+      options.returning ? {}
         itemsFound
         itemsProcessed
         requestsUsed
+        matchingItems: if when is provided, this counts the number of times when is true
+        ... and more stats
   @each: (options) =>
     options extract
-      bucket, limit = 1000, maxRequests, prefix = '', showProgress
+      bucket, limit = 1000, maxRequests, prefix = '', showProgress = true
+      startAfter
+      stopAt
       debug, aggressive
+      getProgress
       map
+      mapList
+      compare
+      toBucket
+      toPrefix
+      pattern
+      verboseProgress
       s3 = &Lib/S3
+
+    _with = options.with
+    _when = if pattern then ({Key}) -> Key.match pattern
+    else options.when
+    _returning = options.returning ? options.into
+    map ?= _with unless mapList
+
+    if compare && map && toBucket
+      throw new Error "cannot use both `compare` and `map` - use mapList instead"
 
     _reduce = options.reduce
 
@@ -38,33 +251,50 @@ class S3P
     requestsUsed =
     maxOutstanding =
     outstanding = 0
+    startTime = currentSecond()
+    matchingItems = if _when then 0 else null # if when is provided, this counts the number of times when is true
 
     if showProgress
-      startTime = currentSecond()
       report = (message) ->
         duration = currentSecond() - startTime
         itemsPerSecond = (itemsFound / duration)
         efficiency = (itemsFound / (requestsUsed * limit)) * 100 | 0
 
-        log "progress: items: #{itemsFound}, requests: #{requestsUsed}, items/s: #{itemsPerSecond | 0}, efficiency: #{efficiency}%, outstanding: #{outstanding}, duration: #{durationString duration}  #{message}"
+        log "s3p progress: " +
+          compactFlatten []
+            "" duration: #{durationString duration}
+            "" items: #{itemsFound}
+            "" items/s: #{itemsPerSecond | 0}
+            "" requests: #{requestsUsed}
+            verboseProgress && "" efficiency: #{efficiency}%
+            verboseProgress && "" outstanding: #{outstanding}
+            matchingItems && "" matches: #{matchingItems}
+            getProgress?(duration) || null
+            message
+          .join ', '
+
       progressReporter = interval 1000, report
 
     # OUT: count of times map was applied
-    applyF = (items) ->
+    applyF = (items, compareItems) ->
       itemsFound += items.length
-      unless map
-        Promise.resolve items.length
-      else
-        Promise.all each a in-array items with map a
-        .then -> items.length
+      Promise.then ->
+        switch
+        when mapList      then mapList items, compareItems
+        when map && _when then each item in-array items with matchingItems++; map item when _when item
+        when map          then each item in-array items with map item
+      .then -> items.length
 
     eachRecursive = (startAfter, stopAt, usePrefixBisect = false, debugContext) =>
       return Promise.resolve(0) if requestsUsed >= maxRequests || startAfter >= stopAt
+      # log eachRecursive: {}
+      #   startAfter: debugKey startAfter, false
+      #   stopAt: debugKey stopAt, false
 
       middleKey = getBisectKey startAfter, stopAt, usePrefixBisect
 
       report() if showProgress == :verbose
-      debug && log "" debug: START: #{pad debugContext ? :root, 10} startAfter: #{debugKey startAfter}  middleKey: #{debugKey middleKey}  stopAt: #{debugKey stopAt}  usePrefixBisect: #{usePrefixBisect}
+      debug && log "" debug: START:  #{pad debugContext ? :root, 10} startAfter: #{debugKey startAfter}  middleKey: #{debugKey middleKey}  stopAt: #{debugKey stopAt}  usePrefixBisect: #{usePrefixBisect}
 
       lastLeftKey = lastRightKey = undefined
       rawLeftCount = rawRightCount = null
@@ -72,13 +302,18 @@ class S3P
       requestsUsed += 2
       maxOutstanding = Math.max maxOutstanding, outstanding += 2
 
+      applyPromise = null
+
       Promise.all []
         s3.list {} bucket, limit, startAfter
         s3.list {} bucket, limit, startAfter: middleKey
 
+        compare && toBucket && @list {} limit, startAfter, prefix: toPrefix, bucket: toBucket, stopAt: middleKey
+        compare && toBucket && @list {} limit, stopAt,     prefix: toPrefix, bucket: toBucket, startAfter: middleKey
+
       .finally -> outstanding -= 2
 
-      .then ([rawLeftItems, rawRightItems]) ->
+      .then ([rawLeftItems, rawRightItems, compareLeftItems, compareRightItems]) ->
         rawLeftCount  = rawLeftItems?.length
         rawRightCount = rawRightItems?.length
 
@@ -88,9 +323,11 @@ class S3P
         lastLeftKey  = peek(leftItems)?.Key
         lastRightKey = peek(rightItems)?.Key
 
-        Promise.all []
-          applyF leftItems
-          applyF rightItems
+        applyPromise = Promise.all []
+          applyF leftItems, compareLeftItems
+          applyF rightItems, compareRightItems
+
+        [leftItems.length, rightItems.length]
 
       .then ([leftCount, rightCount]) ->
         recurseLeft     = leftCount >= limit
@@ -134,8 +371,14 @@ class S3P
                   leftUsePrefixBisect:  #{recurseLeft && leftUsePrefixBisect}
                   rightStartAfter:      #{recurseRight && debugKey rightStartAfter}
                   rightStopAt:          #{recurseRight && debugKey rightStopAt}
+        # else if debug
+        #   debug && log "" debug: RESULT: #{pad debugContext ? :root, 10} startAfter: #{debugKey startAfter}  middleKey: #{debugKey middleKey}  stopAt: #{debugKey stopAt}  usePrefixBisect: #{usePrefixBisect} [#{leftCount}, #{rightCount}]
+
 
         Promise.all []
+          applyPromise
+          .then -> applyPromise = null # make sure we release it when it's done
+
           if recurseLeft
             eachRecursive leftStartAfter,   leftStopAt,   leftUsePrefixBisect,  if recurseRight then :recurse-BL else :recurse-L
             .then (c) -> c + leftCount
@@ -148,28 +391,40 @@ class S3P
 
         .then ([leftCount, rightCount]) -> leftCount + rightCount
 
-      .tapCatch (error) -> log.error eachRecursive: {} startAfter, stopAt, usePrefixBisect, error
+      .tapCatch (error) -> log.error eachRecursive: {} startAfter, stopAt, usePrefixBisect, error if error is Error
 
-    eachRecursive prefix, getLastKeyWithPrefix prefix
+    eachRecursive
+      "#{prefix}#{startAfter}"
+      if stopAt
+        "#{prefix}#{stopAt}"
+      else getLastKeyWithPrefix prefix
+
     .finally -> progressReporter?.stop()
     .then (count) ->
+      log "DONE!!!"
       report? :DONE
-      info = {}
-        itemsFound, requestsUsed, options, maxOutstanding
-        averageItemsPerRequest: (itemsFound / requestsUsed)
-        elapsedSeconds =        currentSecond() - startTime
-        itemsPerSecond:         itemsFound / elapsedSeconds
-        requestsPerSecond:      requestsUsed / elapsedSeconds
+      duration =        currentSecond() - startTime
+      itemsPerSecond = itemsFound / duration
+      itemsPerSecond = itemsPerSecond | 0 if itemsPerSecond > 10
+      requestsPerSecond = verboseProgress && requestsUsed / duration
+      requestsPerSecond = requestsPerSecond | 0 if requestsPerSecond > 10
+      averageItemsPerRequest = verboseProgress && itemsFound / requestsUsed
+      averageItemsPerRequest = averageItemsPerRequest | 0 if averageItemsPerRequest > 10
+      info = merge {}
+        duration
+        matchingItems
+        items: itemsFound
+        itemsPerSecond
+        requests: requestsUsed
+        requestsPerSecond
+        maxOutstanding: verboseProgress && maxOutstanding
+        averageItemsPerRequest
 
       if requestsUsed > maxRequests
         e = Error "S3Tools.each maxRequestsReached:\n" + formattedInspect info
         e.info = info
         throw e
 
-      else info
-
-  @summarize: (options) =>
-    size = count = 0
-    @each options, ({Size}) ->
-      count++
-      size += Size
+      else
+        log finalStats: info if _returning? && showProgress
+        _returning ? info

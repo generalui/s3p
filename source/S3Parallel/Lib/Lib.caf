@@ -2,7 +2,6 @@ exec = &util.promisify &child_process.exec
 
 []
   &S3Keys
-  &Bisect
   shellExec: (command) ->
     exec command
     .then ({stdout}) -> stdout

@@ -4,6 +4,6 @@
 (module.exports = require('./namespace'))
 
 .addModules({
-  Bisect: require('./Bisect'),
-  S3P:    require('./S3P')
+  S3P: require('./S3P')
 });
+require('./Lib');

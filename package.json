@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "art-testbench": "^1.17.2",
+    "aws-s3-multipart-copy": "^1.0.12",
     "aws-sdk": "^2.643.0",
     "caffeine-script": "^0.72.1",
     "chai": "^4.2.0",

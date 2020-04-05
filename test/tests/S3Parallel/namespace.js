@@ -5,3 +5,4 @@ module.exports = require('../namespace').addNamespace(
   'S3Parallel',
   class S3Parallel extends Neptune.PackageNamespace {}
 );
+require('./Lib/namespace');

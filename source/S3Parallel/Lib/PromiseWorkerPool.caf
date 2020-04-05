@@ -5,23 +5,30 @@ class PromiseWorkerPool extends BaseClass
     @_jobCount = 0
     @_queue = []
     @_finalPromise = null
+    @_activeWorkers = 0
 
   # resolves after the last job completes
   # if no jobs have been ever queued, will resolve asynchronously
   # OUT: Promise.then -> jobs processed
   then: ->
     if @_finalPromise
+      log :returnFinalPromise
       @_finalPromise
     else
+      log :createFinalPromise
       @_finalPromise =
         Promise.all array til @numWorkers with @_worker()
         .then -> @_jobCount
 
   _worker: ->
     if @_queue.length > 0
-      job = @_queue.pop()
-      Promise.then job
-      .then -> @_worker()
+      @_activeWorkers++
+      Promise.then @_queue.pop()
+      .finally ->
+        @_activeWorkers--
+        @_worker()
+    else if @_activeWorkers > 0
+      timeout 1 -> @_worker()
     else Promise.resolve()
 
   queue: (job) ->

@@ -1,18 +1,21 @@
-import &ArtStandardLib, &ArtClassSystem, {} &util.promisify
+import &StandardImport, {} &util.promisify
 exec = promisify &child_process.exec
 shellEscape = &shellEscape
 escape = (single) -> shellEscape [] single
 
 &AwsSdk.config.setPromisesDependency &bluebird
-s3 = new &AwsSdk.S3()
 
-lostObjectsV2 = promisify s3.listObjectsV2
+class S3 extends BaseClass
 
-class S3
+  @awsSdkS3 = new &AwsSdk.S3 {} # useAccelerateEndpoint: true
+  # https://docs.aws.amazon.com/AmazonS3/latest/dev/transfer-acceleration-examples.html
 
-  @list: ({bucket, prefix, limit=1000, startAfter}) ->
+  @classGetter
+    s3: -> @awsSdkS3
+
+  @list: ({bucket, prefix, limit=1000, startAfter}) =>
     startTime = currentSecond()
-    s3.listObjectsV2
+    @s3.listObjectsV2
       Bucket:     bucket
       Prefix:     prefix
       MaxKeys:    limit
@@ -31,3 +34,98 @@ class S3
         log.warn S3.list-slow: {} bucket, prefix, startAfter, limit, duration, results: merge results, Contents: "Array #{results.Contents.length}"
 
       results.Contents
+
+  ##
+    TODO:
+      For large files (>5GB), we need to just use the CLI:
+        aws s3 cp s3://resbio-fastq-drop-internal/180316_NB501104_0354_AHM2L2BGX5/Undetermined/Undetermined_S0_L001_R1_001.fastq.gz s3://genui-dynamodb-migration-scratch/large-test.gz
+        We can add --quiet (probably)
+      Further, that should use acceleration, if enabled - still need to test that.
+    IN:
+      options:
+        size:       Bytes (optional) if provided and if bigger than the max size allowed by copyObject, largeCopy is used
+        bucket:     <String> (ignored if both from-bucket and to-bucket are provided)
+        fromBucket: from-bucket (default: bucket)
+        toBucket:   to-bucket (default: bucket)
+        key:      <String>
+        fromKey:  from-key (default: key)
+        toKey:    to-key (default: key)
+    OUT:
+      Promise.then -> see https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html#copyObject-property > Callback > Parameters
+        {} CopyObjectResult, ...
+  @copy: (options) =>
+    @_normalizeCopyOptions(options) extract
+      fromBucket, toBucket, fromKey, toKey, size
+      pretend
+    # if size > 4.9 * 1024**3
+    #   @largeCopy options
+
+    # else
+    if pretend
+      Promise.resolve pretend: true
+    else
+      @s3.copyObject
+        CopySource: "" #{fromBucket}/#{fromKey}
+        Bucket:     toBucket
+        Key:        toKey
+      .promise()
+
+  # https://www.npmjs.com/package/aws-s3-multipart-copy
+  @_multipartCopy: (options) =>
+    &aws-s3-multipart-copy.init @s3
+
+  @delete: (options) =>
+    @s3.deleteObject
+      Bucket: options.bucket
+      Key:    options.key
+
+  @largeCopy: ({bucket, fromBucket, toBucket, key, fromKey, toKey, size}) =>
+    fromUrl = escape "" s3://#{fromBucket ? bucket}/#{fromKey ? key}
+    toUrl = escape "" s3://#{toBucket ? bucket}/#{toKey ? key}
+    exec "" aws s3 cp #{fromUrl} #{toUrl}
+
+  # get object's metdata
+  @headObject: ({bucket, key}) =>
+    @s3.headObject
+      Bucket: bucket
+      Key: key
+    .promise()
+
+  @_normalizeCopyOptions: (options) ->
+    options extract
+      bucket, key
+      fromBucket = bucket
+      toBucket = bucket
+      fromKey = key
+      toKey = key
+
+
+    unless present(fromBucket) && present(toBucket) && present(fromKey) && present toKey
+      throw new Error "" Missing one of: fromBucket, toBucket, fromKey, toKey or bucket or key as a default
+    merge options, {} fromBucket, fromKey, toBucket, toKey
+
+  @shouldSyncObjects: (options) ->
+    @_normalizeCopyOptions(options) extract fromBucket, toBucket, fromKey, toKey
+    Promise.then ->
+      if options.size < 1024**2 || !options.size
+        true
+      else
+        @headObject options
+        .then ({ContentLength}) -> ContentLength != options.size
+
+  ## syncObject
+    IN: options:
+      passed to copyObject and shouldSyncObject
+      size: used to compare and decide if it should copy
+    OUT:
+      copied: Bool
+      status: if not copied, explains why
+  @syncObject: (options) =>
+    @shouldSyncObjects options
+    .then (shouldSync) ->
+      if shouldSync
+        @copyObject options
+        .then (result) -> merge result, copied: true
+
+      else {} copied: false
+        # status: "s3://#{toBucket}/#{toKey} exists and has same size (#{size}); skipping"
