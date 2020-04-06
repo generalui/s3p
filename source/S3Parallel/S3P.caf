@@ -1,4 +1,4 @@
-import &ArtStandardLib, &ArtClassSystem, &Lib
+import &path, &ArtStandardLib, &ArtClassSystem, &Lib
 
 class S3P
 
@@ -13,18 +13,29 @@ class S3P
     :zetabytes
 
   @summarize: (options) =>
+    options extract summarizeFolders
     summary =
       size: 0
       maxSize: null
       minSize: null
       sizeHistogram: {}
-    @each merge options, map: ({Size}) ->
+      folders: summarizeFolders && {}
+    @each merge options, map: ({Size, Key}) ->
       floorSize = humanByteSize
         Math.pow 2, 1 + logSize = (Math.log(Size) / Math.log(2)) | 0
         0
       group = logGroups[((logSize + 1)/10) | 0] ? "big"
       g = summary.sizeHistogram[group]?={}
       g[floorSize] = (g[floorSize] | 0) + 1
+
+      if summarizeFolders
+        folder = summary.folders
+        each subFolder in
+            dirname Key
+            .split '/'
+          folder = folder[subFolder] ?= size: 0, files: 0, humanSize: null
+          folder.size += Size
+          folder.files++
 
       summary.size += Size
       summary.maxSize = Math.max
@@ -35,6 +46,13 @@ class S3P
         Size
 
     .then (stats) ->
+      if summarizeFolders
+        humanize = (folder) ->
+          folder.humanSize = humanByteSize folder.size if folder.size is Number
+          each subFolder in folder when subFolder is Object
+            humanize subFolder
+        humanize summary.folders
+
       merge
         {} stats.items
         summary
