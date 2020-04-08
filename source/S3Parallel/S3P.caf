@@ -104,6 +104,7 @@ class S3P
   @copy: (options) =>
     options extract
       s3 = &Lib/S3
+      pretend
       copyConcurrency       = 100
       largeCopyConcurrency  = copyConcurrency / 4 | 0
       maxQueueSize          = copyConcurrency * 100
@@ -130,6 +131,7 @@ class S3P
           "" copyWorkers: #{copyPwp.activeWorkers} + #{largeCopyPwp.activeWorkers}
           if 0 < copyPwp.queueSize + largeCopyPwp.queueSize
             "" copyQueue: #{copyPwp.queueSize} + #{largeCopyPwp.queueSize}
+          "PRETENDING" if pretend
         .join ' '
 
       map: ({Key: key, Size}) ->
@@ -140,6 +142,7 @@ class S3P
         .queue ->
           bytesInFlight += Size
           options = {}
+            pretend
             options.bucket
             options.toBucket
             key

@@ -58,11 +58,12 @@ class S3 extends BaseClass
       fromBucket, toBucket, fromKey, toKey, size
       pretend
 
-    if pretend then Promise.resolve pretend: true
-    else if size >= 1024**3
+    if size >= 1024**3
       # log largeCopy: {} fromBucket, toBucket, fromKey, toKey, size
-      @largeCopy {} fromBucket, toBucket, fromKey, toKey
+      @largeCopy {} fromBucket, toBucket, fromKey, toKey, pretend
 
+    else if pretend
+      timeout 100 -> pretend: true
     else
       # log smallCopy: {} fromBucket, toBucket, fromKey, toKey, size
       @s3.copyObject
@@ -96,7 +97,8 @@ class S3 extends BaseClass
   @largeCopy: (options) =>
     @_normalizeCopyOptions(options) extract fromBucket, toBucket, fromKey, toKey, pretend
 
-    if pretend then Promise.resolve pretend: true
+    if pretend
+      timeout 1000 -> pretend: true
     else exec
       ""
         aws s3 cp
