@@ -18,6 +18,8 @@ class S3P
       size: 0
       maxSize: null
       minSize: null
+      maxSizeKey: null
+      minSizeKey: null
       sizeHistogram: {}
       folders: summarizeFolders && {}
     @each merge options, map: ({Size, Key}) ->
@@ -38,9 +40,12 @@ class S3P
           folder.files++
 
       summary.size += Size
-      summary.maxSize = Math.max
-        summary.maxSize ? Size
-        Size
+      if Size >= summary.maxSize ? Size
+        summary.maxSize = Size
+        summary.maxSizeKey = Key
+      if Size <= summary.maxSize ? Size
+        summary.minSize = Size
+        summary.minSizeKey = Key
       summary.minSize = Math.min
         summary.minSize ? Size
         Size
@@ -77,7 +82,12 @@ class S3P
       toBucket: <String> [Default: options.bucket] - target bucket
       toPrefix: <String> optional - prepend to key for toKey
   @copy: (options) =>
-    options extract s3 = &Lib/S3
+    options extract
+      s3 = &Lib/S3
+      concurrency = 1000
+      copyConcurrency = concurrency
+      copyPwp = new PromiseWorkerPool copyConcurrency
+      largeCopyPwp = new PromiseWorkerPool copyConcurrency
     bytesCopied = 0
     bytesStarted = 0
     filesStarted = 0
@@ -86,20 +96,31 @@ class S3P
     throw new Error "toBucket required" unless present options.toBucket
     @eachPromises merge options,
       getProgress: (duration) ->
-        "" copied #{filesCopied}/#{filesStarted} #{humanByteSize bytesCopied}/#{humanByteSize bytesStarted} (#{humanByteSize bytesCopied / duration}/s)
+        compactFlatten []
+          "" copied
+          "" #{filesCopied}/#{filesStarted}
+          "" #{humanByteSize bytesCopied}/#{humanByteSize bytesStarted}
+          "" (#{humanByteSize bytesCopied / duration}/s)
+          "" copyWorkers: #{copyPwp.activeWorkers} + #{largeCopyPwp.activeWorkers}
+          if 0 < copyPwp.queueSize + largeCopyPwp.queueSize
+            "" copyQueue: #{copyPwp.queueSize} + #{largeCopyPwp.queueSize}
+        .join ' '
 
       map: ({Key: key, Size}) ->
 
         filesStarted++
         bytesStarted += Size
-        s3.copy {}
-          options.bucket
-          options.toBucket
-          key
-          toKey: "" #{options.toPrefix}#{key}
-        .then ->
-          filesCopied++
-          bytesCopied += Size
+        if Size < 1024**3 then copyPwp else largeCopyPwp
+        .queue ->
+          s3.copy {}
+            options.bucket
+            options.toBucket
+            key
+            size: Size
+            toKey: "" #{options.toPrefix}#{key}
+          .then ->
+            filesCopied++
+            bytesCopied += Size
 
     .then (stats) ->
       merge {}
@@ -124,9 +145,9 @@ class S3P
         Promise.all array item in-array items
           Promise.then -> map item
           .catch (error) ->
-            log {} item.key, error
+            log {} item.Key, error
             failed?=[]
-            .push item.key
+            .push item.Key
     .then (result) ->
       merge result, {} failed
 
@@ -269,6 +290,8 @@ class S3P
       toPrefix
       pattern
       verboseProgress
+      concurrency = 1000 # max open reqeusts
+      pwp = new PromiseWorkerPool concurrency # internal use only
       s3 = &Lib/S3
 
     _with = options.with
@@ -290,6 +313,8 @@ class S3P
     startTime = currentSecond()
     matchingItems = if _when then 0 else undefined # if when is provided, this counts the number of times when is true
 
+    # pwp = queue: (f) -> f()
+
     if showProgress
       report = (message) ->
         duration = currentSecond() - startTime
@@ -301,10 +326,12 @@ class S3P
             "" duration: #{durationString duration}
             "" items: #{itemsFound}
             "" items/s: #{itemsPerSecond | 0}
-            "" requests: #{requestsUsed}
+            "" listRequests: #{requestsUsed}
             verboseProgress && "" efficiency: #{efficiency}%
             verboseProgress && "" outstanding: #{outstanding}
             matchingItems && "" matches: #{matchingItems}
+            pwp.activeWorkers > 0 && "" listWorkers: #{pwp.activeWorkers}
+            pwp.queueSize > 0 && "" listQueue: #{pwp.queueSize}
             getProgress?(duration) || null
             message
           .join ', '
@@ -341,11 +368,11 @@ class S3P
       applyPromise = null
 
       Promise.all []
-        s3.list {} bucket, limit, startAfter
-        s3.list {} bucket, limit, startAfter: middleKey
+        pwp.queue -> s3.list {} bucket, limit, startAfter
+        pwp.queue -> s3.list {} bucket, limit, startAfter: middleKey
 
-        compare && toBucket && @list {} limit, startAfter, prefix: toPrefix, bucket: toBucket, stopAt: middleKey
-        compare && toBucket && @list {} limit, stopAt,     prefix: toPrefix, bucket: toBucket, startAfter: middleKey
+        compare && toBucket && @list {} limit, startAfter, pwp, prefix: toPrefix, bucket: toBucket, stopAt: middleKey
+        compare && toBucket && @list {} limit, stopAt,     pwp, prefix: toPrefix, bucket: toBucket, startAfter: middleKey
 
       .finally -> outstanding -= 2
 

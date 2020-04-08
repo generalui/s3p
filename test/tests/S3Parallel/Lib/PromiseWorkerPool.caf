@@ -4,18 +4,24 @@ suite: ->
   test :pwp ->
     currentlyActive = 0
     maxActive = 0
+    totalDone = 0
 
     doWork = ->
       currentlyActive++
+      # log "" work-start #{currentlyActive}/#{maxActive}
       maxActive = max currentlyActive, maxActive
       timeout 1
-      .then -> currentlyActive--
+      .then ->
+        totalDone++
+        # log "" work-end #{currentlyActive}/#{maxActive}
+        currentlyActive--
 
     pwp = new PromiseWorkerPool poolSize = 10
 
-    each til numQueued = 100
+    Promise.all array til numQueued = 100
       pwp.queue doWork
 
-    log :wat
-    pwp.then ->
+    .then ->
       log {} currentlyActive, maxActive, poolSize, numQueued
+      assert.eq maxActive, poolSize
+      assert.eq totalDone, numQueued

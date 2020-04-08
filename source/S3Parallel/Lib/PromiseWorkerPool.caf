@@ -1,37 +1,48 @@
 import &ArtStandardLib, &ArtClassSystem
 
+## TODO
+  PWP should
+
+  - allow an amount of queueing in any order. A queue action automatically starts up 'workers'
+  - .then could be configured to resolve on the next "empty queue", but really we don't need that for now.
+
 class PromiseWorkerPool extends BaseClass
-  constructor: (@numWorkers = 10) ->
-    @_jobCount = 0
+
+  constructor: (@_maxWorkers = 10) ->
+    @_stats =
+      jobs: queued: 0 started: 0 succeeded: 0 failed: 0
+      maxActiveWorkers: 0
     @_queue = []
-    @_finalPromise = null
-    @_activeWorkers = 0
+    @_availableWorkers = @_maxWorkers
 
-  # resolves after the last job completes
-  # if no jobs have been ever queued, will resolve asynchronously
-  # OUT: Promise.then -> jobs processed
-  then: ->
-    if @_finalPromise
-      log :returnFinalPromise
-      @_finalPromise
-    else
-      log :createFinalPromise
-      @_finalPromise =
-        Promise.all array til @numWorkers with @_worker()
-        .then -> @_jobCount
+  @getter :stats
+  @getter
+    queueSize: -> @_queue.length
+    activeWorkers: -> @_maxWorkers - @_availableWorkers
 
-  _worker: ->
-    if @_queue.length > 0
-      @_activeWorkers++
-      Promise.then @_queue.pop()
-      .finally ->
-        @_activeWorkers--
-        @_worker()
-    else if @_activeWorkers > 0
-      timeout 1 -> @_worker()
-    else Promise.resolve()
 
+  # OUT: a promise that resolves/rejects job's return value or error
+  #   Except that the promise might be delayed if there are no workers available
   queue: (job) ->
     @_jobCount++
-    @_queue.push job
-    @then()
+    new Promise (resolve, reject) ->
+      @_stats.jobs.queued++
+      @_queue.push ->
+        @_stats.jobs.started++
+        Promise
+        .then job
+        .tap -> @_stats.jobs.succeeded++
+        .tapCatch -> @_stats.jobs.failed++
+        .then resolve, reject
+      @_work()
+
+  _work: ->
+    if @_availableWorkers > 0 && work = @_queue.pop()
+      @_finishWork ?= ->
+        @_availableWorkers++
+        @_work()
+
+      @_availableWorkers--
+      @_stats.maxActiveWorkers = max @_stats.maxActiveWorkers, @activeWorkers
+      Promise.then work
+      .finally @_finishWork

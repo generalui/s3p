@@ -1,4 +1,4 @@
-import &StandardImport, {} &util.promisify
+import &StandardImport, {} &util.promisify, &awsS3MultipartCopy
 exec = promisify &child_process.exec
 shellEscape = &shellEscape
 escape = (single) -> shellEscape [] single
@@ -57,13 +57,16 @@ class S3 extends BaseClass
     @_normalizeCopyOptions(options) extract
       fromBucket, toBucket, fromKey, toKey, size
       pretend
-    # if size > 4.9 * 1024**3
-    #   @largeCopy options
 
-    # else
     if pretend
       Promise.resolve pretend: true
+
+    else if size > 4.9 * 1024**3
+      # log largeCopy: {} fromBucket, toBucket, fromKey, toKey, size
+      @_largeCopy {} fromBucket, toBucket, fromKey, toKey
+
     else
+      # log smallCopy: {} fromBucket, toBucket, fromKey, toKey, size
       @s3.copyObject
         CopySource: "" #{fromBucket}/#{fromKey}
         Bucket:     toBucket
@@ -71,18 +74,33 @@ class S3 extends BaseClass
       .promise()
 
   # https://www.npmjs.com/package/aws-s3-multipart-copy
-  @_multipartCopy: (options) =>
-    &aws-s3-multipart-copy.init @s3
+  # I think the configuration is right, but it fails with an invalid request error from AWS
+  @_multipartCopy: ({fromBucket, toBucket, fromKey, toKey, size}) =>
+    awsS3MultipartCopy.init
+      @s3
+      info:   (info) -> log multipart_info: info
+      error:  (error) -> log.error multipart_error: error
+
+    awsS3MultipartCopy.copyObjectMultipart
+      source_bucket: fromBucket
+      object_key: fromKey
+      destination_bucket: toBucket
+      copied_object_name: toKey
+      object_size: size
+      # copy_part_size_bytes: 50000000,
+      # expiration_period: 100000
 
   @delete: (options) =>
     @s3.deleteObject
       Bucket: options.bucket
       Key:    options.key
 
-  @largeCopy: ({bucket, fromBucket, toBucket, key, fromKey, toKey, size}) =>
-    fromUrl = escape "" s3://#{fromBucket ? bucket}/#{fromKey ? key}
-    toUrl = escape "" s3://#{toBucket ? bucket}/#{toKey ? key}
-    exec "" aws s3 cp #{fromUrl} #{toUrl}
+  @_largeCopy: ({fromBucket, toBucket, fromKey, toKey, size}) =>
+    exec log
+      ""
+        aws s3 cp
+        #{} escape "" s3://#{fromBucket}/#{fromKey}
+        #{} escape "" s3://#{toBucket}/#{toKey}
 
   # get object's metdata
   @headObject: ({bucket, key}) =>
