@@ -328,7 +328,7 @@ class S3P
       toPrefix
       pattern
       verboseProgress
-      concurrency = 1000 # max open reqeusts
+      concurrency = 100 # max open reqeusts
       pwp = new PromiseWorkerPool concurrency # internal use only
       s3 = &Lib/S3
       throttle
