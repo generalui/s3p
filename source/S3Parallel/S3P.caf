@@ -105,12 +105,12 @@ class S3P
     options extract
       s3 = &Lib/S3
       pretend
-      copyConcurrency       = 100
-      largeCopyConcurrency  = copyConcurrency / 4 | 0
+      copyConcurrency       = 500
+      largeCopyConcurrency  = 75
       maxQueueSize          = copyConcurrency * 100
       copyPwp               = new PromiseWorkerPool copyConcurrency
       largeCopyPwp          = new PromiseWorkerPool largeCopyConcurrency
-      largeCopyThreshold    = 1024 ** 3
+      largeCopyThreshold    = 100 * 1024 ** 2
 
     bytesCopied = 0
     bytesStarted = 0
