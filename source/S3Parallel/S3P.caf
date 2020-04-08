@@ -12,6 +12,16 @@ class S3P
     :exabytes
     :zetabytes
 
+  groupUnits =
+    :_B
+    :kB
+    :mB
+    :gB
+    :tB
+    :pB
+    :eB
+    :zB
+
   @summarize: (options) =>
     options extract summarizeFolders
     summary =
@@ -26,8 +36,15 @@ class S3P
       floorSize = humanByteSize
         Math.pow 2, 1 + logSize = (Math.log(Size) / Math.log(2)) | 0
         0
-      group = logGroups[((logSize + 1)/10) | 0] ? "big"
-      g = summary.sizeHistogram[group]?={}
+      group = logGroups[groupKey = ((logSize + 1)/10) | 0] ? "big"
+      groupUnit = groupUnits[groupKey]
+      g = summary.sizeHistogram[group]?=
+
+        each i til 10 into out = items: 0 size: 0
+          out[(1 << i) + groupUnit] = 0
+
+      g.items += 1
+      g.size += Size
       g[floorSize] = (g[floorSize] | 0) + 1
 
       if summarizeFolders
@@ -35,7 +52,7 @@ class S3P
         each subFolder in
             dirname Key
             .split '/'
-          folder = folder[subFolder] ?= size: 0, files: 0, humanSize: null
+          folder = folder[subFolder] ?= size: 0, files: 0
           folder.size += Size
           folder.files++
 
@@ -43,7 +60,7 @@ class S3P
       if Size >= summary.maxSize ? Size
         summary.maxSize = Size
         summary.maxSizeKey = Key
-      if Size <= summary.maxSize ? Size
+      if Size <= summary.minSize ? Size
         summary.minSize = Size
         summary.minSizeKey = Key
       summary.minSize = Math.min
@@ -51,6 +68,7 @@ class S3P
         Size
 
     .then (stats) ->
+      summary.averageSize = summary.size / stats.items | 0
       if summarizeFolders
         humanize = (folder) ->
           folder.humanSize = humanByteSize folder.size if folder.size is Number
@@ -67,8 +85,7 @@ class S3P
 
   humanByteSize = (bytes, decimals = 2) ->
     switch
-    when bytes == 1       then "" 1byte
-    when bytes < 1024     then "" #{bytes/1024**0 | 0}bytes
+    when bytes < 1024     then "" #{bytes/1024**0 | 0}_B
     when bytes < 1024**2  then "" #{(bytes/1024**1).toFixed decimals}kB
     when bytes < 1024**3  then "" #{(bytes/1024**2).toFixed decimals}mB
     when bytes < 1024**4  then "" #{(bytes/1024**3).toFixed decimals}gB
@@ -81,44 +98,57 @@ class S3P
       all the each options plus:
       toBucket: <String> [Default: options.bucket] - target bucket
       toPrefix: <String> optional - prepend to key for toKey
+      copyConcurrency       [100]                   number of active copies < 1GB using aws sdk directly
+      largeCopyConcurrency  [copyConcurrency/4]     number of active copies > 1GB using exec aws cp
+      maxQueueSize          [copyConcurrency * 10]  max number of copy-jobs to queue before throttling s3.lists
   @copy: (options) =>
     options extract
       s3 = &Lib/S3
-      concurrency = 1000
-      copyConcurrency = concurrency
-      copyPwp = new PromiseWorkerPool copyConcurrency
-      largeCopyPwp = new PromiseWorkerPool copyConcurrency
+      copyConcurrency       = 100
+      largeCopyConcurrency  = copyConcurrency / 4 | 0
+      maxQueueSize          = copyConcurrency * 100
+      copyPwp               = new PromiseWorkerPool copyConcurrency
+      largeCopyPwp          = new PromiseWorkerPool largeCopyConcurrency
+      largeCopyThreshold    = 1024 ** 3
+
     bytesCopied = 0
     bytesStarted = 0
     filesStarted = 0
     filesCopied = 0
+    bytesInFlight = 0
 
     throw new Error "toBucket required" unless present options.toBucket
     @eachPromises merge options,
+      throttle: -> copyPwp.queueSize + largeCopyPwp.queueSize >= maxQueueSize
       getProgress: (duration) ->
         compactFlatten []
           "" copied
           "" #{filesCopied}/#{filesStarted}
           "" #{humanByteSize bytesCopied}/#{humanByteSize bytesStarted}
           "" (#{humanByteSize bytesCopied / duration}/s)
+          "" inFlight: #{} humanByteSize bytesInFlight
           "" copyWorkers: #{copyPwp.activeWorkers} + #{largeCopyPwp.activeWorkers}
           if 0 < copyPwp.queueSize + largeCopyPwp.queueSize
             "" copyQueue: #{copyPwp.queueSize} + #{largeCopyPwp.queueSize}
         .join ' '
 
       map: ({Key: key, Size}) ->
-
         filesStarted++
         bytesStarted += Size
-        if Size < 1024**3 then copyPwp else largeCopyPwp
+
+        if Size < largeCopyThreshold then copyPwp else largeCopyPwp
         .queue ->
-          s3.copy {}
+          bytesInFlight += Size
+          options = {}
             options.bucket
             options.toBucket
             key
             size: Size
             toKey: "" #{options.toPrefix}#{key}
+
+          if Size < largeCopyThreshold then s3.copy options else s3.largeCopy options
           .then ->
+            bytesInFlight -= Size
             filesCopied++
             bytesCopied += Size
 
@@ -264,6 +294,11 @@ class S3P
 
         pattern: only yield items who's keys match this pattern (creates a 'when' clause)
 
+        throttle: -> T/F - (optional)
+          If present, it gets called before any new s3.list calls are made.
+          If it returns true, no new s3.list calls will be made.
+          While it returns true, it will be called once/second/parallel-branch until it returns false.
+
         COMPREHENSION
         with: (Item) -> ignored - alais of `map`
         when: (Item) -> T/F - if true, pass it on to `map`, else skip
@@ -293,6 +328,7 @@ class S3P
       concurrency = 1000 # max open reqeusts
       pwp = new PromiseWorkerPool concurrency # internal use only
       s3 = &Lib/S3
+      throttle
 
     _with = options.with
     _when = if pattern then ({Key}) -> Key.match pattern
@@ -330,7 +366,8 @@ class S3P
             if verboseProgress        then "" efficiency: #{efficiency}%
             if verboseProgress        then "" outstanding: #{outstanding}
             if matchingItems          then "" matches: #{matchingItems}
-            if pwp.activeWorkers > 0  then "" listWorkers: #{pwp.activeWorkers}
+            if throttled > 0                then "" listWorkers: throttled
+            else if pwp.activeWorkers > 0   then "" listWorkers: #{pwp.activeWorkers}
             if pwp.queueSize > 0      then "" listQueue: #{pwp.queueSize}
             getProgress?(duration) || null
             message
@@ -347,6 +384,16 @@ class S3P
         when map && _when then each item in-array items with matchingItems++; map item when _when item
         when map          then each item in-array items with map item
       .then -> items.length
+
+    throttled = 0
+    waitForThrottle = ->
+      Promise.then ->
+        if throttle?()
+          throttled++
+          timeout 1000
+          .then ->
+            throttled--
+            waitForThrottle()
 
     eachRecursive = (startAfter, stopAt, usePrefixBisect = false, debugContext) =>
       return Promise.resolve(0) if requestsUsed >= maxRequests || startAfter >= stopAt
@@ -367,7 +414,8 @@ class S3P
 
       applyPromise = null
 
-      Promise.all []
+      waitForThrottle()
+      .then -> Promise.all []
         pwp.queue -> s3.list {} bucket, limit, startAfter
         pwp.queue -> s3.list {} bucket, limit, startAfter: middleKey
 

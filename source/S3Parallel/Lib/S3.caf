@@ -58,12 +58,10 @@ class S3 extends BaseClass
       fromBucket, toBucket, fromKey, toKey, size
       pretend
 
-    if pretend
-      Promise.resolve pretend: true
-
-    else if size > 4.9 * 1024**3
+    if pretend then Promise.resolve pretend: true
+    else if size >= 1024**3
       # log largeCopy: {} fromBucket, toBucket, fromKey, toKey, size
-      @_largeCopy {} fromBucket, toBucket, fromKey, toKey
+      @largeCopy {} fromBucket, toBucket, fromKey, toKey
 
     else
       # log smallCopy: {} fromBucket, toBucket, fromKey, toKey, size
@@ -95,8 +93,11 @@ class S3 extends BaseClass
       Bucket: options.bucket
       Key:    options.key
 
-  @_largeCopy: ({fromBucket, toBucket, fromKey, toKey, size}) =>
-    exec log
+  @largeCopy: (options) =>
+    @_normalizeCopyOptions(options) extract fromBucket, toBucket, fromKey, toKey, pretend
+
+    if pretend then Promise.resolve pretend: true
+    else exec
       ""
         aws s3 cp
         #{} escape "" s3://#{fromBucket}/#{fromKey}
