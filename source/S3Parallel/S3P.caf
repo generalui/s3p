@@ -327,11 +327,11 @@ class S3P
             "" items: #{itemsFound}
             "" items/s: #{itemsPerSecond | 0}
             "" listRequests: #{requestsUsed}
-            verboseProgress && "" efficiency: #{efficiency}%
-            verboseProgress && "" outstanding: #{outstanding}
-            matchingItems && "" matches: #{matchingItems}
-            pwp.activeWorkers > 0 && "" listWorkers: #{pwp.activeWorkers}
-            pwp.queueSize > 0 && "" listQueue: #{pwp.queueSize}
+            if verboseProgress        then "" efficiency: #{efficiency}%
+            if verboseProgress        then "" outstanding: #{outstanding}
+            if matchingItems          then "" matches: #{matchingItems}
+            if pwp.activeWorkers > 0  then "" listWorkers: #{pwp.activeWorkers}
+            if pwp.queueSize > 0      then "" listQueue: #{pwp.queueSize}
             getProgress?(duration) || null
             message
           .join ', '
