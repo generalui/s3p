@@ -108,7 +108,7 @@ class S3P
   @_copyWrapper: (options, eachFunction) =>
     options extract
       s3 = &Lib/S3
-
+      stats
       pretend
       copyConcurrency       = 500
       largeCopyConcurrency  = 75
@@ -117,21 +117,24 @@ class S3P
       largeCopyPwp          = new PromiseWorkerPool largeCopyConcurrency
       largeCopyThreshold    = 100 * 1024 ** 2
 
-    bytesCopied = 0
-    bytesStarted = 0
-    filesStarted = 0
-    filesCopied = 0
-    bytesInFlight = 0
+    stats ?= {}
+    stats.copiedBytes = 0
+    stats.copiedBytesPerSecond = 0
+    stats.copyingBytesInFlight = 0
+    stats.copyingBytesStarted = 0
+    stats.copyingFilesStarted = 0
+    stats.copiedFiles = 0
 
     throw new Error "toBucket required" unless present options.toBucket
-    eachFunction merge options,
+    eachFunction merge options, {}
+      stats
       throttle: -> copyPwp.queueSize + largeCopyPwp.queueSize >= maxQueueSize
       getProgress: (duration) ->
         compactFlatten []
           "" copied
-          "" #{} colors.green "" #{filesCopied}/#{filesStarted} #{humanByteSize bytesCopied}/#{humanByteSize bytesStarted}
-          colors.blue "" #{humanByteSize bytesCopied / duration}/s
-          "" inFlight: #{} colors.green humanByteSize bytesInFlight
+          "" #{} colors.green "" #{stats.copiedFiles}/#{stats.copyingFilesStarted} #{humanByteSize stats.copiedBytes}/#{humanByteSize stats.copyingBytesStarted}
+          colors.blue "" #{humanByteSize stats.copiedBytesPerSecond = stats.copiedBytes / duration}/s
+          "" inFlight: #{} colors.green humanByteSize stats.copyingBytesInFlight
           "" copyWorkers: #{} colors.green "" #{copyPwp.activeWorkers} + #{largeCopyPwp.activeWorkers}
           if 0 < copyPwp.queueSize + largeCopyPwp.queueSize
             "" copyQueue: #{} colors.green "" #{copyPwp.queueSize} + #{largeCopyPwp.queueSize}
@@ -139,12 +142,12 @@ class S3P
         .join ' '
 
       map: ({Key: key, Size}) ->
-        filesStarted++
-        bytesStarted += Size
+        stats.copyingFilesStarted++
+        stats.copyingBytesStarted += Size
 
         if Size < largeCopyThreshold then copyPwp else largeCopyPwp
         .queue ->
-          bytesInFlight += Size
+          stats.copyingBytesInFlight += Size
           options = {}
             pretend
             options.bucket
@@ -155,27 +158,29 @@ class S3P
 
           if Size < largeCopyThreshold then s3.copy options else s3.largeCopy options
           .then ->
-            bytesInFlight -= Size
-            filesCopied++
-            bytesCopied += Size
+            stats.copyingBytesInFlight -= Size
+            stats.copiedFiles++
+            stats.copiedBytes += Size
 
     .then (stats) ->
-      merge {}
-        stats
-        bytesCopied
-        bytesPerSecond: bytesCopied / stats.duration
-        human:
-          bytesCopied: humanByteSize bytesCopied
-          bytesPerSecond: humanByteSize bytesCopied / stats.duration
+      delete stats.copyingBytesInFlight
+      delete stats.copyingFilesStarted
+      delete stats.copyingBytesStarted
+      stats.copiedBytesPerSecond = stats.copiedBytes / stats.duration
+      stats.human = object stat, key in stats when /byte|size/i.test key
+        humanByteSize stat
+      stats
 
   @sync: (options) =>
     @_copyWrapper options, (options2) ->
-      copyFile = options2.map
+      options2 extract
+        map as copyFile
+        stats
 
-      toDeleteCount = 0
-      toDeleteSize = 0
-      sameCount = 0
-      sameSize = 0
+      stats.toDeleteFiles = 0
+      stats.toDeleteBytes = 0
+      stats.unchangedFiles = 0
+      stats.unchangedBytes = 0
 
       @each merge
         objectWithout options2, :map
@@ -183,8 +188,8 @@ class S3P
         getProgress: (duration) ->
           options2.getProgress duration
           + ""
-            \_same: #{} colors.green "" #{sameCount}(#{humanByteSize sameSize})
-            toDelete: #{} colors.green "" #{toDeleteCount}(#{humanByteSize toDeleteSize})
+            \_same: #{} colors.green "" #{stats.unchangedFiles}(#{humanByteSize stats.unchangedBytes})
+            toDelete: #{} colors.green "" #{stats.toDeleteFiles}(#{humanByteSize stats.toDeleteBytes})
 
         mapList: (sourceItems, targetItems) ->
           copyPromises = []
@@ -198,8 +203,8 @@ class S3P
             # removed
             (key, targetValue) ->
               log "aws s3 rm s3://#{options.toBucket}/#{key} # you must do this. size: #{humanByteSize targetValue}"
-              toDeleteSize += targetValue
-              toDeleteCount++
+              stats.toDeleteBytes += targetValue
+              stats.toDeleteFiles++
 
             # changed
             (key, sourceValue, targetValue) ->
@@ -208,8 +213,8 @@ class S3P
 
             # same
             (key, value) ->
-              sameSize += value
-              sameCount++
+              stats.unchangedBytes += value
+              stats.unchangedFiles++
 
           Promise.all copyPromises
 
@@ -398,6 +403,7 @@ class S3P
       pwp = new PromiseWorkerPool concurrency # internal use only
       s3 = &Lib/S3
       throttle
+      stats
 
     _with = options.with
     _when = if pattern then ({Key}) -> Key.match pattern
@@ -631,4 +637,4 @@ class S3P
               pattern
 
             stats: info
-        _returning ? info
+        _returning ? merge stats, info
