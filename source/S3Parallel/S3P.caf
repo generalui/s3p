@@ -1,4 +1,4 @@
-import &path, &ArtStandardLib, &ArtClassSystem, &Lib
+import &path, &ArtStandardLib, &ArtClassSystem, &Lib, {} &colors
 
 class S3P
 
@@ -124,14 +124,13 @@ class S3P
       getProgress: (duration) ->
         compactFlatten []
           "" copied
-          "" #{filesCopied}/#{filesStarted}
-          "" #{humanByteSize bytesCopied}/#{humanByteSize bytesStarted}
-          "" (#{humanByteSize bytesCopied / duration}/s)
-          "" inFlight: #{} humanByteSize bytesInFlight
-          "" copyWorkers: #{copyPwp.activeWorkers} + #{largeCopyPwp.activeWorkers}
+          "" #{} colors.green "" #{filesCopied}/#{filesStarted} #{humanByteSize bytesCopied}/#{humanByteSize bytesStarted}
+          colors.blue "" #{humanByteSize bytesCopied / duration}/s
+          "" inFlight: #{} colors.green humanByteSize bytesInFlight
+          "" copyWorkers: #{} colors.green "" #{copyPwp.activeWorkers} + #{largeCopyPwp.activeWorkers}
           if 0 < copyPwp.queueSize + largeCopyPwp.queueSize
-            "" copyQueue: #{copyPwp.queueSize} + #{largeCopyPwp.queueSize}
-          "PRETENDING" if pretend
+            "" copyQueue: #{} colors.green "" #{copyPwp.queueSize} + #{largeCopyPwp.queueSize}
+          colors.yellow "PRETENDING" if pretend
         .join ' '
 
       map: ({Key: key, Size}) ->
@@ -185,11 +184,11 @@ class S3P
       merge result, {} failed
 
   itemsByKey = (itemList, prefix) ->
-    object item in-array itemList with-key
-      key = item.Key
-      if (l = prefix?.length) > 0
-        key.slice l, key.length
-      else key
+    object {Key, Size} in-array itemList with-key
+        if (l = prefix?.length) > 0
+          Key.slice l, Key.length
+        else Key
+      Size
 
   ##
     IN
@@ -201,48 +200,58 @@ class S3P
       throw new Error "toBucket required"
     @each merge
       options,
-      returning: stats =
-        addedCount: 0
-        removedCount: 0
-        changed: 0
-        unchanged: 0
+      returning: stats = {}
+        counts =
+          needToCopy: 0
+          needToDelete: 0
+          missingInTarget: 0
+          different: 0
+          targetSmaller:  0
+          targetBigger:   0
+          same:       0
+        bytes =
+          needToCopy:   0
+          needToDelete: 0
+          same: 0
 
+      getProgress: ->
+        ""
+          same: #{} colors.green "" #{counts.same}(#{humanByteSize bytes.same})
+          toCopy: #{} colors.green "" #{counts.needToCopy}(#{humanByteSize bytes.needToCopy})
+          toDelete: #{} colors.green "" #{counts.needToDelete}(#{humanByteSize bytes.needToDelete})
       compare: true
       mapList: (sourceItems, targetItems) ->
 
-        sourceItems = itemsByKey sourceItems  # , options.prefix # right now these are somewhat asymetric - the source prefix is mainatined when copying to a prefix
-        targetItems = itemsByKey targetItems, options.toPrefix
-
-        sKeys = Object.keys(sourceItems).sort()
-        log sourceItems:
-          source:
-            first: sourceItems[0]
-            last: peek(sourceItems)
-          target:
-            first: targetItems[0]
-            last: peek(targetItems)
-
-        # log :sourceItems
-        # log Object.keys(sourceItems).join "\n"
-        # log :targetItems
-        # log Object.keys(targetItems).join "\n"
-
         objectDiff
-          sourceItems
-          targetItems
-          (added) -> stats.addedCount++
-          (removed...) ->
-            # log {} removed
-            stats.removedCount++
-          (changed...) ->
-            log "" changed #{changed[0]}
-            stats.changed++
-          -> stats.unchanged++
-          (a, b) ->
-            # ETag is essentialy an MD5 of the object - https://teppen.io/2018/06/23/aws_s3_etags/
-            # a.ETag == b.ETag &&
-            a.Size == b.Size
+          itemsByKey sourceItems  # , options.prefix # right now these are somewhat asymetric - the source prefix is mainatined when copying to a prefix
+          itemsByKey targetItems, options.toPrefix
+          # added
+          (key, sourceValue) -> bytes.needToCopy += sourceValue; counts.needToCopy++; counts.missingInTarget++
 
+          # removed
+          (key, targetValue) -> bytes.needToDelete += targetValue; counts.needToDelete++
+
+          # changed
+          (key, sourceValue, targetValue) ->
+            counts.different++
+            counts.needToCopy++
+            bytes.needToCopy+=sourceValue
+            if sourceValue > targetValue
+                              counts.targetSmaller++
+            else              counts.targetBigger
+
+          # same
+          (key, value) ->
+            bytes.same += value
+            counts.same++
+
+    .then (stats) ->
+      cleanStats = (s) ->
+        object v in s when v != 0
+          if v is Object
+            cleanStats v
+          else v
+      cleanStats stats
   ##
     return first item found
     IN: each options plus
@@ -316,7 +325,7 @@ class S3P
         ... and more stats
   @each: (options) =>
     options extract
-      bucket, limit = 1000, maxRequests, prefix = '', showProgress = true
+      bucket, limit = 1000, maxRequests, prefix, showProgress = true
       startAfter
       stopAt
       debug, aggressive
@@ -422,17 +431,31 @@ class S3P
         pwp.queue -> s3.list {} bucket, limit, startAfter
         pwp.queue -> s3.list {} bucket, limit, startAfter: middleKey
 
-        compare && toBucket && @list {} limit, startAfter, pwp, prefix: toPrefix, bucket: toBucket, stopAt: middleKey
-        compare && toBucket && @list {} limit, stopAt,     pwp, prefix: toPrefix, bucket: toBucket, startAfter: middleKey
-
       .finally -> outstanding -= 2
 
       .then ([rawLeftItems, rawRightItems, compareLeftItems, compareRightItems]) ->
         rawLeftCount  = rawLeftItems?.length
         rawRightCount = rawRightItems?.length
+        Promise.all []
+          leftItems = array item in-array rawLeftItems  when item.Key <= middleKey
+          rightItems = array item in-array rawRightItems when item.Key <= stopAt
 
-        leftItems   = array item in-array rawLeftItems  when item.Key <= middleKey
-        rightItems  = array item in-array rawRightItems when item.Key <= stopAt
+          compare && toBucket && @list {}
+            limit, startAfter, pwp
+            prefix: toPrefix
+            bucket: toBucket
+            stopAt: if leftItems.length == limit then peek(leftItems).Key else middleKey
+            showProgress: false
+
+          compare && toBucket && @list {}
+            limit, pwp
+            prefix: toPrefix
+            bucket: toBucket
+            startAfter: middleKey
+            stopAt: if rightItems.length == limit then peek(rightItems).Key else stopAt
+            showProgress: false
+
+      .then ([leftItems, rightItems, compareLeftItems, compareRightItems]) ->
 
         lastLeftKey  = peek(leftItems)?.Key
         lastRightKey = peek(rightItems)?.Key
@@ -511,11 +534,10 @@ class S3P
       "#{prefix}#{startAfter}"
       if stopAt
         "#{prefix}#{stopAt}"
-      else getLastKeyWithPrefix prefix
+      else getLastKeyWithPrefix prefix ? ''
 
     .finally -> progressReporter?.stop()
     .then (count) ->
-      log "DONE!!!"
       report? :DONE
       duration =        currentSecond() - startTime
       itemsPerSecond = itemsFound / duration
@@ -540,5 +562,16 @@ class S3P
         throw e
 
       else
-        log finalStats: info if _returning? && showProgress
+        if _returning? && showProgress
+          log final:
+            options: merge {}
+              bucket
+              prefix
+              startAfter
+              stopAt
+              toBucket
+              toPrefix
+              pattern
+
+            stats: info
         _returning ? info
