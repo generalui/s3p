@@ -30,7 +30,7 @@ class S3 extends BaseClass
         log.warn S3.list-no-Contents: {} bucket, prefix, startAfter, limit, duration, results
         throw new Error "S3.list: Contents is not an array"
 
-      else if duration > 10
+      else if duration > 60
         log.warn S3.list-slow: {} bucket, prefix, startAfter, limit, duration, results: merge results, Contents: "Array #{results.Contents.length}"
 
       results.Contents
@@ -63,7 +63,7 @@ class S3 extends BaseClass
       @largeCopy {} fromBucket, toBucket, fromKey, toKey, pretend
 
     else if pretend
-      timeout 100 -> pretend: true
+      timeout 1 -> pretend: true
     else
       # log smallCopy: {} fromBucket, toBucket, fromKey, toKey, size
       @s3.copyObject

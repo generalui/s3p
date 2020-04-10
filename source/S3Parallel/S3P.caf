@@ -102,8 +102,13 @@ class S3P
       largeCopyConcurrency  [copyConcurrency/4]     number of active copies > 1GB using exec aws cp
       maxQueueSize          [copyConcurrency * 10]  max number of copy-jobs to queue before throttling s3.lists
   @copy: (options) =>
+    @_copyWrapper options, (options2) =>
+      @eachPromises options2
+
+  @_copyWrapper: (options, eachFunction) =>
     options extract
       s3 = &Lib/S3
+
       pretend
       copyConcurrency       = 500
       largeCopyConcurrency  = 75
@@ -119,7 +124,7 @@ class S3P
     bytesInFlight = 0
 
     throw new Error "toBucket required" unless present options.toBucket
-    @eachPromises merge options,
+    eachFunction merge options,
       throttle: -> copyPwp.queueSize + largeCopyPwp.queueSize >= maxQueueSize
       getProgress: (duration) ->
         compactFlatten []
@@ -163,6 +168,52 @@ class S3P
           bytesCopied: humanByteSize bytesCopied
           bytesPerSecond: humanByteSize bytesCopied / stats.duration
 
+  @sync: (options) =>
+    @_copyWrapper options, (options2) ->
+      copyFile = options2.map
+
+      toDeleteCount = 0
+      toDeleteSize = 0
+      sameCount = 0
+      sameSize = 0
+
+      @each merge
+        objectWithout options2, :map
+        compare: true
+        getProgress: (duration) ->
+          options2.getProgress duration
+          + ""
+            \_same: #{} colors.green "" #{sameCount}(#{humanByteSize sameSize})
+            toDelete: #{} colors.green "" #{toDeleteCount}(#{humanByteSize toDeleteSize})
+
+        mapList: (sourceItems, targetItems) ->
+          copyPromises = []
+          objectDiff
+            itemsByKey sourceItems  # , options.prefix # right now these are somewhat asymetric - the source prefix is mainatined when copying to a prefix
+            itemsByKey targetItems, options.toPrefix
+            # added
+            (key, sourceValue) ->
+              copyPromises.push copyFile {} Key: key, Size: sourceValue
+
+            # removed
+            (key, targetValue) ->
+              log "aws s3 rm s3://#{options.toBucket}/#{key} # you must do this. size: #{humanByteSize targetValue}"
+              toDeleteSize += targetValue
+              toDeleteCount++
+
+            # changed
+            (key, sourceValue, targetValue) ->
+              log "# overwriting s3://#{options.toBucket}/#{key} - replacing targetSize: #{targetValue} with sourceSize #{sourceValue}"
+              copyPromises.push copyFile {} Key: key, Size: sourceValue
+
+            # same
+            (key, value) ->
+              sameSize += value
+              sameCount++
+
+          Promise.all copyPromises
+
+
   ##
     wrapper around each that returns a list of promise failures rather than failing
   @eachPromises: (options) =>
@@ -196,6 +247,7 @@ class S3P
       required: toBucket
 
   @compare: (options) =>
+    options extract logToDelete
     unless options.toBucket
       throw new Error "toBucket required"
     @each merge
@@ -229,7 +281,9 @@ class S3P
           (key, sourceValue) -> bytes.needToCopy += sourceValue; counts.needToCopy++; counts.missingInTarget++
 
           # removed
-          (key, targetValue) -> bytes.needToDelete += targetValue; counts.needToDelete++
+          (key, targetValue) ->
+            log "rm s3://#{options.toBucket}/#{key} # #{humanByteSize targetValue}" if logToDelete
+            bytes.needToDelete += targetValue; counts.needToDelete++
 
           # changed
           (key, sourceValue, targetValue) ->
@@ -244,6 +298,9 @@ class S3P
           (key, value) ->
             bytes.same += value
             counts.same++
+
+          # compare
+          # (item1, item2) -> item1.Size == item2.Size
 
     .then (stats) ->
       cleanStats = (s) ->
