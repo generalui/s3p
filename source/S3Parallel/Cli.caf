@@ -1,0 +1,38 @@
+import &StandardImport
+
+class Cli
+
+  optionRegExp = /^--(.+)$/
+
+  @parseArgs: ([node, sourceFile, args...] = process.argv)->
+    each arg, i in args into options = commands: currentOption = []
+      if option = arg.match /^--(.+)$/
+        currentOption = options[option[1]] = []
+      else
+        currentOption.push arg
+
+  @main: ->
+    options = @parseArgs()
+    unless options.commands.length == 1 &&
+        command = &S3P[commandName = options.commands[0]]
+        && command is Function
+        && !isClass command
+      log
+        """
+          s3p help:
+
+          Commands: #{}
+            array k in Object.keys &S3P when /^[a-zA-Z]+$/.test(k) && &S3P[k] is Function && !isClass(&S3P[k]) && not (k in [] :each :eachPromises :array :find :object)
+            .join ', '
+    else
+      options = object o, k in options when k != :commands
+        switch o.length
+        when 0 then true
+        when 1 then o[0]
+        else o
+
+      log {}
+        command: commandName
+        options
+      Promise.then -> command options
+      .then log, log

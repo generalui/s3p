@@ -250,9 +250,11 @@ class S3P
     IN
       @each options
       required: toBucket
+      logToCopy: false
+      logToDelete: false
 
   @compare: (options) =>
-    options extract logToDelete
+    options extract logToDelete, logToCopy
     unless options.toBucket
       throw new Error "toBucket required"
     @each merge
@@ -283,7 +285,9 @@ class S3P
           itemsByKey sourceItems  # , options.prefix # right now these are somewhat asymetric - the source prefix is mainatined when copying to a prefix
           itemsByKey targetItems, options.toPrefix
           # added
-          (key, sourceValue) -> bytes.needToCopy += sourceValue; counts.needToCopy++; counts.missingInTarget++
+          (key, sourceValue) ->
+            log "cp s3://#{options.bucket}/#{key} # #{humanByteSize sourceValue}" if logToCopy
+            bytes.needToCopy += sourceValue; counts.needToCopy++; counts.missingInTarget++
 
           # removed
           (key, targetValue) ->
@@ -292,6 +296,7 @@ class S3P
 
           # changed
           (key, sourceValue, targetValue) ->
+            log "replace s3://#{options.toBucket}/#{key} # #{humanByteSize targetValue} -> #{humanByteSize sourceValue}" if logToCopy
             counts.different++
             counts.needToCopy++
             bytes.needToCopy+=sourceValue
