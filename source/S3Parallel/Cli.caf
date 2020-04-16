@@ -7,7 +7,7 @@ class Cli
   @parseArgs: ([node, sourceFile, args...] = process.argv)->
     each arg, i in args into options = commands: currentOption = []
       if option = arg.match /^--(.+)$/
-        currentOption = options[option[1]] = []
+        currentOption = options[lowerCamelCase option[1]] = []
       else
         currentOption.push arg
 

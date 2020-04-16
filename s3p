@@ -1,2 +1,0 @@
-#!/usr/bin/env node --trace-warnings
-require('./s3p.js');

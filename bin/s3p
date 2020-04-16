@@ -1,0 +1,4 @@
+#!/usr/bin/env node --trace-warnings
+
+require('../register.js')
+require('../source').Cli.main()
