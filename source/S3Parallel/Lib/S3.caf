@@ -57,20 +57,28 @@ class S3 extends BaseClass
     @_normalizeCopyOptions(options) extract
       fromBucket, toBucket, fromKey, toKey, size
       pretend
+      verbose
 
-    if size >= 1024**3
+    # NOTE: there appears to be a bug in the AWS s3 sdk copyObject - it can't handle spaces in the toKey
+    if size >= 1024**3 || /\s/.test toKey
       # log largeCopy: {} fromBucket, toBucket, fromKey, toKey, size
-      @largeCopy {} fromBucket, toBucket, fromKey, toKey, pretend
+      @largeCopy {} fromBucket, toBucket, fromKey, toKey, pretend, verbose
 
-    else if pretend
-      timeout 1 -> pretend: true
     else
-      # log smallCopy: {} fromBucket, toBucket, fromKey, toKey, size
-      @s3.copyObject
+      copyOptions =
         CopySource: "" #{fromBucket}/#{fromKey}
         Bucket:     toBucket
         Key:        toKey
-      .promise()
+
+      if verbose
+        log copyObject: copyOptions
+
+      if pretend
+        timeout 1 -> pretend: true
+      else
+
+        @s3.copyObject copyOptions
+        .promise()
 
   # https://www.npmjs.com/package/aws-s3-multipart-copy
   # I think the configuration is right, but it fails with an invalid request error from AWS
@@ -95,15 +103,20 @@ class S3 extends BaseClass
       Key:    options.key
 
   @largeCopy: (options) =>
-    @_normalizeCopyOptions(options) extract fromBucket, toBucket, fromKey, toKey, pretend
+    @_normalizeCopyOptions(options) extract fromBucket, toBucket, fromKey, toKey, pretend, verbose
 
-    if pretend
-      timeout 1000 -> pretend: true
-    else exec
+    command =
       ""
         aws s3 cp
         #{} escape "" s3://#{fromBucket}/#{fromKey}
         #{} escape "" s3://#{toBucket}/#{toKey}
+    if verbose
+      log command
+
+    if pretend
+      timeout 1000 -> pretend: true
+    else
+      exec command
 
   # get object's metdata
   @headObject: ({bucket, key}) =>
@@ -119,7 +132,10 @@ class S3 extends BaseClass
       toBucket = bucket
       fromKey = key
       toKey = key
+      size
 
+    if isFunction toKey
+      toKey = toKey fromKey, fromBucket, toBucket, options.size
 
     unless present(fromBucket) && present(toBucket) && present(fromKey) && present toKey
       throw new Error "" Missing one of: fromBucket, toBucket, fromKey, toKey or bucket or key as a default

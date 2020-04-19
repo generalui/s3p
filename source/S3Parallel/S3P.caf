@@ -98,6 +98,7 @@ class S3P
       all the each options plus:
       toBucket: <String> [Default: options.bucket] - target bucket
       toPrefix: <String> optional - prepend to key for toKey
+      toKey: (optional) <Function> (fromKey, fromBucket, toBucket, size) -> to-key-string
       copyConcurrency       [100]                   number of active copies < 1GB using aws sdk directly
       largeCopyConcurrency  [copyConcurrency/4]     number of active copies > 1GB using exec aws cp
       maxQueueSize          [copyConcurrency * 10]  max number of copy-jobs to queue before throttling s3.lists
@@ -108,8 +109,10 @@ class S3P
   @_copyWrapper: (options, eachFunction) =>
     options extract
       s3 = &Lib/S3
+      toKey
       stats
       pretend
+      verbose
       copyConcurrency       = 500
       largeCopyConcurrency  = 75
       maxQueueSize          = copyConcurrency * 100
@@ -150,11 +153,12 @@ class S3P
           stats.copyingBytesInFlight += Size
           options = {}
             pretend
+            verbose
             options.bucket
             options.toBucket
             key
             size: Size
-            toKey: "" #{options.toPrefix}#{key}
+            toKey: if isFunction toKey then toKey else "" #{options.toPrefix}#{key}
 
           if Size < largeCopyThreshold then s3.copy options else s3.largeCopy options
           .then ->
@@ -254,7 +258,7 @@ class S3P
       logToDelete: false
 
   @compare: (options) =>
-    options extract logToDelete, logToCopy
+    options extract logToDelete, logToCopy, logToReplace, verbose
     unless options.toBucket
       throw new Error "toBucket required"
     @each merge
@@ -286,17 +290,17 @@ class S3P
           itemsByKey targetItems, options.toPrefix
           # added
           (key, sourceValue) ->
-            log "cp s3://#{options.bucket}/#{key} # #{humanByteSize sourceValue}" if logToCopy
+            log "cp s3://#{options.bucket}/#{key} # #{humanByteSize sourceValue}" if logToCopy || verbose
             bytes.needToCopy += sourceValue; counts.needToCopy++; counts.missingInTarget++
 
           # removed
           (key, targetValue) ->
-            log "rm s3://#{options.toBucket}/#{key} # #{humanByteSize targetValue}" if logToDelete
+            log "rm s3://#{options.toBucket}/#{key} # #{humanByteSize targetValue}" if logToDelete || verbose
             bytes.needToDelete += targetValue; counts.needToDelete++
 
           # changed
           (key, sourceValue, targetValue) ->
-            log "replace s3://#{options.toBucket}/#{key} # #{humanByteSize targetValue} -> #{humanByteSize sourceValue}" if logToCopy
+            log "replace s3://#{options.toBucket}/#{key} # #{humanByteSize targetValue} -> #{humanByteSize sourceValue}" if logToReplace || logToCopy || verbose
             counts.different++
             counts.needToCopy++
             bytes.needToCopy+=sourceValue

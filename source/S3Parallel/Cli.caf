@@ -1,5 +1,9 @@
 import &StandardImport
 
+commands = {copy, summarize, sync, compare, list} = &S3P
+commands.cp = commands.copy
+commands.ls = commands.list
+
 class Cli
 
   optionRegExp = /^--(.+)$/
@@ -14,7 +18,7 @@ class Cli
   @main: ->
     options = @parseArgs()
     unless options.commands.length == 1 &&
-        command = &S3P[commandName = options.commands[0]]
+        command = commands[commandName = options.commands[0]]
         && command is Function
         && !isClass command
       log
@@ -22,7 +26,7 @@ class Cli
           s3p help:
 
           Commands: #{}
-            array k in Object.keys &S3P when /^[a-zA-Z]+$/.test(k) && &S3P[k] is Function && !isClass(&S3P[k]) && not (k in [] :each :eachPromises :array :find :object)
+            Object.keys commands
             .join ', '
     else
       options = object o, k in options when k != :commands
