@@ -180,9 +180,19 @@ class S3P
       options2 extract
         map as copyFile
         stats
+        overwrite
+        pretend
+        toKey
+        toBucket
 
       stats.toDeleteFiles = 0
       stats.toDeleteBytes = 0
+      stats.toReplaceFiles = 0
+      stats.toReplaceBytes = 0
+      stats.toReplaceWithBytes = 0
+      stats.replacedFiles = 0
+      stats.replacedBytes = 0
+
       stats.unchangedFiles = 0
       stats.unchangedBytes = 0
 
@@ -197,23 +207,36 @@ class S3P
 
         mapList: (sourceItems, targetItems) ->
           copyPromises = []
+
+          reverseKeyMap = toKey && object {Key} in sourceItems with-key toKey Key with Key
+
           objectDiff
-            itemsByKey sourceItems  # , options.prefix # right now these are somewhat asymetric - the source prefix is mainatined when copying to a prefix
-            itemsByKey targetItems, options.toPrefix
+            itemsByKey sourceItems, toKey
+            itemsByKey targetItems
             # added
             (key, sourceValue) ->
-              copyPromises.push copyFile {} Key: key, Size: sourceValue
+              fromKey = reverseKeyMap?[key] ? key
+              copyPromises.push copyFile {} Key: fromKey, Size: sourceValue
 
             # removed
             (key, targetValue) ->
-              log "aws s3 rm s3://#{options.toBucket}/#{key} # you must do this. size: #{humanByteSize targetValue}"
+              log "aws s3 rm s3://#{toBucket}/#{key} # you must do this. size: #{humanByteSize targetValue}"
               stats.toDeleteBytes += targetValue
               stats.toDeleteFiles++
 
             # changed
             (key, sourceValue, targetValue) ->
-              log "# overwriting s3://#{options.toBucket}/#{key} - replacing targetSize: #{targetValue} with sourceSize #{sourceValue}"
-              copyPromises.push copyFile {} Key: key, Size: sourceValue
+              fromKey = reverseKeyMap?[key] ? key
+              if overwrite
+                log "# overwriting s3://#{toBucket}/#{key} - replacing targetSize: #{targetValue} with sourceSize #{sourceValue}"
+                copyPromises.push copyFile {} Key: fromKey, Size: sourceValue
+                stats.replacedFiles++
+                stats.replacedBytes += targetValue
+              else
+                log "# NOT overwriting s3://#{toBucket}/#{key} - replacing targetSize: #{targetValue} with sourceSize #{sourceValue} (use overwrite: true to overwrite)"
+                stats.toReplaceFiles++
+                stats.toReplaceBytes += targetValue
+                stats.toReplaceWithBytes = sourceValue
 
             # same
             (key, value) ->
@@ -243,10 +266,10 @@ class S3P
     .then (result) ->
       merge result, {} failed
 
-  itemsByKey = (itemList, prefix) ->
+  itemsByKey = (itemList, toKey) ->
     object {Key, Size} in-array itemList with-key
-        if (l = prefix?.length) > 0
-          Key.slice l, Key.length
+        if toKey?
+          toKey Key
         else Key
       Size
 
@@ -258,55 +281,70 @@ class S3P
       logToDelete: false
 
   @compare: (options) =>
-    options extract logToDelete, logToCopy, logToReplace, verbose
-    unless options.toBucket
+    options extract
+      logToDelete, logToCopy, logToReplace, verbose, toKey
+      bucket
+      toBucket
+    unless toBucket
       throw new Error "toBucket required"
+
     @each merge
       options,
       returning: stats = {}
         counts =
           needToCopy: 0
+          needToReplace: 0
           needToDelete: 0
           missingInTarget: 0
           different: 0
-          targetSmaller:  0
-          targetBigger:   0
+          replaceSmaller:  0
+          replaceBigger:   0
           same:       0
         bytes =
           needToCopy:   0
           needToDelete: 0
+          needToReplace: 0
+          needToReplaceWith: 0
           same: 0
 
       getProgress: ->
-        ""
-          same: #{} colors.green "" #{counts.same}(#{humanByteSize bytes.same})
-          toCopy: #{} colors.green "" #{counts.needToCopy}(#{humanByteSize bytes.needToCopy})
-          toDelete: #{} colors.green "" #{counts.needToDelete}(#{humanByteSize bytes.needToDelete})
+        compactFlatten []
+          if counts.same > 0          then "" same: #{} colors.green "" #{counts.same}(#{humanByteSize bytes.same})
+          if counts.needToCopy > 0    then "" toCopy: #{} colors.green "" #{counts.needToCopy}(#{humanByteSize bytes.needToCopy})
+          if counts.needToReplace > 0 then "" toReplace: #{} colors.green "" #{counts.needToReplace}(#{humanByteSize bytes.needToReplace} with #{humanByteSize bytes.needToReplaceWith})
+          if counts.needToDelete > 0  then "" toDelete: #{} colors.green "" #{counts.needToDelete}(#{humanByteSize bytes.needToDelete})
+        .join ' '
+
       compare: true
       mapList: (sourceItems, targetItems) ->
 
+        reverseKeyMap = toKey &&  object {Key} in sourceItems with-key toKey Key with Key
+
         objectDiff
-          itemsByKey sourceItems  # , options.prefix # right now these are somewhat asymetric - the source prefix is mainatined when copying to a prefix
-          itemsByKey targetItems, options.toPrefix
+          itemsByKey sourceItems, toKey  # , options.prefix # right now these are somewhat asymetric - the source prefix is mainatined when copying to a prefix
+          itemsByKey targetItems
           # added
           (key, sourceValue) ->
-            log "cp s3://#{options.bucket}/#{key} # #{humanByteSize sourceValue}" if logToCopy || verbose
+            fromKey = reverseKeyMap?[key] ? key
+            log "aws s3 cp s3://#{bucket}/#{fromKey} s3://#{toBucket}/#{key} # #{humanByteSize sourceValue}" if logToCopy || verbose
             bytes.needToCopy += sourceValue; counts.needToCopy++; counts.missingInTarget++
 
           # removed
           (key, targetValue) ->
-            log "rm s3://#{options.toBucket}/#{key} # #{humanByteSize targetValue}" if logToDelete || verbose
+            log "rm s3://#{toBucket}/#{key} # #{humanByteSize targetValue}" if logToDelete || verbose
             bytes.needToDelete += targetValue; counts.needToDelete++
 
           # changed
           (key, sourceValue, targetValue) ->
-            log "replace s3://#{options.toBucket}/#{key} # #{humanByteSize targetValue} -> #{humanByteSize sourceValue}" if logToReplace || logToCopy || verbose
+            fromKey = reverseKeyMap?[key] ? key
+            log "aws s3 cp s3://#{bucket}/#{fromKey} s3://#{toBucket}/#{key} # replace #{humanByteSize targetValue} with #{humanByteSize sourceValue}" if logToReplace || verbose
             counts.different++
-            counts.needToCopy++
-            bytes.needToCopy+=sourceValue
+            counts.needToReplace++
+            bytes.needToReplace+=targetValue
+            bytes.needToReplaceWith+=sourceValue
             if sourceValue > targetValue
-                              counts.targetSmaller++
-            else              counts.targetBigger
+                              counts.replaceSmaller++
+            else              counts.replaceBigger++
 
           # same
           (key, value) ->
@@ -413,6 +451,7 @@ class S3P
       s3 = &Lib/S3
       throttle
       stats
+      toKey = (a) -> a
 
     _with = options.with
     _when = if pattern then ({Key}) -> Key.match pattern
@@ -513,18 +552,19 @@ class S3P
           rightItems = array item in-array rawRightItems when item.Key <= stopAt
 
           compare && toBucket && @list {}
-            limit, startAfter, pwp
-            prefix: toPrefix
+            limit, pwp
+            startAfter: toKey startAfter
+            # prefix: toPrefix
             bucket: toBucket
-            stopAt: if leftItems.length == limit then peek(leftItems).Key else middleKey
+            stopAt: toKey if leftItems.length == limit then peek(leftItems).Key else middleKey
             showProgress: false
 
           compare && toBucket && @list {}
             limit, pwp
-            prefix: toPrefix
+            # prefix: toPrefix
             bucket: toBucket
-            startAfter: middleKey
-            stopAt: if rightItems.length == limit then peek(rightItems).Key else stopAt
+            startAfter: toKey middleKey
+            stopAt: toKey if rightItems.length == limit then peek(rightItems).Key else stopAt
             showProgress: false
 
       .then ([leftItems, rightItems, compareLeftItems, compareRightItems]) ->
