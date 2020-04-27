@@ -114,7 +114,7 @@ class S3 extends BaseClass
       log command
 
     if pretend
-      timeout 1000 -> pretend: true
+      timeout 1 -> pretend: true
     else
       exec command
 
