@@ -204,7 +204,8 @@ class S3P
         map as copyFile
         stats
         overwrite
-        pretend
+        dryRun
+        pretend = dryRun
         toKey
         toBucket
 
@@ -291,7 +292,8 @@ class S3P
       s3 = &Lib/S3
       toKey
       stats
-      pretend
+      dryRun
+      pretend = dryRun
       verbose
       copyConcurrency       = 500
       largeCopyConcurrency  = 75

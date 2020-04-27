@@ -33,26 +33,35 @@ class S3P
     return first item found
     IN: each options plus
   @find: (options) =>
-    _with = options.with ? options.map ? (a) -> a
-    @each merge options, with: (item) -> throw found: _with item
+    withFn = options.with ? options.map ? (a) -> a
+    @each merge options, with: (item) -> throw found: withFn item
     .catch (error) -> error.found || throw error
 
   ## return array of items found
   @array: (options) =>
-    _with = options.with ? options.map ? (a) -> a
+    withFn = options.with ? options.map ? (a) -> a
+    apply = (item) -> withFn item, item.Key
+    store = (v) -> intoArray.push v
     @each merge
       options
-      into: _into = options.into ? []
-      with: (item) -> _into.push _with item
+      into: intoArray = options.into ? []
+      with: (item) ->
+        Promise.resolve withFn item, item.Key
+        .then store
 
   ## return an object mapping item.Keys to items found
   @object: (options) =>
-    _with = options.with ? options.map ? (a) -> a
+    withFn  = options.with ? options.map ? (a) -> a
+    withKey = options.withKey ? ({Key}) -> Key
+    store = ([k, v]) -> intoObject[k] = v
     @each merge
       options
-      into:     _into = options.into ? []
-      with:     (item) -> _into.push _with item
-      withKey:  options.withKey ? ({Key}) -> Key
+      into:     intoObject = options.into ? {}
+      with: (item) ->
+        Promise.all []
+          withKey item, item.Key
+          withFn item, item.Key
+        .then store
 
   ##
     IN:
@@ -113,14 +122,15 @@ class S3P
       stats
       toKey = (a) -> a
 
-    _with = options.with
+    # ArtSuite/CaffeineScript comprehension aliases: with, when, returning
+    withFn = options.with
     _when = if pattern then ({Key}) -> Key.match pattern
     else options.when
     _returning = options.returning ? options.into
-    map ?= _with unless mapList
+    map ?= withFn unless mapList
 
     if compare && map && toBucket
-      throw new Error "cannot use both `compare` and `map` - use mapList instead"
+      throw new Error "cannot use both `compare` and `map/with` - use mapList instead"
 
     _reduce = options.reduce
 
@@ -146,24 +156,37 @@ class S3P
             "" items: #{itemsFound}
             "" items/s: #{itemsPerSecond | 0}
             "" listRequests: #{requestsUsed}
-            if verboseProgress        then "" efficiency: #{efficiency}%
-            if verboseProgress        then "" outstanding: #{outstanding}
-            if matchingItems          then "" matches: #{matchingItems}
+            if verboseProgress              then "" efficiency: #{efficiency}%
+            if verboseProgress              then "" outstanding: #{outstanding}
+            if matchingItems                then "" matches: #{matchingItems}
             if throttled > 0                then "" listWorkers: throttled
             else if pwp.activeWorkers > 0   then "" listWorkers: #{pwp.activeWorkers}
-            if pwp.queueSize > 0      then "" listQueue: #{pwp.queueSize}
+            if pwp.queueSize > 0            then "" listQueue: #{pwp.queueSize}
             getProgress?(duration) || null
             message
           .join ', '
 
       progressReporter = interval 1000, report
 
-    # OUT: count of times map was applied
-    applyF = (items, compareItems) ->
+    ## applyF
+      Apply the custom map or mapList functions
+      IN:
+        items:        list of S3 items in the source bucekt as returned by the AwsSdk s3 list call
+        compareItems: (optional, if compare is set), list of items in the toBucket
+        compareStartAfter
+        compareStopAt
+
+      items, and compareItems (if present) are guaranteed to be complete lists for the given range:
+        The Range will be:
+          from: > compareStartAfter
+          to:   <= compareStopAt
+
+      OUT: count of times map was applied
+    applyF = (items, compareItems, compareStartAfter, compareStopAt) ->
       itemsFound += items.length
       Promise.then ->
         switch
-        when mapList      then mapList items, compareItems
+        when mapList      then mapList items, compareItems, compareStartAfter, compareStopAt
         when map && _when then each item in-array items with matchingItems++; map item when _when item
         when map          then each item in-array items with map item
       .then -> items.length
@@ -178,67 +201,89 @@ class S3P
             throttled--
             waitForThrottle()
 
+    ## eachRecursive
+      OUT: number of items iterated over (in the source bucket)
     eachRecursive = (startAfter, stopAt, usePrefixBisect = false, debugContext) =>
       return Promise.resolve(0) if requestsUsed >= maxRequests || startAfter >= stopAt
-      # log eachRecursive: {}
-      #   startAfter: debugKey startAfter, false
-      #   stopAt: debugKey stopAt, false
 
       middleKey = getBisectKey startAfter, stopAt, usePrefixBisect
 
       report() if showProgress == :verbose
       debug && log "" debug: START:  #{pad debugContext ? :root, 10} startAfter: #{debugKey startAfter}  middleKey: #{debugKey middleKey}  stopAt: #{debugKey stopAt}  usePrefixBisect: #{usePrefixBisect}
 
-      lastLeftKey = lastRightKey = undefined
       rawLeftCount = rawRightCount = null
-
-      requestsUsed += 2
-      maxOutstanding = Math.max maxOutstanding, outstanding += 2
-
       applyPromise = null
 
       waitForThrottle()
-      .then -> Promise.all []
-        pwp.queue -> s3.list {} bucket, limit, startAfter
-        pwp.queue -> s3.list {} bucket, limit, startAfter: middleKey
+
+      ###################################################
+        LIST (source) bucket
+      ###################################################
+      .then ->
+        requestsUsed += 2
+        maxOutstanding = Math.max maxOutstanding, outstanding += 2
+
+        Promise.all []
+          pwp.queue -> s3.list {} bucket, limit, startAfter
+          pwp.queue -> s3.list {} bucket, limit, startAfter: middleKey
+
+        .then ([rawLeftItems, rawRightItems]) ->
+          rawLeftCount  = rawLeftItems?.length
+          rawRightCount = rawRightItems?.length
+          []
+            array item in-array rawLeftItems  when item.Key <= middleKey
+            array item in-array rawRightItems when item.Key <= stopAt
 
       .finally -> outstanding -= 2
 
-      .then ([rawLeftItems, rawRightItems, compareLeftItems, compareRightItems]) ->
-        rawLeftCount  = rawLeftItems?.length
-        rawRightCount = rawRightItems?.length
+      ###################################################
+        LIST toBucket (optional -- only if 'compare' is true)
+      ###################################################
+      .then ([leftItems, rightItems]) ->
         Promise.all []
-          leftItems = array item in-array rawLeftItems  when item.Key <= middleKey
-          rightItems = array item in-array rawRightItems when item.Key <= stopAt
+          leftItems
+          rightItems
 
-          compare && toBucket && @list {}
+          compare && toBucket && @_compareList leftCompareOptions = {}
             limit, pwp
             startAfter: toKey startAfter
-            # prefix: toPrefix
             bucket: toBucket
             stopAt: toKey if leftItems.length == limit then peek(leftItems).Key else middleKey
-            showProgress: false
+            quiet: true
 
-          compare && toBucket && @list {}
+          compare && toBucket && @_compareList rightCompareOptions = {}
             limit, pwp
-            # prefix: toPrefix
             bucket: toBucket
             startAfter: toKey middleKey
             stopAt: toKey if rightItems.length == limit then peek(rightItems).Key else stopAt
-            showProgress: false
+            quiet: true
 
-      .then ([leftItems, rightItems, compareLeftItems, compareRightItems]) ->
+          leftCompareOptions
+          rightCompareOptions
 
-        lastLeftKey  = peek(leftItems)?.Key
-        lastRightKey = peek(rightItems)?.Key
+      ###################################################
+        APPLY map/mapList
+      ###################################################
+        NOTE: we to something weird here - we set applyPromise, but we don't return it.
+        This accomplishes two things:
+          1. it allows us to apply the custom mapping code in parallel with subsequent, recursive LISTings
+          2. it allows us to free up memory (leftItems / rightItems) as soon as the custom map code is done
+      .then ([leftItems, rightItems, compareLeftItems, compareRightItems, leftCompareOptions, rightCompareOptions]) ->
 
         applyPromise = Promise.all []
-          applyF leftItems, compareLeftItems
-          applyF rightItems, compareRightItems
+          applyF leftItems,   compareLeftItems,   leftCompareOptions?.startAfter, leftCompareOptions?.stopAt
+          applyF rightItems,  compareRightItems,  rightCompareOptions?.startAfter, leftCompareOptions?.stopAt
 
-        [leftItems.length, rightItems.length]
+        []
+          leftItems.length
+          rightItems.length
+          peek(leftItems)?.Key
+          peek(rightItems)?.Key
 
-      .then ([leftCount, rightCount]) ->
+      ###################################################
+        RECURSE & wait for APPLY to complete
+      ###################################################
+      .then ([leftCount, rightCount, lastLeftKey, lastRightKey]) ->
         recurseLeft     = leftCount >= limit
         recurseRight    = rightCount >= limit
 
@@ -249,7 +294,12 @@ class S3P
 
         leftUsePrefixBisect = rightCount == 0
 
-        # OPTIMIZATION: The code will work without this, but this lets us skip one recursion step. It may speed things up, but it appears to actually use more calls.
+        ## OPTIMIZATION: The code will work without this, but this lets us skip one recursion step. It may speed things up, but it appears to actually use more calls.
+          SBD 4/27: I haven't need this over 10s of millions of S3 items iterated over. It still might be a good idea... but we may not actually need it.
+          Basically, if (leftCount == 0 && recurseRight) is true, then the, when we recurse, we'll always be doing a use-prefix-bisect.
+          We can skip directly to that here, one recursion step sooner.
+          However, this also results in a second right-tail call that can OTHERWISE sometimes be skipped.
+          It's a tradeoff.
         if aggressive && leftCount == 0 && recurseRight
           recurseLeft = true
           leftUsePrefixBisect = true
@@ -280,13 +330,10 @@ class S3P
                   leftUsePrefixBisect:  #{recurseLeft && leftUsePrefixBisect}
                   rightStartAfter:      #{recurseRight && debugKey rightStartAfter}
                   rightStopAt:          #{recurseRight && debugKey rightStopAt}
-        # else if debug
-        #   debug && log "" debug: RESULT: #{pad debugContext ? :root, 10} startAfter: #{debugKey startAfter}  middleKey: #{debugKey middleKey}  stopAt: #{debugKey stopAt}  usePrefixBisect: #{usePrefixBisect} [#{leftCount}, #{rightCount}]
-
 
         Promise.all []
           applyPromise
-          .then -> applyPromise = null # make sure we release it when it's done
+          .finally -> applyPromise = null # make sure we release it when it's done
 
           if recurseLeft
             eachRecursive leftStartAfter,   leftStopAt,   leftUsePrefixBisect,  if recurseRight then :recurse-BL else :recurse-L
@@ -305,31 +352,31 @@ class S3P
     eachRecursive
       "#{prefix}#{startAfter}"
       if stopAt
-        "#{prefix}#{stopAt}"
-      else getLastKeyWithPrefix prefix ? ''
+            "#{prefix}#{stopAt}"
+      else  getLastKeyWithPrefix prefix ? ''
 
     .finally -> progressReporter?.stop()
     .then (count) ->
       report? :DONE
-      duration =        currentSecond() - startTime
-      itemsPerSecond = itemsFound / duration
-      itemsPerSecond = itemsPerSecond | 0 if itemsPerSecond > 10
-      requestsPerSecond = verboseProgress && requestsUsed / duration
-      requestsPerSecond = requestsPerSecond | 0 if requestsPerSecond > 10
-      averageItemsPerRequest = verboseProgress && itemsFound / requestsUsed
-      averageItemsPerRequest = averageItemsPerRequest | 0 if averageItemsPerRequest > 10
+      duration                = currentSecond() - startTime
+      itemsPerSecond          = itemsFound / duration
+      itemsPerSecond          = itemsPerSecond | 0 if itemsPerSecond > 10
+      requestsPerSecond       = verboseProgress && requestsUsed / duration
+      requestsPerSecond       = requestsPerSecond | 0 if requestsPerSecond > 10
+      averageItemsPerRequest  = verboseProgress && itemsFound / requestsUsed
+      averageItemsPerRequest  = averageItemsPerRequest | 0 if averageItemsPerRequest > 10
       info = merge {}
         duration
         matchingItems
-        items: itemsFound
+        items:              itemsFound
         itemsPerSecond
-        requests: requestsUsed
+        requests:           requestsUsed
         requestsPerSecond
-        maxOutstanding: verboseProgress && maxOutstanding
+        maxOutstanding:     verboseProgress && maxOutstanding
         averageItemsPerRequest
 
       if requestsUsed > maxRequests
-        e = Error "S3Tools.each maxRequestsReached:\n" + formattedInspect info
+        e = Error "S3Comprehensions.each maxRequestsReached:\n" + formattedInspect info
         e.info = info
         throw e
 
@@ -347,3 +394,8 @@ class S3P
 
             stats: info
         _returning ? merge stats, info
+
+  @_compareList: (options) =>
+    @each merge options,
+      returning: list = []
+      mapList: (l) -> array from-array l into list
