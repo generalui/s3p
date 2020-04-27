@@ -2,18 +2,83 @@ import &path, &ArtStandardLib, &ArtClassSystem, &Lib, {} &colors
 
 class S3P
 
+  @normalizeOptions: (options) =>
+    options extract
+      # aliases
+      dryRun
+      toPrefix
+      addPrefix
+      prefix
+      pattern
+
+      # normalized
+      pretend = dryRun
+      toKey
+      map
+      mapList
+      returnValue
+      filter
+      startAfter
+      stopAt
+
+    withFn = options.with
+    whenFn = options.when
+    returningV = options.returning ? options.into
+
+    return options unless dryRun or toPrefix or withFn or pattern or returningV or whenFn or prefix? or !startAfter? or !stopAt?
+
+    if prefix
+      throw new Error "only use prefix OR startAfter & stopAt" if startAfter or stopAt
+    else
+      prefix = ''
+    startAfter ?= prefix
+    stopAt ?= getLastKeyWithPrefix prefix ? ''
+
+    if whenFn
+      throw new Error "only use one: when or filter" if filter
+      filter = whenFn
+
+    if withFn or pattern
+      throw new Error "only use one: with, map, pattern or mapList" if compactFlatten([withFn, map, pattern, mapList]).length > 1
+      map = withFn ? ({Key}) -> Key.match pattern
+
+    if toPrefix or addPrefix
+      throw new Error "only use one: addPrefix, toPrefix, toKey" if compactFlatten([toPrefix, addPrefix, toKey]).length > 1
+      toKey = switch
+      when toPrefix
+        if prefix
+          r = /// ^#{prefix}
+          (key) -> key.replace r, toPrefix
+        else
+          (key) -> toPrefix + key
+      when addPrefix
+        (key) -> addPrefix + key
+
+    merge
+      objectWithout options, :dryRun :toPrefix :withFn :pattern :into :returning :whenFn :prefix
+      {}
+        pretend
+        toKey
+        filter
+        map
+        mapList
+        returnValue
+        startAfter
+        stopAt
+
+  filterNone = -> true
   ##
     wrapper around each that returns a list of promise failures rather than failing
   @eachPromises: (options) =>
+    options = @normalizeOptions options
     failed = null
-    options extract map
-    _when = options.when
+    options extract map, filter = filterNone
 
     throw new Error "Expecting options.map" unless map is Function
 
     @each merge options,
       mapList: (items) ->
-        Promise.all array item in-array items
+        Promise.all array item in-array items when filterNone item
           Promise.then -> map item
           .catch (error) ->
             log {} item.Key, error
@@ -33,12 +98,14 @@ class S3P
     return first item found
     IN: each options plus
   @find: (options) =>
-    withFn = options.with ? options.map ? (a) -> a
-    @each merge options, with: (item) -> throw found: withFn item
+    options = @normalizeOptions options
+    withFn  = options.map ? (a) -> a
+    @each merge options, map: (item) -> throw found: withFn item
     .catch (error) -> error.found || throw error
 
   ## return array of items found
   @array: (options) =>
+    options = @normalizeOptions options
     withFn = options.with ? options.map ? (a) -> a
     apply = (item) -> withFn item, item.Key
     store = (v) -> intoArray.push v
@@ -51,7 +118,8 @@ class S3P
 
   ## return an object mapping item.Keys to items found
   @object: (options) =>
-    withFn  = options.with ? options.map ? (a) -> a
+    options = @normalizeOptions options
+    withFn  = options.map ? (a) -> a
     withKey = options.withKey ? ({Key}) -> Key
     store = ([k, v]) -> intoObject[k] = v
     @each merge
@@ -101,36 +169,46 @@ class S3P
         matchingItems: if when is provided, this counts the number of times when is true
         ... and more stats
   @each: (options) =>
+    options = @normalizeOptions originalOptions = options
     options extract
       quiet
-      bucket, limit = 1000, maxRequests, prefix, showProgress = !quiet
+      showProgress = !quiet
+      debug
+
+      # source options
+      bucket
       startAfter
       stopAt
-      debug, aggressive
-      getProgress
-      map
-      mapList
+      filter
+
+      # compare-to options
       compare
       toBucket
-      toPrefix
-      pattern
-      verboseProgress
-      concurrency = 100 # max open reqeusts
-      pwp = new PromiseWorkerPool concurrency # internal use only
-      s3 = &Lib/S3
-      throttle
-      stats
       toKey = (a) -> a
 
-    # ArtSuite/CaffeineScript comprehension aliases: with, when, returning
-    withFn = options.with
-    _when = if pattern then ({Key}) -> Key.match pattern
-    else options.when
-    _returning = options.returning ? options.into
-    map ?= withFn unless mapList
+      # limits
+      limit = 1000
+      maxRequests
+      concurrency = 100 # max open reqeusts
+
+      # actions
+      returnValue
+      map
+      mapList
+
+      aggressive
+
+      getProgress
+      verboseProgress
+      throttle
+      stats
+
+      # internal use only
+      s3 = &Lib/S3
+      pwp = new PromiseWorkerPool concurrency # internal use only
 
     if compare && map && toBucket
-      throw new Error "cannot use both `compare` and `map/with` - use mapList instead"
+      throw new Error "cannot use both `compare` and `map` - use mapList instead"
 
     _reduce = options.reduce
 
@@ -140,7 +218,7 @@ class S3P
     maxOutstanding =
     outstanding = 0
     startTime = currentSecond()
-    matchingItems = if _when then 0 else undefined # if when is provided, this counts the number of times when is true
+    matchingItems = if filter then 0 else undefined # if when is provided, this counts the number of times when is true
 
     # pwp = queue: (f) -> f()
 
@@ -186,9 +264,9 @@ class S3P
       itemsFound += items.length
       Promise.then ->
         switch
-        when mapList      then mapList items, compareItems, compareStartAfter, compareStopAt
-        when map && _when then each item in-array items with matchingItems++; map item when _when item
-        when map          then each item in-array items with map item
+        when mapList        then mapList items, compareItems, compareStartAfter, compareStopAt
+        when map && filter  then each item in-array items with matchingItems++; map item when filter item
+        when map            then each item in-array items with map item
       .then -> items.length
 
     throttled = 0
@@ -350,10 +428,8 @@ class S3P
       .tapCatch (error) -> log.error eachRecursive: {} startAfter, stopAt, usePrefixBisect, error if error is Error
 
     eachRecursive
-      "#{prefix}#{startAfter}"
-      if stopAt
-            "#{prefix}#{stopAt}"
-      else  getLastKeyWithPrefix prefix ? ''
+      startAfter
+      stopAt
 
     .finally -> progressReporter?.stop()
     .then (count) ->
@@ -381,19 +457,11 @@ class S3P
         throw e
 
       else
-        if _returning? && showProgress
+        if returnValue? && showProgress
           log final:
-            options: merge {}
-              bucket
-              prefix
-              startAfter
-              stopAt
-              toBucket
-              toPrefix
-              pattern
-
+            options: object v in originalOptions when !isFunction v
             stats: info
-        _returning ? merge stats, info
+        returnValue ? merge stats, info
 
   @_compareList: (options) =>
     @each merge options,

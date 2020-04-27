@@ -101,6 +101,7 @@ class S3P
           stats
 
   @compare: (options) =>
+    options S3C.normalizeOptions options
     options extract
       logToDelete, logToCopy, logToReplace, verbose, toKey
       bucket
@@ -112,20 +113,20 @@ class S3P
       options,
       returning: stats = {}
         counts =
-          needToCopy: 0
-          needToReplace: 0
-          needToDelete: 0
-          missingInTarget: 0
-          different: 0
-          replaceSmaller:  0
-          replaceBigger:   0
-          same:       0
+          needToCopy:         0
+          needToReplace:      0
+          needToDelete:       0
+          missingInTarget:    0
+          different:          0
+          replaceSmaller:     0
+          replaceBigger:      0
+          same:               0
         bytes =
-          needToCopy:   0
-          needToDelete: 0
-          needToReplace: 0
-          needToReplaceWith: 0
-          same: 0
+          needToCopy:         0
+          needToDelete:       0
+          needToReplace:      0
+          needToReplaceWith:  0
+          same:               0
 
       getProgress: ->
         compactFlatten []
@@ -288,12 +289,12 @@ class S3P
       TODO: this stats-object with final 'humanize' should become the base line for all S3P
 
   @_copyWrapper: (options, eachFunction) =>
+    options S3C.normalizeOptions options
     options extract
       s3 = &Lib/S3
       toKey
       stats
-      dryRun
-      pretend = dryRun
+      pretend
       verbose
       copyConcurrency       = 500
       largeCopyConcurrency  = 75
@@ -353,6 +354,10 @@ class S3P
       delete stats.copyingFilesStarted
       delete stats.copyingBytesStarted
       stats.copiedBytesPerSecond = stats.copiedBytes / stats.duration
-      stats.human = object stat, key in stats when /byte|size/i.test key
-        humanByteSize stat
+      @getStatsWithHumanByteSizes stats
+
+  @getStatsWithHumanByteSizes: (stats) ->
+    merge
       stats
+      human: object stat, key in stats when /byte|size/i.test key
+        humanByteSize stat
