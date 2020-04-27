@@ -101,7 +101,7 @@ class S3P
           stats
 
   @compare: (options) =>
-    options S3C.normalizeOptions options
+    options = S3C.normalizeOptions options
     options extract
       logToDelete, logToCopy, logToReplace, verbose, toKey
       bucket
@@ -289,7 +289,7 @@ class S3P
       TODO: this stats-object with final 'humanize' should become the base line for all S3P
 
   @_copyWrapper: (options, eachFunction) =>
-    options S3C.normalizeOptions options
+    options = S3C.normalizeOptions options
     options extract
       s3 = &Lib/S3
       toKey

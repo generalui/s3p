@@ -27,35 +27,39 @@ class S3P
 
     return options unless dryRun or toPrefix or withFn or pattern or returningV or whenFn or prefix? or !startAfter? or !stopAt?
 
-    if prefix
-      throw new Error "only use prefix OR startAfter & stopAt" if startAfter or stopAt
-    else
-      prefix = ''
-    startAfter ?= prefix
-    stopAt ?= getLastKeyWithPrefix prefix ? ''
+    try
+      if prefix
+        throw new Error "only use prefix OR startAfter & stopAt" if startAfter or stopAt
+      else
+        prefix = ''
+      startAfter ?= prefix
+      stopAt ?= getLastKeyWithPrefix prefix ? ''
 
-    if whenFn
-      throw new Error "only use one: when or filter" if filter
-      filter = whenFn
+      if whenFn
+        throw new Error "only use one: when or filter" if filter
+        filter = whenFn
 
-    if withFn or pattern
-      throw new Error "only use one: with, map, pattern or mapList" if compactFlatten([withFn, map, pattern, mapList]).length > 1
-      map = withFn ? ({Key}) -> Key.match pattern
+      if withFn or pattern
+        throw new Error "only use one: with, map, pattern or mapList" if compactFlatten([withFn, map, pattern, mapList]).length > 1
+        map = withFn ? ({Key}) -> Key.match pattern
 
-    if toPrefix or addPrefix
-      throw new Error "only use one: addPrefix, toPrefix, toKey" if compactFlatten([toPrefix, addPrefix, toKey]).length > 1
-      toKey = switch
-      when toPrefix
-        if prefix
-          r = /// ^#{prefix}
-          (key) -> key.replace r, toPrefix
-        else
-          (key) -> toPrefix + key
-      when addPrefix
-        (key) -> addPrefix + key
+      if toPrefix or addPrefix
+        throw new Error "only use one: addPrefix, toPrefix, toKey" if compactFlatten([toPrefix, addPrefix, toKey]).length > 1
+        toKey = switch
+        when toPrefix
+          if prefix
+            r = /// ^#{prefix}
+            (key) -> key.replace r, toPrefix
+          else
+            (key) -> toPrefix + key
+        when addPrefix
+          (key) -> addPrefix + key
 
+    catch e
+      log {} options
+      throw e
     merge
-      objectWithout options, :dryRun :toPrefix :withFn :pattern :into :returning :whenFn :prefix
+      objectWithout options, :dryRun :toPrefix :withFn :pattern :into :returning :whenFn :prefix :addPrefix
       {}
         pretend
         toKey
@@ -327,14 +331,12 @@ class S3P
             startAfter: toKey startAfter
             bucket: toBucket
             stopAt: toKey if leftItems.length == limit then peek(leftItems).Key else middleKey
-            quiet: true
 
           compare && toBucket && @_compareList rightCompareOptions = {}
             limit, pwp
             bucket: toBucket
             startAfter: toKey middleKey
             stopAt: toKey if rightItems.length == limit then peek(rightItems).Key else stopAt
-            quiet: true
 
           leftCompareOptions
           rightCompareOptions
@@ -465,5 +467,6 @@ class S3P
 
   @_compareList: (options) =>
     @each merge options,
-      returning: list = []
+      returnValue: list = []
       mapList: (l) -> array from-array l into list
+      quiet: true
