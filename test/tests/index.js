@@ -4,6 +4,7 @@
 (module.exports = require('./namespace'))
 
 .addModules({
-  StandardImport: require('./StandardImport')
+  StandardImport: require('./StandardImport'),
+  TestLib:        require('./TestLib')
 });
 require('./S3Parallel');

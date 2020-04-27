@@ -4,6 +4,7 @@
 (module.exports = require('./namespace'))
 
 .addModules({
-  S3P: require('./S3P')
+  S3Comprehensions: require('./S3Comprehensions'),
+  S3P:              require('./S3P')
 });
 require('./Lib');

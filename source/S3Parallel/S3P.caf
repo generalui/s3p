@@ -1,26 +1,42 @@
 import &path, &ArtStandardLib, &ArtClassSystem, &Lib, {} &colors
 
+S3C = &S3Comprehensions
+
+itemsByKey = (itemList, toKey) ->
+  object {Key, Size} in-array itemList with-key
+      if toKey?
+        toKey Key
+      else Key
+    Size
+
+summarizeHistogramGroups =
+  :bytes
+  :kilobytes
+  :megabytes
+  :gigabytes
+  :terabytes
+  :petabytes
+  :exabytes
+  :zetabytes
+
+summarizeHistogramGroupUnits =
+  :_B
+  :kB
+  :mB
+  :gB
+  :tB
+  :pB
+  :eB
+  :zB
+
 class S3P
-
-  logGroups =
-    :bytes
-    :kilobytes
-    :megabytes
-    :gigabytes
-    :terabytes
-    :petabytes
-    :exabytes
-    :zetabytes
-
-  groupUnits =
-    :_B
-    :kB
-    :mB
-    :gB
-    :tB
-    :pB
-    :eB
-    :zB
+  ###########################################################
+    READONLY Commands
+  ###########################################################
+  @list: (options) =>
+    S3C.each merge options,
+      returning: list = []
+      mapList: (l) -> array from-array l into list
 
   @summarize: (options) =>
     options extract summarizeFolders
@@ -32,12 +48,13 @@ class S3P
       minSizeKey: null
       sizeHistogram: {}
       folders: summarizeFolders && {}
-    @each merge options, map: ({Size, Key}) ->
+
+    S3C.each merge options, map: ({Size, Key}) ->
       floorSize = humanByteSize
         Math.pow 2, 1 + logSize = (Math.log(Size) / Math.log(2)) | 0
         0
-      group = logGroups[groupKey = ((logSize + 1)/10) | 0] ? "big"
-      groupUnit = groupUnits[groupKey]
+      group = summarizeHistogramGroups[groupKey = ((logSize + 1)/10) | 0] ? "big"
+      groupUnit = summarizeHistogramGroupUnits[groupKey]
       g = summary.sizeHistogram[group]?=
 
         each i til 10 into out = items: 0 size: 0
@@ -83,203 +100,6 @@ class S3P
           human: object v, k in summary with humanByteSize v when /size$/i.test k
           stats
 
-  humanByteSize = (bytes, decimals = 2) ->
-    switch
-    when bytes < 1024     then "" #{bytes/1024**0 | 0}_B
-    when bytes < 1024**2  then "" #{(bytes/1024**1).toFixed decimals}kB
-    when bytes < 1024**3  then "" #{(bytes/1024**2).toFixed decimals}mB
-    when bytes < 1024**4  then "" #{(bytes/1024**3).toFixed decimals}gB
-    when bytes < 1024**5  then "" #{(bytes/1024**4).toFixed decimals}tB
-    when bytes < 1024**6  then "" #{(bytes/1024**5).toFixed decimals}pB
-    else                       "" #{(bytes/1024**6).toFixed decimals}eB
-
-  ##
-    IN: options:
-      all the each options plus:
-      toBucket: <String> [Default: options.bucket] - target bucket
-      toPrefix: <String> optional - prepend to key for toKey
-      toKey: (optional) <Function> (fromKey, fromBucket, toBucket, size) -> to-key-string
-      copyConcurrency       [100]                   number of active copies < 1GB using aws sdk directly
-      largeCopyConcurrency  [copyConcurrency/4]     number of active copies > 1GB using exec aws cp
-      maxQueueSize          [copyConcurrency * 10]  max number of copy-jobs to queue before throttling s3.lists
-  @copy: (options) =>
-    @_copyWrapper options, (options2) =>
-      @eachPromises options2
-
-  @_copyWrapper: (options, eachFunction) =>
-    options extract
-      s3 = &Lib/S3
-      toKey
-      stats
-      pretend
-      verbose
-      copyConcurrency       = 500
-      largeCopyConcurrency  = 75
-      maxQueueSize          = copyConcurrency * 100
-      copyPwp               = new PromiseWorkerPool copyConcurrency
-      largeCopyPwp          = new PromiseWorkerPool largeCopyConcurrency
-      largeCopyThreshold    = 100 * 1024 ** 2
-
-    stats ?= {}
-    stats.copiedBytes = 0
-    stats.copiedBytesPerSecond = 0
-    stats.copyingBytesInFlight = 0
-    stats.copyingBytesStarted = 0
-    stats.copyingFilesStarted = 0
-    stats.copiedFiles = 0
-
-    throw new Error "toBucket required" unless present options.toBucket
-    eachFunction merge options, {}
-      stats
-      throttle: -> copyPwp.queueSize + largeCopyPwp.queueSize >= maxQueueSize
-      getProgress: (duration) ->
-        compactFlatten []
-          "" copied
-          "" #{} colors.green "" #{stats.copiedFiles}/#{stats.copyingFilesStarted} #{humanByteSize stats.copiedBytes}/#{humanByteSize stats.copyingBytesStarted}
-          colors.blue "" #{humanByteSize stats.copiedBytesPerSecond = stats.copiedBytes / duration}/s
-          "" inFlight: #{} colors.green humanByteSize stats.copyingBytesInFlight
-          "" copyWorkers: #{} colors.green "" #{copyPwp.activeWorkers} + #{largeCopyPwp.activeWorkers}
-          if 0 < copyPwp.queueSize + largeCopyPwp.queueSize
-            "" copyQueue: #{} colors.green "" #{copyPwp.queueSize} + #{largeCopyPwp.queueSize}
-          colors.yellow "PRETENDING" if pretend
-        .join ' '
-
-      map: ({Key: key, Size}) ->
-        stats.copyingFilesStarted++
-        stats.copyingBytesStarted += Size
-
-        if Size < largeCopyThreshold then copyPwp else largeCopyPwp
-        .queue ->
-          stats.copyingBytesInFlight += Size
-          options = {}
-            pretend
-            verbose
-            options.bucket
-            options.toBucket
-            key
-            size: Size
-            toKey: if isFunction toKey then toKey else "" #{options.toPrefix}#{key}
-
-          if Size < largeCopyThreshold then s3.copy options else s3.largeCopy options
-          .then ->
-            stats.copyingBytesInFlight -= Size
-            stats.copiedFiles++
-            stats.copiedBytes += Size
-
-    .then (stats) ->
-      delete stats.copyingBytesInFlight
-      delete stats.copyingFilesStarted
-      delete stats.copyingBytesStarted
-      stats.copiedBytesPerSecond = stats.copiedBytes / stats.duration
-      stats.human = object stat, key in stats when /byte|size/i.test key
-        humanByteSize stat
-      stats
-
-  @sync: (options) =>
-    @_copyWrapper options, (options2) ->
-      options2 extract
-        map as copyFile
-        stats
-        overwrite
-        pretend
-        toKey
-        toBucket
-
-      stats.toDeleteFiles = 0
-      stats.toDeleteBytes = 0
-      stats.toReplaceFiles = 0
-      stats.toReplaceBytes = 0
-      stats.toReplaceWithBytes = 0
-      stats.replacedFiles = 0
-      stats.replacedBytes = 0
-
-      stats.unchangedFiles = 0
-      stats.unchangedBytes = 0
-
-      @each merge
-        objectWithout options2, :map
-        compare: true
-        getProgress: (duration) ->
-          options2.getProgress duration
-          + ""
-            \_same: #{} colors.green "" #{stats.unchangedFiles}(#{humanByteSize stats.unchangedBytes})
-            toDelete: #{} colors.green "" #{stats.toDeleteFiles}(#{humanByteSize stats.toDeleteBytes})
-
-        mapList: (sourceItems, targetItems) ->
-          copyPromises = []
-
-          reverseKeyMap = toKey && object {Key} in sourceItems with-key toKey Key with Key
-
-          objectDiff
-            itemsByKey sourceItems, toKey
-            itemsByKey targetItems
-            # added
-            (key, sourceValue) ->
-              fromKey = reverseKeyMap?[key] ? key
-              copyPromises.push copyFile {} Key: fromKey, Size: sourceValue
-
-            # removed
-            (key, targetValue) ->
-              log "aws s3 rm s3://#{toBucket}/#{key} # you must do this. size: #{humanByteSize targetValue}"
-              stats.toDeleteBytes += targetValue
-              stats.toDeleteFiles++
-
-            # changed
-            (key, sourceValue, targetValue) ->
-              fromKey = reverseKeyMap?[key] ? key
-              if overwrite
-                log "# overwriting s3://#{toBucket}/#{key} - replacing targetSize: #{targetValue} with sourceSize #{sourceValue}"
-                copyPromises.push copyFile {} Key: fromKey, Size: sourceValue
-                stats.replacedFiles++
-                stats.replacedBytes += targetValue
-              else
-                log "# NOT overwriting s3://#{toBucket}/#{key} - replacing targetSize: #{targetValue} with sourceSize #{sourceValue} (use overwrite: true to overwrite)"
-                stats.toReplaceFiles++
-                stats.toReplaceBytes += targetValue
-                stats.toReplaceWithBytes = sourceValue
-
-            # same
-            (key, value) ->
-              stats.unchangedBytes += value
-              stats.unchangedFiles++
-
-          Promise.all copyPromises
-
-
-  ##
-    wrapper around each that returns a list of promise failures rather than failing
-  @eachPromises: (options) =>
-    failed = null
-    options extract map
-    _when = options.when
-
-    throw new Error "Expecting options.map" unless map is Function
-
-    @each merge options,
-      mapList: (items) ->
-        Promise.all array item in-array items
-          Promise.then -> map item
-          .catch (error) ->
-            log {} item.Key, error
-            failed?=[]
-            .push item.Key
-    .then (result) ->
-      merge result, {} failed
-
-  itemsByKey = (itemList, toKey) ->
-    object {Key, Size} in-array itemList with-key
-        if toKey?
-          toKey Key
-        else Key
-      Size
-
-  ##
-    IN
-      @each options
-      required: toBucket
-      logToCopy: false
-      logToDelete: false
-
   @compare: (options) =>
     options extract
       logToDelete, logToCopy, logToReplace, verbose, toKey
@@ -288,7 +108,7 @@ class S3P
     unless toBucket
       throw new Error "toBucket required"
 
-    @each merge
+    S3C.each merge
       options,
       returning: stats = {}
         counts =
@@ -361,329 +181,176 @@ class S3P
             cleanStats v
           else v
       cleanStats stats
+
+  ###########################################################
+    READ/WRITE Commands
+  ###########################################################
   ##
-    return first item found
-    IN: each options plus
-  @find: (options) =>
-    _with = options.with ? options.map ? (a) -> a
-    @each merge options, with: (item) -> throw found: _with item
-    .catch (error) -> error.found || throw error
+    IN: options:
+      all the each options plus:
+      toBucket: <String> [Default: options.bucket] - target bucket
+      toPrefix: <String> optional - prepend to key for toKey
+      toKey: (optional) <Function> (fromKey, fromBucket, toBucket, size) -> to-key-string
+      copyConcurrency       [100]                   number of active copies < 1GB using aws sdk directly
+      largeCopyConcurrency  [copyConcurrency/4]     number of active copies > 1GB using exec aws cp
+      maxQueueSize          [copyConcurrency * 10]  max number of copy-jobs to queue before throttling s3.lists
+  @copy: (options) =>
+    @_copyWrapper options, (updatedOptions) =>
+      S3C.eachPromises updatedOptions
 
-  ## return array of items found
-  @array: (options) =>
-    _with = options.with ? options.map ? (a) -> a
-    @each merge
-      options
-      into: _into = options.into ? []
-      with: (item) -> _into.push _with item
+  @sync: (options) =>
+    @_copyWrapper options, (options2) ->
+      options2 extract
+        map as copyFile
+        stats
+        overwrite
+        pretend
+        toKey
+        toBucket
 
-  ## return an object mapping item.Keys to items found
-  @object: (options) =>
-    _with = options.with ? options.map ? (a) -> a
-    @each merge
-      options
-      into:     _into = options.into ? []
-      with:     (item) -> _into.push _with item
-      withKey:  options.withKey ? ({Key}) -> Key
+      stats.toDeleteFiles = 0
+      stats.toDeleteBytes = 0
+      stats.toReplaceFiles = 0
+      stats.toReplaceBytes = 0
+      stats.toReplaceWithBytes = 0
+      stats.replacedFiles = 0
+      stats.replacedBytes = 0
 
-  @list: (options) =>
-    @each merge options,
-      returning: list = []
-      mapList: (l) -> array from-array l into list
-    # .tap (result) ->
-    #   log {}
-    #     list: options
-    #     result
+      stats.unchangedFiles = 0
+      stats.unchangedBytes = 0
 
+      S3C.each merge
+        objectWithout options2, :map
+        compare: true
+        getProgress: (duration) ->
+          options2.getProgress duration
+          + ""
+            \_same: #{} colors.green "" #{stats.unchangedFiles}(#{humanByteSize stats.unchangedBytes})
+            toDelete: #{} colors.green "" #{stats.toDeleteFiles}(#{humanByteSize stats.toDeleteBytes})
 
-  ##
+        mapList: (sourceItems, targetItems) ->
+          copyPromises = []
+
+          reverseKeyMap = toKey && object {Key} in sourceItems with-key toKey Key with Key
+
+          objectDiff
+            itemsByKey sourceItems, toKey
+            itemsByKey targetItems
+            # added
+            (key, sourceValue) ->
+              fromKey = reverseKeyMap?[key] ? key
+              copyPromises.push copyFile {} Key: fromKey, Size: sourceValue
+
+            # removed
+            (key, targetValue) ->
+              log "aws s3 rm s3://#{toBucket}/#{key} # you must do this. size: #{humanByteSize targetValue}"
+              stats.toDeleteBytes += targetValue
+              stats.toDeleteFiles++
+
+            # changed
+            (key, sourceValue, targetValue) ->
+              fromKey = reverseKeyMap?[key] ? key
+              if overwrite
+                log "# overwriting s3://#{toBucket}/#{key} - replacing targetSize: #{targetValue} with sourceSize #{sourceValue}"
+                copyPromises.push copyFile {} Key: fromKey, Size: sourceValue
+                stats.replacedFiles++
+                stats.replacedBytes += targetValue
+              else
+                log "# NOT overwriting s3://#{toBucket}/#{key} - replacing targetSize: #{targetValue} with sourceSize #{sourceValue} (use overwrite: true to overwrite)"
+                stats.toReplaceFiles++
+                stats.toReplaceBytes += targetValue
+                stats.toReplaceWithBytes = sourceValue
+
+            # same
+            (key, value) ->
+              stats.unchangedBytes += value
+              stats.unchangedFiles++
+
+          Promise.all copyPromises
+
+  ######################################################
+    PRIVATE
+  ######################################################
+
+  ## @_copyWrapper is used by @copy and @sync to share copy-code
     IN:
-      options:
-        aggressive:   false - if true, will make a little more S3 requests to increase parallelism
-        debug:        false
-        showProgress: true - log progress once a second
-        verboseProgress: false
-        prefix:       <String/NULL> only scan within a given prefix
-        startAfter:   <String/NULL> Keys starting with and including this key will be passed to map/mapList - overrides prefix
-        stopAt:       <String/NULL> Keys up to but not including this one will be passed to map/mapList - overrides prefix
-        limit:        <Number/1000> limit items per call; generally the default of 1000 is best (max allowed by AWS is 1000)
-        bucket:
-        toBucket:     <String> bucket name to compare with - if present, will run the same s3:list operations on the target bucket and pass matching lists to mapList as the second argument (map not supported)
-        getProgress: <(duration) -> <String>> optional - if provided and showProgress is true, will append to the progress string
-        maxRequests: <Number> limit how many requests will be used - aborts nicely if reached
-          nicely: finishes current function calls, logs message, does no more work, throws error
+      options - all the options you pass to @copy or @sync
+      eachFunction: (updatedOptions) ->
 
-        pattern: only yield items who's keys match this pattern (creates a 'when' clause)
+      updatedOptions are options which can be passed directly to S3C.each.
+      In particular, @_copyWrapper defines crical shared copy-code:
+        map: ->
+        getProgress: ->
+        throttle: ->
 
-        throttle: -> T/F - (optional)
-          If present, it gets called before any new s3.list calls are made.
-          If it returns true, no new s3.list calls will be made.
-          While it returns true, it will be called once/second/parallel-branch until it returns false.
+      It also creates the basic stats object, which it uses to return the final results.
+      TODO: this stats-object with final 'humanize' should become the base line for all S3P
 
-        COMPREHENSION
-        with: (Item) -> ignored - alais of `map`
-        when: (Item) -> T/F - if true, pass it on to `map`, else skip
-        returning:    if present, return this value instead of stats
-        into:         <ALIAS: returning>
-    OUT:
-      options.returning ? {}
-        itemsFound
-        itemsProcessed
-        requestsUsed
-        matchingItems: if when is provided, this counts the number of times when is true
-        ... and more stats
-  @each: (options) =>
+  @_copyWrapper: (options, eachFunction) =>
     options extract
-      bucket, limit = 1000, maxRequests, prefix, showProgress = true
-      startAfter
-      stopAt
-      debug, aggressive
-      getProgress
-      map
-      mapList
-      compare
-      toBucket
-      toPrefix
-      pattern
-      verboseProgress
-      concurrency = 100 # max open reqeusts
-      pwp = new PromiseWorkerPool concurrency # internal use only
       s3 = &Lib/S3
-      throttle
+      toKey
       stats
-      toKey = (a) -> a
+      pretend
+      verbose
+      copyConcurrency       = 500
+      largeCopyConcurrency  = 75
+      maxQueueSize          = copyConcurrency * 100
+      copyPwp               = new PromiseWorkerPool copyConcurrency
+      largeCopyPwp          = new PromiseWorkerPool largeCopyConcurrency
+      largeCopyThreshold    = 100 * 1024 ** 2
 
-    _with = options.with
-    _when = if pattern then ({Key}) -> Key.match pattern
-    else options.when
-    _returning = options.returning ? options.into
-    map ?= _with unless mapList
+    stats ?= {}
+    stats.copiedBytes = 0
+    stats.copiedBytesPerSecond = 0
+    stats.copyingBytesInFlight = 0
+    stats.copyingBytesStarted = 0
+    stats.copyingFilesStarted = 0
+    stats.copiedFiles = 0
 
-    if compare && map && toBucket
-      throw new Error "cannot use both `compare` and `map` - use mapList instead"
+    throw new Error "toBucket required" unless present options.toBucket
+    eachFunction merge options, {}
+      stats
+      throttle: -> copyPwp.queueSize + largeCopyPwp.queueSize >= maxQueueSize
+      getProgress: (duration) ->
+        compactFlatten []
+          "" copied
+          "" #{} colors.green "" #{stats.copiedFiles}/#{stats.copyingFilesStarted} #{humanByteSize stats.copiedBytes}/#{humanByteSize stats.copyingBytesStarted}
+          colors.blue "" #{humanByteSize stats.copiedBytesPerSecond = stats.copiedBytes / duration}/s
+          "" inFlight: #{} colors.green humanByteSize stats.copyingBytesInFlight
+          "" copyWorkers: #{} colors.green "" #{copyPwp.activeWorkers} + #{largeCopyPwp.activeWorkers}
+          if 0 < copyPwp.queueSize + largeCopyPwp.queueSize
+            "" copyQueue: #{} colors.green "" #{copyPwp.queueSize} + #{largeCopyPwp.queueSize}
+          colors.yellow "PRETENDING" if pretend
+        .join ' '
 
-    _reduce = options.reduce
+      map: ({Key: key, Size}) ->
+        stats.copyingFilesStarted++
+        stats.copyingBytesStarted += Size
 
-    # statistics
-    itemsFound =
-    requestsUsed =
-    maxOutstanding =
-    outstanding = 0
-    startTime = currentSecond()
-    matchingItems = if _when then 0 else undefined # if when is provided, this counts the number of times when is true
+        if Size < largeCopyThreshold then copyPwp else largeCopyPwp
+        .queue ->
+          stats.copyingBytesInFlight += Size
+          options = {}
+            pretend
+            verbose
+            options.bucket
+            options.toBucket
+            key
+            size: Size
+            toKey: if isFunction toKey then toKey else "" #{options.toPrefix}#{key}
 
-    # pwp = queue: (f) -> f()
-
-    if showProgress
-      report = (message) ->
-        duration = currentSecond() - startTime
-        itemsPerSecond = (itemsFound / duration)
-        efficiency = (itemsFound / (requestsUsed * limit)) * 100 | 0
-
-        log "s3p progress: " +
-          compactFlatten []
-            "" duration: #{durationString duration}
-            "" items: #{itemsFound}
-            "" items/s: #{itemsPerSecond | 0}
-            "" listRequests: #{requestsUsed}
-            if verboseProgress        then "" efficiency: #{efficiency}%
-            if verboseProgress        then "" outstanding: #{outstanding}
-            if matchingItems          then "" matches: #{matchingItems}
-            if throttled > 0                then "" listWorkers: throttled
-            else if pwp.activeWorkers > 0   then "" listWorkers: #{pwp.activeWorkers}
-            if pwp.queueSize > 0      then "" listQueue: #{pwp.queueSize}
-            getProgress?(duration) || null
-            message
-          .join ', '
-
-      progressReporter = interval 1000, report
-
-    # OUT: count of times map was applied
-    applyF = (items, compareItems) ->
-      itemsFound += items.length
-      Promise.then ->
-        switch
-        when mapList      then mapList items, compareItems
-        when map && _when then each item in-array items with matchingItems++; map item when _when item
-        when map          then each item in-array items with map item
-      .then -> items.length
-
-    throttled = 0
-    waitForThrottle = ->
-      Promise.then ->
-        if throttle?()
-          throttled++
-          timeout 1000
+          if Size < largeCopyThreshold then s3.copy options else s3.largeCopy options
           .then ->
-            throttled--
-            waitForThrottle()
+            stats.copyingBytesInFlight -= Size
+            stats.copiedFiles++
+            stats.copiedBytes += Size
 
-    eachRecursive = (startAfter, stopAt, usePrefixBisect = false, debugContext) =>
-      return Promise.resolve(0) if requestsUsed >= maxRequests || startAfter >= stopAt
-      # log eachRecursive: {}
-      #   startAfter: debugKey startAfter, false
-      #   stopAt: debugKey stopAt, false
-
-      middleKey = getBisectKey startAfter, stopAt, usePrefixBisect
-
-      report() if showProgress == :verbose
-      debug && log "" debug: START:  #{pad debugContext ? :root, 10} startAfter: #{debugKey startAfter}  middleKey: #{debugKey middleKey}  stopAt: #{debugKey stopAt}  usePrefixBisect: #{usePrefixBisect}
-
-      lastLeftKey = lastRightKey = undefined
-      rawLeftCount = rawRightCount = null
-
-      requestsUsed += 2
-      maxOutstanding = Math.max maxOutstanding, outstanding += 2
-
-      applyPromise = null
-
-      waitForThrottle()
-      .then -> Promise.all []
-        pwp.queue -> s3.list {} bucket, limit, startAfter
-        pwp.queue -> s3.list {} bucket, limit, startAfter: middleKey
-
-      .finally -> outstanding -= 2
-
-      .then ([rawLeftItems, rawRightItems, compareLeftItems, compareRightItems]) ->
-        rawLeftCount  = rawLeftItems?.length
-        rawRightCount = rawRightItems?.length
-        Promise.all []
-          leftItems = array item in-array rawLeftItems  when item.Key <= middleKey
-          rightItems = array item in-array rawRightItems when item.Key <= stopAt
-
-          compare && toBucket && @list {}
-            limit, pwp
-            startAfter: toKey startAfter
-            # prefix: toPrefix
-            bucket: toBucket
-            stopAt: toKey if leftItems.length == limit then peek(leftItems).Key else middleKey
-            showProgress: false
-
-          compare && toBucket && @list {}
-            limit, pwp
-            # prefix: toPrefix
-            bucket: toBucket
-            startAfter: toKey middleKey
-            stopAt: toKey if rightItems.length == limit then peek(rightItems).Key else stopAt
-            showProgress: false
-
-      .then ([leftItems, rightItems, compareLeftItems, compareRightItems]) ->
-
-        lastLeftKey  = peek(leftItems)?.Key
-        lastRightKey = peek(rightItems)?.Key
-
-        applyPromise = Promise.all []
-          applyF leftItems, compareLeftItems
-          applyF rightItems, compareRightItems
-
-        [leftItems.length, rightItems.length]
-
-      .then ([leftCount, rightCount]) ->
-        recurseLeft     = leftCount >= limit
-        recurseRight    = rightCount >= limit
-
-        leftStartAfter  = lastLeftKey
-        leftStopAt      = middleKey
-        rightStartAfter = lastRightKey
-        rightStopAt     = stopAt
-
-        leftUsePrefixBisect = rightCount == 0
-
-        # OPTIMIZATION: The code will work without this, but this lets us skip one recursion step. It may speed things up, but it appears to actually use more calls.
-        if aggressive && leftCount == 0 && recurseRight
-          recurseLeft = true
-          leftUsePrefixBisect = true
-          leftStartAfter = lastRightKey
-          leftStopAt = newMiddleKey = getBisectKey lastRightKey, rightStopAt
-          rightStartAfter = newMiddleKey
-
-        recurse = if recurseLeft then if recurseRight then :both else :left else :right
-        if debug == :verbose
-          log
-            """
-              -------------------------------------------------------------
-              debug:
-                INPUTS:
-                  startAfter:       #{debugKey startAfter}
-                  middleKey:        #{debugKey middleKey}
-                  stopAt:           #{debugKey stopAt}
-                  usePrefixBisect:  #{usePrefixBisect}
-                RESULTS: (before recursion)
-                  overlap:          #{if lastLeftKey < middleKey then :no else if lastLeftKey == lastRightKey then :full else :partial}
-                  lastLeftKey:      #{debugKey lastLeftKey}
-                  lastRightKey:     #{debugKey lastRightKey}
-                  counts:           applied: [#{leftCount}, #{rightCount}] raw: [#{rawLeftCount}, #{rawRightCount}]
-                PLAN:
-                  recurse:              #{recurse}
-                  leftStartAfter:       #{recurseLeft && debugKey leftStartAfter}
-                  leftStopAt:           #{recurseLeft && debugKey leftStopAt}
-                  leftUsePrefixBisect:  #{recurseLeft && leftUsePrefixBisect}
-                  rightStartAfter:      #{recurseRight && debugKey rightStartAfter}
-                  rightStopAt:          #{recurseRight && debugKey rightStopAt}
-        # else if debug
-        #   debug && log "" debug: RESULT: #{pad debugContext ? :root, 10} startAfter: #{debugKey startAfter}  middleKey: #{debugKey middleKey}  stopAt: #{debugKey stopAt}  usePrefixBisect: #{usePrefixBisect} [#{leftCount}, #{rightCount}]
-
-
-        Promise.all []
-          applyPromise
-          .then -> applyPromise = null # make sure we release it when it's done
-
-          if recurseLeft
-            eachRecursive leftStartAfter,   leftStopAt,   leftUsePrefixBisect,  if recurseRight then :recurse-BL else :recurse-L
-            .then (c) -> c + leftCount
-          else leftCount
-
-          if recurseRight
-            eachRecursive rightStartAfter,  rightStopAt,  false,                if recurseLeft then :recurse-BR else :recurse-R
-            .then (c) -> c + rightCount
-          else rightCount
-
-        .then ([leftCount, rightCount]) -> leftCount + rightCount
-
-      .tapCatch (error) -> log.error eachRecursive: {} startAfter, stopAt, usePrefixBisect, error if error is Error
-
-    eachRecursive
-      "#{prefix}#{startAfter}"
-      if stopAt
-        "#{prefix}#{stopAt}"
-      else getLastKeyWithPrefix prefix ? ''
-
-    .finally -> progressReporter?.stop()
-    .then (count) ->
-      report? :DONE
-      duration =        currentSecond() - startTime
-      itemsPerSecond = itemsFound / duration
-      itemsPerSecond = itemsPerSecond | 0 if itemsPerSecond > 10
-      requestsPerSecond = verboseProgress && requestsUsed / duration
-      requestsPerSecond = requestsPerSecond | 0 if requestsPerSecond > 10
-      averageItemsPerRequest = verboseProgress && itemsFound / requestsUsed
-      averageItemsPerRequest = averageItemsPerRequest | 0 if averageItemsPerRequest > 10
-      info = merge {}
-        duration
-        matchingItems
-        items: itemsFound
-        itemsPerSecond
-        requests: requestsUsed
-        requestsPerSecond
-        maxOutstanding: verboseProgress && maxOutstanding
-        averageItemsPerRequest
-
-      if requestsUsed > maxRequests
-        e = Error "S3Tools.each maxRequestsReached:\n" + formattedInspect info
-        e.info = info
-        throw e
-
-      else
-        if _returning? && showProgress
-          log final:
-            options: merge {}
-              bucket
-              prefix
-              startAfter
-              stopAt
-              toBucket
-              toPrefix
-              pattern
-
-            stats: info
-        _returning ? merge stats, info
+    .then (stats) ->
+      delete stats.copyingBytesInFlight
+      delete stats.copyingFilesStarted
+      delete stats.copyingBytesStarted
+      stats.copiedBytesPerSecond = stats.copiedBytes / stats.duration
+      stats.human = object stat, key in stats when /byte|size/i.test key
+        humanByteSize stat
+      stats

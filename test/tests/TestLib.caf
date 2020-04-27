@@ -1,0 +1,39 @@
+import &StandardImport
+
+_largeListP = null
+
+{}
+
+  ##
+    IN: keys: strings to use as Keys
+    OUT:
+      mocked AWS S3 sdk implementing minimal api:"
+
+        ##
+          IN: only limit and startAfter are supported (all S3P needs)
+          OUT:
+            list of objects with these keys:
+              Key: one of the passed in key-strings
+              Size: Key.length:
+                for easy testing, the size of simulated keys are the length of their keys
+        list: ({limit, startAfter}) ->
+
+  mockS3 = (keys...) ->
+    keys =
+      compactFlatten keys
+      .sort()
+
+    list: ({limit=1000, startAfter}) ->
+      count = 0
+      Promise.then ->
+        array file in keys when file > startAfter && count < limit
+          count++
+          Key: file
+          Size: file.length
+
+  getLargeFileList = ->
+    _largeListP ?=
+      Promise.resolve '' + &fs.readFileSync "test/data/large-list.txt"
+      .then (out) ->
+        out.trim().split "\n"
+        .sort()

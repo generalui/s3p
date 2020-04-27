@@ -4,8 +4,9 @@
 (module.exports = require('./namespace'))
 .includeInNamespace(require('./S3Parallel'))
 .addModules({
-  Cli:            require('./Cli'),
-  S3P:            require('./S3P'),
-  StandardImport: require('./StandardImport')
+  Cli:              require('./Cli'),
+  S3Comprehensions: require('./S3Comprehensions'),
+  S3P:              require('./S3P'),
+  StandardImport:   require('./StandardImport')
 });
 require('./Lib');

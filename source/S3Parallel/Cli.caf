@@ -1,6 +1,6 @@
 import &StandardImport
 
-commands = {copy, summarize, sync, compare, list} = &S3P
+commands = {list, summarize, compare, copy, sync} = &S3P
 commands.cp = commands.copy
 commands.ls = commands.list
 

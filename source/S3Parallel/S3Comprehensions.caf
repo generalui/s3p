@@ -1,0 +1,349 @@
+import &path, &ArtStandardLib, &ArtClassSystem, &Lib, {} &colors
+
+class S3P
+
+  ##
+    wrapper around each that returns a list of promise failures rather than failing
+  @eachPromises: (options) =>
+    failed = null
+    options extract map
+    _when = options.when
+
+    throw new Error "Expecting options.map" unless map is Function
+
+    @each merge options,
+      mapList: (items) ->
+        Promise.all array item in-array items
+          Promise.then -> map item
+          .catch (error) ->
+            log {} item.Key, error
+            failed?=[]
+            .push item.Key
+    .then (result) ->
+      merge result, {} failed
+
+  ##
+    IN
+      @each options
+      required: toBucket
+      logToCopy: false
+      logToDelete: false
+
+  ##
+    return first item found
+    IN: each options plus
+  @find: (options) =>
+    _with = options.with ? options.map ? (a) -> a
+    @each merge options, with: (item) -> throw found: _with item
+    .catch (error) -> error.found || throw error
+
+  ## return array of items found
+  @array: (options) =>
+    _with = options.with ? options.map ? (a) -> a
+    @each merge
+      options
+      into: _into = options.into ? []
+      with: (item) -> _into.push _with item
+
+  ## return an object mapping item.Keys to items found
+  @object: (options) =>
+    _with = options.with ? options.map ? (a) -> a
+    @each merge
+      options
+      into:     _into = options.into ? []
+      with:     (item) -> _into.push _with item
+      withKey:  options.withKey ? ({Key}) -> Key
+
+  ##
+    IN:
+      options:
+        aggressive:   false - if true, will make a little more S3 requests to increase parallelism
+        debug:        false
+        quiet:        log nothing
+        showProgress: true - log progress once a second
+        verboseProgress: false
+        prefix:       <String/NULL> only scan within a given prefix
+        startAfter:   <String/NULL> Keys starting with and including this key will be passed to map/mapList - overrides prefix
+        stopAt:       <String/NULL> Keys up to but not including this one will be passed to map/mapList - overrides prefix
+        limit:        <Number/1000> limit items per call; generally the default of 1000 is best (max allowed by AWS is 1000)
+        bucket:
+        toBucket:     <String> bucket name to compare with - if present, will run the same s3:list operations on the target bucket and pass matching lists to mapList as the second argument (map not supported)
+        getProgress: <(duration) -> <String>> optional - if provided and showProgress is true, will append to the progress string
+        maxRequests: <Number> limit how many requests will be used - aborts nicely if reached
+          nicely: finishes current function calls, logs message, does no more work, throws error
+
+        pattern: only yield items who's keys match this pattern (creates a 'when' clause)
+
+        throttle: -> T/F - (optional)
+          If present, it gets called before any new s3.list calls are made.
+          If it returns true, no new s3.list calls will be made.
+          While it returns true, it will be called once/second/parallel-branch until it returns false.
+
+        COMPREHENSION
+        with: (Item) -> ignored - alais of `map`
+        when: (Item) -> T/F - if true, pass it on to `map`, else skip
+        returning:    if present, return this value instead of stats
+        into:         <ALIAS: returning>
+    OUT:
+      options.returning ? {}
+        itemsFound
+        itemsProcessed
+        requestsUsed
+        matchingItems: if when is provided, this counts the number of times when is true
+        ... and more stats
+  @each: (options) =>
+    options extract
+      quiet
+      bucket, limit = 1000, maxRequests, prefix, showProgress = !quiet
+      startAfter
+      stopAt
+      debug, aggressive
+      getProgress
+      map
+      mapList
+      compare
+      toBucket
+      toPrefix
+      pattern
+      verboseProgress
+      concurrency = 100 # max open reqeusts
+      pwp = new PromiseWorkerPool concurrency # internal use only
+      s3 = &Lib/S3
+      throttle
+      stats
+      toKey = (a) -> a
+
+    _with = options.with
+    _when = if pattern then ({Key}) -> Key.match pattern
+    else options.when
+    _returning = options.returning ? options.into
+    map ?= _with unless mapList
+
+    if compare && map && toBucket
+      throw new Error "cannot use both `compare` and `map` - use mapList instead"
+
+    _reduce = options.reduce
+
+    # statistics
+    itemsFound =
+    requestsUsed =
+    maxOutstanding =
+    outstanding = 0
+    startTime = currentSecond()
+    matchingItems = if _when then 0 else undefined # if when is provided, this counts the number of times when is true
+
+    # pwp = queue: (f) -> f()
+
+    if showProgress
+      report = (message) ->
+        duration = currentSecond() - startTime
+        itemsPerSecond = (itemsFound / duration)
+        efficiency = (itemsFound / (requestsUsed * limit)) * 100 | 0
+
+        log "s3p progress: " +
+          compactFlatten []
+            "" duration: #{durationString duration}
+            "" items: #{itemsFound}
+            "" items/s: #{itemsPerSecond | 0}
+            "" listRequests: #{requestsUsed}
+            if verboseProgress        then "" efficiency: #{efficiency}%
+            if verboseProgress        then "" outstanding: #{outstanding}
+            if matchingItems          then "" matches: #{matchingItems}
+            if throttled > 0                then "" listWorkers: throttled
+            else if pwp.activeWorkers > 0   then "" listWorkers: #{pwp.activeWorkers}
+            if pwp.queueSize > 0      then "" listQueue: #{pwp.queueSize}
+            getProgress?(duration) || null
+            message
+          .join ', '
+
+      progressReporter = interval 1000, report
+
+    # OUT: count of times map was applied
+    applyF = (items, compareItems) ->
+      itemsFound += items.length
+      Promise.then ->
+        switch
+        when mapList      then mapList items, compareItems
+        when map && _when then each item in-array items with matchingItems++; map item when _when item
+        when map          then each item in-array items with map item
+      .then -> items.length
+
+    throttled = 0
+    waitForThrottle = ->
+      Promise.then ->
+        if throttle?()
+          throttled++
+          timeout 1000
+          .then ->
+            throttled--
+            waitForThrottle()
+
+    eachRecursive = (startAfter, stopAt, usePrefixBisect = false, debugContext) =>
+      return Promise.resolve(0) if requestsUsed >= maxRequests || startAfter >= stopAt
+      # log eachRecursive: {}
+      #   startAfter: debugKey startAfter, false
+      #   stopAt: debugKey stopAt, false
+
+      middleKey = getBisectKey startAfter, stopAt, usePrefixBisect
+
+      report() if showProgress == :verbose
+      debug && log "" debug: START:  #{pad debugContext ? :root, 10} startAfter: #{debugKey startAfter}  middleKey: #{debugKey middleKey}  stopAt: #{debugKey stopAt}  usePrefixBisect: #{usePrefixBisect}
+
+      lastLeftKey = lastRightKey = undefined
+      rawLeftCount = rawRightCount = null
+
+      requestsUsed += 2
+      maxOutstanding = Math.max maxOutstanding, outstanding += 2
+
+      applyPromise = null
+
+      waitForThrottle()
+      .then -> Promise.all []
+        pwp.queue -> s3.list {} bucket, limit, startAfter
+        pwp.queue -> s3.list {} bucket, limit, startAfter: middleKey
+
+      .finally -> outstanding -= 2
+
+      .then ([rawLeftItems, rawRightItems, compareLeftItems, compareRightItems]) ->
+        rawLeftCount  = rawLeftItems?.length
+        rawRightCount = rawRightItems?.length
+        Promise.all []
+          leftItems = array item in-array rawLeftItems  when item.Key <= middleKey
+          rightItems = array item in-array rawRightItems when item.Key <= stopAt
+
+          compare && toBucket && @list {}
+            limit, pwp
+            startAfter: toKey startAfter
+            # prefix: toPrefix
+            bucket: toBucket
+            stopAt: toKey if leftItems.length == limit then peek(leftItems).Key else middleKey
+            showProgress: false
+
+          compare && toBucket && @list {}
+            limit, pwp
+            # prefix: toPrefix
+            bucket: toBucket
+            startAfter: toKey middleKey
+            stopAt: toKey if rightItems.length == limit then peek(rightItems).Key else stopAt
+            showProgress: false
+
+      .then ([leftItems, rightItems, compareLeftItems, compareRightItems]) ->
+
+        lastLeftKey  = peek(leftItems)?.Key
+        lastRightKey = peek(rightItems)?.Key
+
+        applyPromise = Promise.all []
+          applyF leftItems, compareLeftItems
+          applyF rightItems, compareRightItems
+
+        [leftItems.length, rightItems.length]
+
+      .then ([leftCount, rightCount]) ->
+        recurseLeft     = leftCount >= limit
+        recurseRight    = rightCount >= limit
+
+        leftStartAfter  = lastLeftKey
+        leftStopAt      = middleKey
+        rightStartAfter = lastRightKey
+        rightStopAt     = stopAt
+
+        leftUsePrefixBisect = rightCount == 0
+
+        # OPTIMIZATION: The code will work without this, but this lets us skip one recursion step. It may speed things up, but it appears to actually use more calls.
+        if aggressive && leftCount == 0 && recurseRight
+          recurseLeft = true
+          leftUsePrefixBisect = true
+          leftStartAfter = lastRightKey
+          leftStopAt = newMiddleKey = getBisectKey lastRightKey, rightStopAt
+          rightStartAfter = newMiddleKey
+
+        recurse = if recurseLeft then if recurseRight then :both else :left else :right
+        if debug == :verbose
+          log
+            """
+              -------------------------------------------------------------
+              debug:
+                INPUTS:
+                  startAfter:       #{debugKey startAfter}
+                  middleKey:        #{debugKey middleKey}
+                  stopAt:           #{debugKey stopAt}
+                  usePrefixBisect:  #{usePrefixBisect}
+                RESULTS: (before recursion)
+                  overlap:          #{if lastLeftKey < middleKey then :no else if lastLeftKey == lastRightKey then :full else :partial}
+                  lastLeftKey:      #{debugKey lastLeftKey}
+                  lastRightKey:     #{debugKey lastRightKey}
+                  counts:           applied: [#{leftCount}, #{rightCount}] raw: [#{rawLeftCount}, #{rawRightCount}]
+                PLAN:
+                  recurse:              #{recurse}
+                  leftStartAfter:       #{recurseLeft && debugKey leftStartAfter}
+                  leftStopAt:           #{recurseLeft && debugKey leftStopAt}
+                  leftUsePrefixBisect:  #{recurseLeft && leftUsePrefixBisect}
+                  rightStartAfter:      #{recurseRight && debugKey rightStartAfter}
+                  rightStopAt:          #{recurseRight && debugKey rightStopAt}
+        # else if debug
+        #   debug && log "" debug: RESULT: #{pad debugContext ? :root, 10} startAfter: #{debugKey startAfter}  middleKey: #{debugKey middleKey}  stopAt: #{debugKey stopAt}  usePrefixBisect: #{usePrefixBisect} [#{leftCount}, #{rightCount}]
+
+
+        Promise.all []
+          applyPromise
+          .then -> applyPromise = null # make sure we release it when it's done
+
+          if recurseLeft
+            eachRecursive leftStartAfter,   leftStopAt,   leftUsePrefixBisect,  if recurseRight then :recurse-BL else :recurse-L
+            .then (c) -> c + leftCount
+          else leftCount
+
+          if recurseRight
+            eachRecursive rightStartAfter,  rightStopAt,  false,                if recurseLeft then :recurse-BR else :recurse-R
+            .then (c) -> c + rightCount
+          else rightCount
+
+        .then ([leftCount, rightCount]) -> leftCount + rightCount
+
+      .tapCatch (error) -> log.error eachRecursive: {} startAfter, stopAt, usePrefixBisect, error if error is Error
+
+    eachRecursive
+      "#{prefix}#{startAfter}"
+      if stopAt
+        "#{prefix}#{stopAt}"
+      else getLastKeyWithPrefix prefix ? ''
+
+    .finally -> progressReporter?.stop()
+    .then (count) ->
+      report? :DONE
+      duration =        currentSecond() - startTime
+      itemsPerSecond = itemsFound / duration
+      itemsPerSecond = itemsPerSecond | 0 if itemsPerSecond > 10
+      requestsPerSecond = verboseProgress && requestsUsed / duration
+      requestsPerSecond = requestsPerSecond | 0 if requestsPerSecond > 10
+      averageItemsPerRequest = verboseProgress && itemsFound / requestsUsed
+      averageItemsPerRequest = averageItemsPerRequest | 0 if averageItemsPerRequest > 10
+      info = merge {}
+        duration
+        matchingItems
+        items: itemsFound
+        itemsPerSecond
+        requests: requestsUsed
+        requestsPerSecond
+        maxOutstanding: verboseProgress && maxOutstanding
+        averageItemsPerRequest
+
+      if requestsUsed > maxRequests
+        e = Error "S3Tools.each maxRequestsReached:\n" + formattedInspect info
+        e.info = info
+        throw e
+
+      else
+        if _returning? && showProgress
+          log final:
+            options: merge {}
+              bucket
+              prefix
+              startAfter
+              stopAt
+              toBucket
+              toPrefix
+              pattern
+
+            stats: info
+        _returning ? merge stats, info

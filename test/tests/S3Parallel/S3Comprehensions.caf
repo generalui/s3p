@@ -1,0 +1,31 @@
+import &StandardImport, &TestLib
+
+suite:
+  summarize: ->
+    @timeout 10000
+    test :3-items ->
+      S3P.summarize
+        quiet: true
+        limit: 2
+        s3: mockS3
+          :alpha
+          :beta
+          :gamma
+      .then (result) ->
+        assert.selectedEq
+          items: 3
+          size: 14
+          result
+
+    test :largeList ->
+      getLargeFileList()
+      .then (files) ->
+        S3P.summarize
+          quiet: true
+          s3: mockS3 files
+
+        .then (result) ->
+          assert.selectedEq
+            items:  files.length
+            size:   files.join('').length
+            result
