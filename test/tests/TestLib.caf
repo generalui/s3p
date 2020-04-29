@@ -31,9 +31,20 @@ _largeListP = null
           Key: file
           Size: file.length
 
+  generateLargeFileList = ->
+    paths =
+      :run1/job-status//
+      :run2/job-status/
+      :run2/sync-status/
+      :run2/fluffy/
+      :run2/upload-status/
+      :run2/output/
+
+    each path in paths into out = []
+      array i til 10000 into out
+        "" #{path}#{randomString()}
+
+    .sort()
+
   getLargeFileList = ->
-    _largeListP ?=
-      Promise.resolve '' + &fs.readFileSync "test/data/large-list.txt"
-      .then (out) ->
-        out.trim().split "\n"
-        .sort()
+    _largeListP ?= Promise.then generateLargeFileList
