@@ -3,6 +3,7 @@ import &StandardImport
 commands = {list, summarize, compare, copy, sync} = &S3P
 commands.cp = commands.copy
 commands.ls = commands.list
+commands.version = -> &package.version
 
 class Cli
 

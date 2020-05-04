@@ -12,6 +12,7 @@
 
 # Fixes and Improvements
 - large-file copy support that doesn't require sys-execing "aws s3 cp"
+  - https://www.npmjs.com/package/aws-s3-multipart-copy didn't work, but maybe it's source is a place to start
 - abort properly when 'found'
 - S3P isn't optimized when comparing with toBucket and there are large lists of Keys not present in the source-bucket.
   - For a given source-bucket range, limited by the limit option, S3P creates an in-memory list of ALL keys in toBucket in the same range - without limit.

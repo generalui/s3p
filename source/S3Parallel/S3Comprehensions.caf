@@ -1,6 +1,6 @@
 import &path, &ArtStandardLib, &ArtClassSystem, &Lib, {} &colors
 
-class S3P
+class S3Comprehensions
 
   @normalizeOptions: (options) =>
     options extract

@@ -1,4 +1,4 @@
-import &StandardImport, {} &util.promisify, &awsS3MultipartCopy
+import &StandardImport, {} &util.promisify
 exec = promisify &child_process.exec
 shellEscape = &shellEscape
 escape = (single) -> shellEscape [] single
@@ -79,23 +79,6 @@ class S3 extends BaseClass
 
         @s3.copyObject copyOptions
         .promise()
-
-  # https://www.npmjs.com/package/aws-s3-multipart-copy
-  # I think the configuration is right, but it fails with an invalid request error from AWS
-  @_multipartCopy: ({fromBucket, toBucket, fromKey, toKey, size}) =>
-    awsS3MultipartCopy.init
-      @s3
-      info:   (info) -> log multipart_info: info
-      error:  (error) -> log.error multipart_error: error
-
-    awsS3MultipartCopy.copyObjectMultipart
-      source_bucket: fromBucket
-      object_key: fromKey
-      destination_bucket: toBucket
-      copied_object_name: toKey
-      object_size: size
-      # copy_part_size_bytes: 50000000,
-      # expiration_period: 100000
 
   @delete: (options) =>
     @s3.deleteObject

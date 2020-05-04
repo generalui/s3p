@@ -1,0 +1,1 @@
+module.exports = (env, argv) => require("art-build-configurator").getWebpackConfig(__dirname, env, argv);
