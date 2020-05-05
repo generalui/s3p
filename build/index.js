@@ -171,6 +171,7 @@ module.exports = __webpack_require__(/*! ./S3Parallel */ 4);
   Cli:              __webpack_require__(/*! ./Cli */ 27),
   S3Comprehensions: __webpack_require__(/*! ./S3Comprehensions */ 26),
   S3P:              __webpack_require__(/*! ./S3P */ 23),
+  S3PCli:           __webpack_require__(/*! ./S3PCli */ 28),
   StandardImport:   __webpack_require__(/*! ./StandardImport */ 15)
 });
 __webpack_require__(/*! ./Lib */ 10);
@@ -211,7 +212,7 @@ module.exports = require('neptune-namespaces' /* ABC - not inlining fellow NPM *
 /*! exports provided: author, bin, bugs, dependencies, description, devDependencies, homepage, license, name, repository, scripts, version, default */
 /***/ (function(module) {
 
-module.exports = JSON.parse("{\"author\":\"GenUI LLC\",\"bin\":{\"s3p\":\"./s3p\"},\"bugs\":\"https:/github.com/generalui/s3p/issues\",\"dependencies\":{\"aws-sdk\":\"^2.643.0\",\"caffeine-script-runtime\":\"^1.13.3\",\"neptune-namespaces\":\"^4.0.0\",\"shell-escape\":\"^0.2.0\"},\"description\":\"S3p\",\"devDependencies\":{\"art-build-configurator\":\"^1.26.9\",\"art-testbench\":\"^1.17.2\",\"caffeine-script\":\"^0.72.1\",\"case-sensitive-paths-webpack-plugin\":\"^2.2.0\",\"chai\":\"^4.2.0\",\"coffee-loader\":\"^0.7.3\",\"css-loader\":\"^3.0.0\",\"json-loader\":\"^0.5.7\",\"mocha\":\"^7.1.1\",\"mock-fs\":\"^4.10.0\",\"script-loader\":\"^0.7.2\",\"style-loader\":\"^1.0.0\",\"webpack\":\"^4.39.1\",\"webpack-cli\":\"*\",\"webpack-dev-server\":\"^3.7.2\",\"webpack-merge\":\"^4.2.1\",\"webpack-node-externals\":\"^1.7.2\",\"webpack-stylish\":\"^0.1.8\"},\"homepage\":\"https://github.com/generalui/s3p\",\"license\":\"ISC\",\"name\":\"s3p\",\"repository\":{\"type\":\"git\",\"url\":\"https://github.com/generalui/s3p.git\"},\"scripts\":{\"build\":\"webpack --progress\",\"start\":\"webpack-dev-server --hot --inline --progress --env.devServer\",\"test\":\"nn -s;mocha -u tdd\",\"testInBrowser\":\"webpack-dev-server --progress --env.devServer\"},\"version\":\"2.1.1\"}");
+module.exports = JSON.parse("{\"author\":\"GenUI LLC\",\"bin\":{\"s3p\":\"./s3p\"},\"bugs\":\"https:/github.com/generalui/s3p/issues\",\"dependencies\":{\"art-class-system\":\"^1.11.2\",\"art-standard-lib\":\"^1.65.1\",\"aws-sdk\":\"^2.643.0\",\"caffeine-script-runtime\":\"^1.13.3\",\"neptune-namespaces\":\"^4.0.0\",\"shell-escape\":\"^0.2.0\"},\"description\":\"S3p\",\"devDependencies\":{\"art-build-configurator\":\"^1.26.9\",\"art-testbench\":\"^1.17.2\",\"caffeine-script\":\"^0.72.1\",\"case-sensitive-paths-webpack-plugin\":\"^2.2.0\",\"chai\":\"^4.2.0\",\"coffee-loader\":\"^0.7.3\",\"css-loader\":\"^3.0.0\",\"json-loader\":\"^0.5.7\",\"mocha\":\"^7.1.1\",\"mock-fs\":\"^4.10.0\",\"script-loader\":\"^0.7.2\",\"style-loader\":\"^1.0.0\",\"webpack\":\"^4.39.1\",\"webpack-cli\":\"*\",\"webpack-dev-server\":\"^3.7.2\",\"webpack-merge\":\"^4.2.1\",\"webpack-node-externals\":\"^1.7.2\",\"webpack-stylish\":\"^0.1.8\"},\"homepage\":\"https://github.com/generalui/s3p\",\"license\":\"ISC\",\"name\":\"s3p\",\"repository\":{\"type\":\"git\",\"url\":\"https://github.com/generalui/s3p.git\"},\"scripts\":{\"build\":\"webpack --progress\",\"start\":\"webpack-dev-server --hot --inline --progress --env.devServer\",\"test\":\"nn -s;mocha -u tdd\",\"testInBrowser\":\"webpack-dev-server --progress --env.devServer\"},\"version\":\"2.2.0\"}");
 
 /***/ }),
 /* 8 */
@@ -944,14 +945,14 @@ Caf.defMod(module, () => {
   return Caf.importInvoke(
     [
       "merge",
+      "compactFlatten",
+      "colors",
       "humanByteSize",
       "Math",
       "dirname",
       "Number",
       "Object",
       "Error",
-      "compactFlatten",
-      "colors",
       "objectDiff",
       "log",
       "objectWithout",
@@ -970,14 +971,14 @@ Caf.defMod(module, () => {
     ],
     (
       merge,
+      compactFlatten,
+      colors,
       humanByteSize,
       Math,
       dirname,
       Number,
       Object,
       Error,
-      compactFlatten,
-      colors,
       objectDiff,
       log,
       objectWithout,
@@ -1081,6 +1082,22 @@ Caf.defMod(module, () => {
           };
           return S3C.each(
             merge(options, {
+              getProgress: () =>
+                compactFlatten([
+                  `totalSize: ${Caf.toString(
+                    colors.green(`${Caf.toString(humanByteSize(summary.size))}`)
+                  )}`,
+                  `minSize: ${Caf.toString(
+                    colors.green(
+                      `${Caf.toString(humanByteSize(summary.minSize))}`
+                    )
+                  )}`,
+                  `maxSize: ${Caf.toString(
+                    colors.green(
+                      `${Caf.toString(humanByteSize(summary.maxSize))}`
+                    )
+                  )}`
+                ]).join(" "),
               map: ({ Size, Key }) => {
                 let floorSize,
                   logSize,
@@ -1174,13 +1191,12 @@ Caf.defMod(module, () => {
               };
               humanize(summary.folders);
             }
-            return merge({ items: stats.items }, summary, {
+            return merge(stats, summary, {
               human: Caf.object(
                 summary,
                 (v, k) => humanByteSize(v),
                 (v, k) => /size$/i.test(k)
-              ),
-              stats
+              )
             });
           });
         };
@@ -1700,8 +1716,8 @@ let Caf = __webpack_require__(/*! caffeine-script-runtime */ 2);
 Caf.defMod(module, () => {
   return Caf.importInvoke(
     [
-      "Error",
       "getLastKeyWithPrefix",
+      "Error",
       "compactFlatten",
       "log",
       "merge",
@@ -1730,8 +1746,8 @@ Caf.defMod(module, () => {
       { colors: __webpack_require__(/*! colors */ 25) }
     ],
     (
-      Error,
       getLastKeyWithPrefix,
+      Error,
       compactFlatten,
       log,
       merge,
@@ -1773,27 +1789,31 @@ Caf.defMod(module, () => {
               withFn,
               whenFn,
               returningV,
+              prefixStopAt,
               r,
               e,
               temp,
-              temp1;
+              temp1,
+              temp2,
+              temp3;
             dryRun = options.dryRun;
             toPrefix = options.toPrefix;
             addPrefix = options.addPrefix;
-            prefix = options.prefix;
+            prefix = undefined !== (temp = options.prefix) ? temp : "";
             pattern = options.pattern;
-            pretend = undefined !== (temp = options.pretend) ? temp : dryRun;
+            pretend = undefined !== (temp1 = options.pretend) ? temp1 : dryRun;
             toKey = options.toKey;
             map = options.map;
             mapList = options.mapList;
             returnValue = options.returnValue;
             filter = options.filter;
-            startAfter = options.startAfter;
+            startAfter =
+              undefined !== (temp2 = options.startAfter) ? temp2 : "";
             stopAt = options.stopAt;
             withFn = options.with;
             whenFn = options.when;
             returningV =
-              (temp1 = options.returning) != null ? temp1 : options.into;
+              (temp3 = options.returning) != null ? temp3 : options.into;
             if (
               !(
                 dryRun ||
@@ -1810,17 +1830,18 @@ Caf.defMod(module, () => {
               return options;
             }
             try {
-              if (prefix) {
-                if (startAfter || stopAt) {
-                  throw new Error("only use prefix OR startAfter & stopAt");
-                }
-              } else {
-                prefix = "";
+              startAfter = `${Caf.toString(startAfter)}`;
+              if (stopAt) {
+                stopAt = `${Caf.toString(stopAt)}`;
               }
-              startAfter != null ? startAfter : (startAfter = prefix);
-              stopAt != null
-                ? stopAt
-                : (stopAt = getLastKeyWithPrefix(prefix != null ? prefix : ""));
+              prefix = `${Caf.toString(prefix)}`;
+              if (startAfter < prefix) {
+                startAfter = prefix;
+              }
+              prefixStopAt = getLastKeyWithPrefix(prefix != null ? prefix : "");
+              if (!stopAt || stopAt > prefixStopAt) {
+                stopAt = prefixStopAt;
+              }
               if (whenFn) {
                 if (filter) {
                   throw new Error("only use one: when or filter");
@@ -1872,6 +1893,7 @@ Caf.defMod(module, () => {
                 "addPrefix"
               ),
               {
+                originalOptions: options,
                 pretend,
                 toKey,
                 filter,
@@ -2000,8 +2022,8 @@ Caf.defMod(module, () => {
               toBucket,
               toKey,
               limit,
-              maxRequests,
-              concurrency,
+              maxListRequests,
+              listConcurrency,
               returnValue,
               map,
               mapList,
@@ -2044,9 +2066,9 @@ Caf.defMod(module, () => {
             toBucket = options.toBucket;
             toKey = undefined !== (temp1 = options.toKey) ? temp1 : a => a;
             limit = undefined !== (temp2 = options.limit) ? temp2 : 1000;
-            maxRequests = options.maxRequests;
-            concurrency =
-              undefined !== (temp3 = options.concurrency) ? temp3 : 100;
+            maxListRequests = options.maxListRequests;
+            listConcurrency =
+              undefined !== (temp3 = options.listConcurrency) ? temp3 : 100;
             returnValue = options.returnValue;
             map = options.map;
             mapList = options.mapList;
@@ -2060,7 +2082,7 @@ Caf.defMod(module, () => {
             pwp =
               undefined !== (temp5 = options.pwp)
                 ? temp5
-                : new PromiseWorkerPool(concurrency);
+                : new PromiseWorkerPool(listConcurrency);
             if (compare && map && toBucket) {
               throw new Error(
                 "cannot use both `compare` and `map` - use mapList instead"
@@ -2077,9 +2099,9 @@ Caf.defMod(module, () => {
                 itemsPerSecond = itemsFound / duration;
                 efficiency = ((itemsFound / (requestsUsed * limit)) * 100) | 0;
                 return log(
-                  "s3p progress: " +
+                  "s3p: " +
                     compactFlatten([
-                      `duration: ${Caf.toString(durationString(duration))}`,
+                      `d: ${Caf.toString(durationString(duration, 2))}`,
                       `items: ${Caf.toString(itemsFound)}`,
                       `items/s: ${Caf.toString(itemsPerSecond | 0)}`,
                       `listRequests: ${Caf.toString(requestsUsed)}`,
@@ -2188,7 +2210,7 @@ Caf.defMod(module, () => {
               debugContext
             ) => {
               let middleKey, rawLeftCount, rawRightCount, applyPromise;
-              if (requestsUsed >= maxRequests || startAfter >= stopAt) {
+              if (requestsUsed >= maxListRequests || startAfter >= stopAt) {
                 return Promise.resolve(0);
               }
               middleKey = getBisectKey(startAfter, stopAt, usePrefixBisect);
@@ -2482,9 +2504,9 @@ Caf.defMod(module, () => {
                   maxOutstanding: verboseProgress && maxOutstanding,
                   averageItemsPerRequest
                 });
-                return requestsUsed > maxRequests
+                return requestsUsed > maxListRequests
                   ? ((e = Error(
-                      "S3Comprehensions.each maxRequestsReached:\n" +
+                      "S3Comprehensions.each maxListRequestsReached:\n" +
                         formattedInspect(info)
                     )),
                     (e.info = info),
@@ -2503,7 +2525,19 @@ Caf.defMod(module, () => {
                           }
                         })
                       : undefined,
-                    returnValue != null ? returnValue : merge(stats, info));
+                    returnValue != null
+                      ? returnValue
+                      : merge(stats, info, {
+                          options: Caf.object(
+                            originalOptions,
+                            (o, k) =>
+                              isFunction(o) ? `${Caf.toString(o)}` : o,
+                            (o, k) =>
+                              k !== "map" &&
+                              k !== "mapList" &&
+                              k !== "getProgress"
+                          )
+                        }));
               });
           };
           this._compareList = options => {
@@ -2558,81 +2592,185 @@ let Caf = __webpack_require__(/*! caffeine-script-runtime */ 2);
 Caf.defMod(module, () => {
   return Caf.importInvoke(
     [
-      "process",
       "lowerCamelCase",
-      "Function",
-      "isClass",
       "log",
+      "isFunction",
+      "isClass",
+      "merge",
       "Object",
+      "process",
       "Promise"
     ],
     [global, __webpack_require__(/*! ./StandardImport */ 15)],
-    (process, lowerCamelCase, Function, isClass, log, Object, Promise) => {
-      let commands, list, summarize, compare, copy, sync, Cli;
-      commands =
-        (({ list, summarize, compare, copy, sync } = __webpack_require__(/*! ./S3P */ 23)),
-        { list, summarize, compare, copy, sync });
-      commands.cp = commands.copy;
-      commands.ls = commands.list;
-      commands.version = function() {
-        return __webpack_require__(/*! ../../package */ 7).version;
-      };
+    (
+      lowerCamelCase,
+      log,
+      isFunction,
+      isClass,
+      merge,
+      Object,
+      process,
+      Promise
+    ) => {
+      let Cli;
       return (Cli = Caf.defClass(class Cli extends Object {}, function(
         Cli,
         classSuper,
         instanceSuper
       ) {
-        let optionRegExp;
-        optionRegExp = /^--(.+)$/;
-        this.parseArgs = function([node, sourceFile, ...args] = process.argv) {
-          let options, currentOption;
-          return Caf.each2(
+        this.optionRegExp = /^--(.+)$/;
+        this.evalJsRegExp = /^js:(.*)$/;
+        this.numberRegExp = /^[-+]?([0-9]*\.[0-9]+|[0-9]+)([eE][-+]?[0-9]+)?$/i;
+        this.parseArgs = function(args) {
+          let currentOptionName, commands, currentOption, options;
+          currentOptionName = "arg";
+          commands = currentOption = [];
+          Caf.each2(
             args,
             (arg, i) => {
-              let option;
-              return (option = arg.match(/^--(.+)$/))
-                ? (currentOption = options[lowerCamelCase(option[1])] = [])
-                : currentOption.push(arg);
+              let option, evalMatch, error;
+              return (option = arg.match(this.optionRegExp))
+                ? (currentOption = options[
+                    (currentOptionName = lowerCamelCase(option[1]))
+                  ] = [])
+                : currentOption.push(
+                    (() => {
+                      switch (false) {
+                        case !this.numberRegExp.test(arg):
+                          return arg / 1;
+                        case !this.evalJsRegExp.test(arg):
+                          evalMatch = arg.match(this.optionRegExp);
+                          return (() => {
+                            try {
+                              return eval(evalMatch[1]);
+                            } catch (error1) {
+                              error = error1;
+                              return log.error({
+                                evaluationError: {
+                                  option: currentOptionName,
+                                  source: evalMatch[1],
+                                  raw: arg,
+                                  error
+                                }
+                              });
+                            }
+                          })();
+                        default:
+                          return arg;
+                      }
+                    })()
+                  );
             },
             null,
-            (options = { commands: (currentOption = []) })
+            (options = {})
           );
+          return {
+            commands,
+            options: Caf.object(options, (o, k) =>
+              (() => {
+                switch (o.length) {
+                  case 0:
+                    return true;
+                  case 1:
+                    return o[0];
+                  default:
+                    return o;
+                }
+              })()
+            )
+          };
         };
-        this.main = function() {
-          let options, command, commandName;
-          options = this.parseArgs();
-          return !(
-            options.commands.length === 1 &&
-            (command = commands[(commandName = options.commands[0])]) &&
-              Caf.is(command, Function) &&
-              !isClass(command)
-          )
-            ? log(
-                `s3p help:\n\nCommands: ${Caf.toString(
-                  Object.keys(commands).join(", ")
-                )}`
-              )
-            : ((options = Caf.object(
-                options,
-                (o, k) =>
-                  (() => {
-                    switch (o.length) {
-                      case 0:
-                        return true;
-                      case 1:
-                        return o[0];
-                      default:
-                        return o;
-                    }
-                  })(),
-                (o, k) => k !== "commands"
-              )),
-              log({ command: commandName, options }),
-              Promise.then(() => command(options)).then(log, log));
+        this._selectCommand = function(commands, defaultCommand, parsedArgs) {
+          let commandFunction, commandName;
+          commandFunction =
+            commands[(commandName = parsedArgs.commands[0] || defaultCommand)];
+          if (!(isFunction(commandFunction) && !isClass(commandFunction))) {
+            commandFunction = null;
+            commandName = null;
+          }
+          return merge(parsedArgs, { commandFunction, commandName });
+        };
+        this._showDoc = ({ doc, commands }, parsedArgs, startFile) => {
+          log(
+            `${Caf.toString(startFile)} help:\n\nCommands: ${Caf.toString(
+              Object.keys(commands).join(", ")
+            )}`
+          );
+          return doc != null && log(doc);
+        };
+        this.start = cliOptions => {
+          let commands,
+            defaultCommand,
+            doc,
+            argv,
+            nodeJs,
+            startFile,
+            args,
+            parsed,
+            options,
+            commandName,
+            commandFunction,
+            temp;
+          commands = cliOptions.commands;
+          defaultCommand = cliOptions.defaultCommand;
+          doc = cliOptions.doc;
+          argv = undefined !== (temp = cliOptions.argv) ? temp : process.argv;
+          [nodeJs, startFile, ...args] = argv;
+          parsed = this._selectCommand(
+            commands,
+            defaultCommand,
+            this.parseArgs(args)
+          );
+          return ((options = parsed.options),
+          (commandName = parsed.commandName),
+          (commandFunction = parsed.commandFunction))
+            ? (parsed.options.verbose
+                ? log({ command: commandName, options })
+                : undefined,
+              Promise.then(() => commandFunction(options)).then(
+                result => result != null && log(result)
+              ))
+            : this._showDoc(cliOptions, parsed, startFile);
         };
       }));
     }
   );
+});
+
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../../node_modules/webpack/buildin/module.js */ 1)(module)))
+
+/***/ }),
+/* 28 */
+/*!**************************************!*\
+  !*** ./source/S3Parallel/S3PCli.caf ***!
+  \**************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+/* WEBPACK VAR INJECTION */(function(module) {
+let Caf = __webpack_require__(/*! caffeine-script-runtime */ 2);
+Caf.defMod(module, () => {
+  return (() => {
+    let commands, list, summarize, compare, copy, sync;
+    commands =
+      (({ list, summarize, compare, copy, sync } = __webpack_require__(/*! ./S3P */ 23)),
+      { list, summarize, compare, copy, sync });
+    commands.cp = commands.copy;
+    commands.ls = commands.list;
+    commands.version = function() {
+      return __webpack_require__(/*! ../../package */ 7).version;
+    };
+    return {
+      main: function() {
+        return __webpack_require__(/*! ./Cli */ 27).start({
+          commands,
+          doc:
+            "options:\n  all-commands:\n    --bucket bucket-name\n      The source bucket\n\n    --prefix key\n      Only iterate over keys with this prefix.\n\n    --start-after key\n      Start iteratating after this key\n      If prefix and startAfter are specified, both will be enforced.\n\n    --stop-at key\n      Iterate up to, and including, this key\n      If prefix and stopAt are specified, both will be enforced.\n\n    --pattern\n      Source keys must contain this pattern.\n      If you pass a string, it will be matched exactly.\n\n    --filter function\n      Source keys must return true when passed to this function.\n      Example: 'js:(key)=>key.length>10'\n\n    --quiet\n      no output\n\n    --verbose\n      extra output\n\n    --dry-run / --pretend\n      Will not modify anything.\n      For sync/copy commands, do everything except actually copy files.\n\n  summarize-command\n    --summarize-folders\n\n  compare, copy, sync commands\n    --to-bucket bucket-name\n      The target bucket. Can be the same bucket.\n\n    --to-prefix key-prefix\n      if prefix is specified, the target key will REPLACE it's source prefix with toPrefix\n      Otherwise, this is the same as addPrefix.\n\n    --add-prefix key-prefix\n      The source key is prepended with this string for the target bucket.\n\n  all-commands advanced:\n    --list-concurrency        100\n      Maximum number of simultaneous list operations\n\n    --copy-concurrency        500\n      Maximum number of simultaneous small-copies\n\n    --large-copy-concurrency  75\n      Maximum number of simultaneous large-copies\n\n    --max-queue-size          50000\n      Maximum number of files that can be queued for copying before list-reading is throttled.\n\n    --large-copy-threshold    104857600\n      Files larger than this byte-size will use the large-copy strategy, which is currently\n      a shell-exec of 'aws s3 cp'.\n\n    --max-list-requests       number\n      Not set by default; If set, will stop when hit. Use to limit how many requests\n      get used.\n\nexamples:\n\n  s3p summarize --bucket my-bucket"
+        });
+      }
+    };
+  })();
 });
 
 /* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../../node_modules/webpack/buildin/module.js */ 1)(module)))
