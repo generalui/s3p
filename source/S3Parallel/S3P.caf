@@ -49,40 +49,48 @@ class S3P
       sizeHistogram: {}
       folders: summarizeFolders && {}
 
-    S3C.each merge options, map: ({Size, Key}) ->
-      floorSize = humanByteSize
-        Math.pow 2, 1 + logSize = (Math.log(Size) / Math.log(2)) | 0
-        0
-      group = summarizeHistogramGroups[groupKey = ((logSize + 1)/10) | 0] ? "big"
-      groupUnit = summarizeHistogramGroupUnits[groupKey]
-      g = summary.sizeHistogram[group]?=
+    S3C.each merge options,
+      getProgress: ->
+        compactFlatten []
+          "" totalSize: #{} colors.green "" #{humanByteSize summary.size}
+          "" minSize: #{} colors.green "" #{humanByteSize summary.minSize}
+          "" maxSize: #{} colors.green "" #{humanByteSize summary.maxSize}
+        .join ' '
 
-        each i til 10 into out = items: 0 size: 0
-          out[(1 << i) + groupUnit] = 0
+      map: ({Size, Key}) ->
+        floorSize = humanByteSize
+          Math.pow 2, 1 + logSize = (Math.log(Size) / Math.log(2)) | 0
+          0
+        group = summarizeHistogramGroups[groupKey = ((logSize + 1)/10) | 0] ? "big"
+        groupUnit = summarizeHistogramGroupUnits[groupKey]
+        g = summary.sizeHistogram[group]?=
 
-      g.items += 1
-      g.size += Size
-      g[floorSize] = (g[floorSize] | 0) + 1
+          each i til 10 into out = items: 0 size: 0
+            out[(1 << i) + groupUnit] = 0
 
-      if summarizeFolders
-        folder = summary.folders
-        each subFolder in
-            dirname Key
-            .split '/'
-          folder = folder[subFolder] ?= size: 0, files: 0
-          folder.size += Size
-          folder.files++
+        g.items += 1
+        g.size += Size
+        g[floorSize] = (g[floorSize] | 0) + 1
 
-      summary.size += Size
-      if Size >= summary.maxSize ? Size
-        summary.maxSize = Size
-        summary.maxSizeKey = Key
-      if Size <= summary.minSize ? Size
-        summary.minSize = Size
-        summary.minSizeKey = Key
-      summary.minSize = Math.min
-        summary.minSize ? Size
-        Size
+        if summarizeFolders
+          folder = summary.folders
+          each subFolder in
+              dirname Key
+              .split '/'
+            folder = folder[subFolder] ?= size: 0, files: 0
+            folder.size += Size
+            folder.files++
+
+        summary.size += Size
+        if Size >= summary.maxSize ? Size
+          summary.maxSize = Size
+          summary.maxSizeKey = Key
+        if Size <= summary.minSize ? Size
+          summary.minSize = Size
+          summary.minSizeKey = Key
+        summary.minSize = Math.min
+          summary.minSize ? Size
+          Size
 
     .then (stats) ->
       summary.averageSize = summary.size / stats.items | 0
@@ -94,11 +102,10 @@ class S3P
         humanize summary.folders
 
       merge
-        {} stats.items
+        stats
         summary
         {}
           human: object v, k in summary with humanByteSize v when /size$/i.test k
-          stats
 
   @compare: (options) =>
     options = S3C.normalizeOptions options

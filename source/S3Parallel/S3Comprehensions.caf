@@ -8,7 +8,7 @@ class S3Comprehensions
       dryRun
       toPrefix
       addPrefix
-      prefix
+      prefix = ''
       pattern
 
       # normalized
@@ -18,7 +18,7 @@ class S3Comprehensions
       mapList
       returnValue
       filter
-      startAfter
+      startAfter = ''
       stopAt
 
     withFn = options.with
@@ -28,12 +28,15 @@ class S3Comprehensions
     return options unless dryRun or toPrefix or withFn or pattern or returningV or whenFn or prefix? or !startAfter? or !stopAt?
 
     try
-      if prefix
-        throw new Error "only use prefix OR startAfter & stopAt" if startAfter or stopAt
-      else
-        prefix = ''
-      startAfter ?= prefix
-      stopAt ?= getLastKeyWithPrefix prefix ? ''
+      startAfter = "#{startAfter}"
+      stopAt = "#{stopAt}" if stopAt
+      prefix = "#{prefix}"
+      if startAfter < prefix
+        startAfter = prefix
+
+      prefixStopAt = getLastKeyWithPrefix prefix ? ''
+      if !stopAt || stopAt > prefixStopAt
+        stopAt = prefixStopAt
 
       if whenFn
         throw new Error "only use one: when or filter" if filter
@@ -58,9 +61,11 @@ class S3Comprehensions
     catch e
       log {} options
       throw e
+
     merge
       objectWithout options, :dryRun :toPrefix :withFn :pattern :into :returning :whenFn :prefix :addPrefix
       {}
+        originalOptions: options
         pretend
         toKey
         filter
@@ -150,7 +155,7 @@ class S3Comprehensions
         bucket:
         toBucket:     <String> bucket name to compare with - if present, will run the same s3:list operations on the target bucket and pass matching lists to mapList as the second argument (map not supported)
         getProgress: <(duration) -> <String>> optional - if provided and showProgress is true, will append to the progress string
-        maxRequests: <Number> limit how many requests will be used - aborts nicely if reached
+        maxListRequests: <Number> limit how many requests will be used - aborts nicely if reached
           nicely: finishes current function calls, logs message, does no more work, throws error
 
         pattern: only yield items who's keys match this pattern (creates a 'when' clause)
@@ -192,8 +197,8 @@ class S3Comprehensions
 
       # limits
       limit = 1000
-      maxRequests
-      concurrency = 100 # max open reqeusts
+      maxListRequests
+      listConcurrency = 100 # max open reqeusts
 
       # actions
       returnValue
@@ -209,7 +214,7 @@ class S3Comprehensions
 
       # internal use only
       s3 = &Lib/S3
-      pwp = new PromiseWorkerPool concurrency # internal use only
+      pwp = new PromiseWorkerPool listConcurrency # internal use only
 
     if compare && map && toBucket
       throw new Error "cannot use both `compare` and `map` - use mapList instead"
@@ -232,9 +237,9 @@ class S3Comprehensions
         itemsPerSecond = (itemsFound / duration)
         efficiency = (itemsFound / (requestsUsed * limit)) * 100 | 0
 
-        log "s3p progress: " +
+        log "s3p: " +
           compactFlatten []
-            "" duration: #{durationString duration}
+            "" d: #{durationString duration, 2}
             "" items: #{itemsFound}
             "" items/s: #{itemsPerSecond | 0}
             "" listRequests: #{requestsUsed}
@@ -286,7 +291,7 @@ class S3Comprehensions
     ## eachRecursive
       OUT: number of items iterated over (in the source bucket)
     eachRecursive = (startAfter, stopAt, usePrefixBisect = false, debugContext) =>
-      return Promise.resolve(0) if requestsUsed >= maxRequests || startAfter >= stopAt
+      return Promise.resolve(0) if requestsUsed >= maxListRequests || startAfter >= stopAt
 
       middleKey = getBisectKey startAfter, stopAt, usePrefixBisect
 
@@ -453,8 +458,8 @@ class S3Comprehensions
         maxOutstanding:     verboseProgress && maxOutstanding
         averageItemsPerRequest
 
-      if requestsUsed > maxRequests
-        e = Error "S3Comprehensions.each maxRequestsReached:\n" + formattedInspect info
+      if requestsUsed > maxListRequests
+        e = Error "S3Comprehensions.each maxListRequestsReached:\n" + formattedInspect info
         e.info = info
         throw e
 
@@ -463,7 +468,11 @@ class S3Comprehensions
           log final:
             options: object v in originalOptions when !isFunction v
             stats: info
-        returnValue ? merge stats, info
+        returnValue ? merge stats, info, {} options: object o, k in originalOptions when k != :map && k != :mapList && k != :getProgress
+          if isFunction o
+            "#{o}"
+          else o
+
 
   @_compareList: (options) =>
     @each merge options,

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 if (require("./use-build")) { // use build
-  require('./build').Cli.main();
+  require('./build').S3PCli.main();
 } else {
   require('./register.js')
-  require('./source').Cli.main()
+  require('./source').S3PCli.main()
 }

@@ -1,43 +1,89 @@
 import &StandardImport
 
-commands = {list, summarize, compare, copy, sync} = &S3P
-commands.cp = commands.copy
-commands.ls = commands.list
-commands.version = -> &package.version
-
 class Cli
+  @optionRegExp: /^--(.+)$/
+  @evalJsRegExp: /^js:(.*)$/
+  @numberRegExp:
+    ///i
+      ^
+      [-+]?
+      ( # floating point
+        [0-9]*
+        \.
+        [0-9]+
+      | # integer
+        [0-9]+
+      )
 
-  optionRegExp = /^--(.+)$/
+      # exponent
+      ([eE][-+]?[0-9]+)?
+      $
 
-  @parseArgs: ([node, sourceFile, args...] = process.argv)->
-    each arg, i in args into options = commands: currentOption = []
-      if option = arg.match /^--(.+)$/
-        currentOption = options[lowerCamelCase option[1]] = []
+  @parseArgs: (args)->
+    currentOptionName = :arg
+    commands = currentOption = []
+    each arg, i in args into options = {}
+      if option = arg.match @optionRegExp
+        currentOption = options[currentOptionName = lowerCamelCase option[1]] = []
       else
-        currentOption.push arg
+        currentOption.push
+          switch
+          when @numberRegExp.test arg then arg / 1
+          when @evalJsRegExp.test arg
+            evalMatch = arg.match @optionRegExp
+            try eval evalMatch[1]
+            catch error
+              log.error
+                evaluationError: {}
+                  option: currentOptionName
+                  source: evalMatch[1]
+                  raw:    arg
+                  error
 
-  @main: ->
-    options = @parseArgs()
-    unless options.commands.length == 1 &&
-        command = commands[commandName = options.commands[0]]
-        && command is Function
-        && !isClass command
-      log
-        """
-          s3p help:
+          else arg
 
-          Commands: #{}
-            Object.keys commands
-            .join ', '
-    else
-      options = object o, k in options when k != :commands
+    {}
+      commands
+      options: object o, k in options
         switch o.length
         when 0 then true
         when 1 then o[0]
         else o
 
-      log {}
-        command: commandName
-        options
-      Promise.then -> command options
-      .then log, log
+  @_selectCommand: (commands, defaultCommand, parsedArgs) ->
+    commandFunction = commands[commandName = parsedArgs.commands[0] || defaultCommand]
+    unless isFunction(commandFunction) && !isClass commandFunction
+      commandFunction = null
+      commandName = null
+
+    merge parsedArgs, {}
+      commandFunction
+      commandName
+
+  @_showDoc: ({doc, commands}, parsedArgs, startFile) =>
+    log
+      """
+        #{startFile} help:
+
+        Commands: #{}
+          Object.keys commands
+          .join ', '
+
+    doc? && log doc
+
+  @start: (cliOptions) =>
+    cliOptions extract commands, defaultCommand, doc, argv = process.argv
+    [nodeJs, startFile, args...] = argv
+    parsed = @_selectCommand commands, defaultCommand, @parseArgs args
+    if parsed extract options, commandName, commandFunction
+
+      if parsed.options.verbose
+        log {}
+          command: commandName
+          options
+
+      Promise.then -> commandFunction options
+      .then (result) -> result? && log result
+
+    else
+      @_showDoc cliOptions, parsed, startFile

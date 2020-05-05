@@ -7,6 +7,7 @@
   Cli:              require('./Cli'),
   S3Comprehensions: require('./S3Comprehensions'),
   S3P:              require('./S3P'),
+  S3PCli:           require('./S3PCli'),
   StandardImport:   require('./StandardImport')
 });
 require('./Lib');

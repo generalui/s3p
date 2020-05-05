@@ -1,0 +1,84 @@
+import &StandardImport
+
+commands = {list, summarize, compare, copy, sync} = &S3P
+commands.cp = commands.copy
+commands.ls = commands.list
+commands.version = -> &package.version
+
+main: ->
+  &Cli.start {}
+    commands
+    doc:
+      """
+        options:
+          all-commands:
+            --bucket bucket-name
+              The source bucket
+
+            --prefix key
+              Only iterate over keys with this prefix.
+
+            --start-after key
+              Start iteratating after this key
+              If prefix and startAfter are specified, both will be enforced.
+
+            --stop-at key
+              Iterate up to, and including, this key
+              If prefix and stopAt are specified, both will be enforced.
+
+            --pattern
+              Source keys must contain this pattern.
+              If you pass a string, it will be matched exactly.
+
+            --filter function
+              Source keys must return true when passed to this function.
+              Example: 'js:(key)=>key.length>10'
+
+            --quiet
+              no output
+
+            --verbose
+              extra output
+
+            --dry-run / --pretend
+              Will not modify anything.
+              For sync/copy commands, do everything except actually copy files.
+
+          summarize-command
+            --summarize-folders
+
+          compare, copy, sync commands
+            --to-bucket bucket-name
+              The target bucket. Can be the same bucket.
+
+            --to-prefix key-prefix
+              if prefix is specified, the target key will REPLACE it's source prefix with toPrefix
+              Otherwise, this is the same as addPrefix.
+
+            --add-prefix key-prefix
+              The source key is prepended with this string for the target bucket.
+
+          all-commands advanced:
+            --list-concurrency        100
+              Maximum number of simultaneous list operations
+
+            --copy-concurrency        500
+              Maximum number of simultaneous small-copies
+
+            --large-copy-concurrency  75
+              Maximum number of simultaneous large-copies
+
+            --max-queue-size          50000
+              Maximum number of files that can be queued for copying before list-reading is throttled.
+
+            --large-copy-threshold    104857600
+              Files larger than this byte-size will use the large-copy strategy, which is currently
+              a shell-exec of 'aws s3 cp'.
+
+            --max-list-requests       number
+              Not set by default; If set, will stop when hit. Use to limit how many requests
+              get used.
+
+        examples:
+
+          s3p summarize --bucket my-bucket

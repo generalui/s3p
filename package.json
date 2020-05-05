@@ -5,6 +5,8 @@
   },
   "bugs": "https:/github.com/generalui/s3p/issues",
   "dependencies": {
+    "art-class-system": "^1.11.2",
+    "art-standard-lib": "^1.65.1",
     "aws-sdk": "^2.669.0",
     "caffeine-script-runtime": "^1.13.3",
     "neptune-namespaces": "^4.0.0",
