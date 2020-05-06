@@ -1,8 +1,16 @@
-import &StandardImport
+import &StandardImport, &Lib
 
 commands = {summarize, compare, copy, sync} = &S3P
 commands.cp = commands.copy
 commands.version = -> &package.version
+commands.list = (options) =>
+  &S3Comprehensions.each merge options,
+    quiet: true
+    mapList: (l) ->
+      array {LastModified, Size, Key} from-array l
+        console.log "" #{formatDate LastModified, "yyyy-mm-dd HH:MM:ss"} #{pad humanByteSize(Size), 10, ' ', true} #{Key}
+
+commands.ls = commands.list
 
 main: ->
   &Cli.start {}
@@ -12,6 +20,7 @@ main: ->
         read-only commands:
           summarize   scan all items in one bucket and produce a summary of all the items (only uses s3-list)
           compare     compare two buckets and produce a summary of their differences      (only uses s3-list)
+          list / ls   list all matching files
 
         write-commands:
           copy / cp   blindly copy all files from one bucket to another bucket
@@ -33,13 +42,14 @@ main: ->
               Iterate up to, and including, this key
               If prefix and stopAt are specified, both will be enforced.
 
-            --pattern
-              Source keys must contain this pattern.
-              If you pass a string, it will be matched exactly.
+            --pattern string
+              Source keys must contain this exact string
 
-            --filter function
-              Source keys must return true when passed to this function.
-              Example: 'js:(key)=>key.length>10'
+            --pattern "js:/^any-javascript-regexp/i"
+              Source keys must match this JavaScript regexp.
+
+            --filter "js:({Key, Size, LastModified, ETag, StorageClass, Owner}) => true"
+              Filter results of listObjects.
 
             --quiet
               no output
@@ -47,7 +57,7 @@ main: ->
             --verbose
               extra output
 
-            --dry-run / --pretend
+            --dryrun / --pretend
               Will not modify anything.
               For sync/copy commands, do everything except actually copy files.
 
@@ -64,6 +74,9 @@ main: ->
 
             --add-prefix key-prefix
               The source key is prepended with this string for the target bucket.
+
+            --to-key "js:(key) => key"
+              Provide an arbitrary JavaScript function for re-keying keys.
 
           sync-only:
             --overwrite
@@ -116,3 +129,6 @@ main: ->
           # copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/"
           # The copied items will have their "2020-04-14/" prepended for a total prefix of: "backup/2020-04-14/"
           s3p cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/ --add-prefix backup/
+
+          # summarize all files larger than 1 Megabyte
+          s3p summarize --bucket my-bucket --filter "js:({Size}) => Size > 1024*1024"

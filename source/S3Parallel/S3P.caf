@@ -93,7 +93,7 @@ class S3P
           Size
 
     .then (stats) ->
-      summary.averageSize = summary.size / stats.items | 0
+      summary.averageSize = summary.size / (stats.matchingItems ? stats.items) | 0
       if summarizeFolders
         humanize = (folder) ->
           folder.humanSize = humanByteSize folder.size if folder.size is Number
@@ -212,8 +212,8 @@ class S3P
         map as copyFile
         stats
         overwrite
-        dryRun
-        pretend = dryRun
+        dryrun
+        pretend = dryrun
         toKey
         toBucket
 

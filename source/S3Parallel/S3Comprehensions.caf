@@ -5,14 +5,14 @@ class S3Comprehensions
   @normalizeOptions: (options) =>
     options extract
       # aliases
-      dryRun
+      dryrun
       toPrefix
       addPrefix
       prefix = ''
       pattern
 
       # normalized
-      pretend = dryRun
+      pretend = dryrun
       toKey
       map
       mapList
@@ -25,7 +25,7 @@ class S3Comprehensions
     whenFn = options.when
     returningV = options.returning ? options.into
 
-    return options unless dryRun or toPrefix or withFn or pattern or returningV or whenFn or prefix? or !startAfter? or !stopAt?
+    return options unless dryrun or toPrefix or withFn or pattern or returningV or whenFn or prefix? or !startAfter? or !stopAt?
 
     try
       startAfter = "#{startAfter}"
@@ -63,9 +63,9 @@ class S3Comprehensions
       throw e
 
     merge
-      objectWithout options, :dryRun :toPrefix :withFn :pattern :into :returning :whenFn :prefix :addPrefix
+      objectWithout options, :dryrun :toPrefix :withFn :pattern :into :returning :whenFn :prefix :addPrefix
       {}
-        originalOptions: options
+        originalOptions: options.originalOptions ? options
         pretend
         toKey
         filter
@@ -80,7 +80,7 @@ class S3Comprehensions
     wrapper around each that returns a list of promise failures rather than failing
   @eachPromises: (options) =>
     options = @normalizeOptions options
-    failed = null
+    failed = undefined
     options extract map, filter = filterNone
 
     throw new Error "Expecting options.map" unless map is Function
@@ -94,7 +94,9 @@ class S3Comprehensions
             failed?=[]
             .push item.Key
     .then (result) ->
-      merge result, {} failed
+      if failed?
+        merge result, {} failed
+      else result
 
   ##
     IN
@@ -178,7 +180,7 @@ class S3Comprehensions
         matchingItems: if when is provided, this counts the number of times when is true
         ... and more stats
   @each: (options) =>
-    options = @normalizeOptions originalOptions = options
+    options = @normalizeOptions options
     options extract
       quiet
       showProgress = !quiet
@@ -273,7 +275,24 @@ class S3Comprehensions
       itemsFound += items.length
       Promise.then ->
         switch
-        when mapList        then mapList items, compareItems, compareStartAfter, compareStopAt
+        when mapList
+          if filter
+            filteredItems = array item in-array items when filter item
+            matchingItems += filteredItems.length
+
+            mapList
+              filteredItems
+              array item in-array compareItems when filter item
+              compareStartAfter
+              compareStopAt
+
+          else
+            mapList
+              items
+              compareItems
+              compareStartAfter
+              compareStopAt
+
         when map && filter  then each item in-array items with matchingItems++; map item when filter item
         when map            then each item in-array items with map item
       .then -> items.length
@@ -466,13 +485,13 @@ class S3Comprehensions
       else
         if returnValue? && showProgress
           log final:
-            options: object v in originalOptions when !isFunction v
+            options: object v in options.originalOptions when !isFunction v
             stats: info
-        returnValue ? merge stats, info, {} options: object o, k in originalOptions when k != :map && k != :mapList && k != :getProgress
-          if isFunction o
-            "#{o}"
-          else o
 
+        returnValue
+        ? merge stats, info, {}
+          options.pretend
+          options: object v, k in options.originalOptions
 
   @_compareList: (options) =>
     @each merge options,

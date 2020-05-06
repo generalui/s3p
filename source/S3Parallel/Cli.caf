@@ -30,7 +30,7 @@ class Cli
           switch
           when @numberRegExp.test arg then arg / 1
           when @evalJsRegExp.test arg
-            evalMatch = arg.match @optionRegExp
+            evalMatch = arg.match @evalJsRegExp
             try eval evalMatch[1]
             catch error
               log.error
