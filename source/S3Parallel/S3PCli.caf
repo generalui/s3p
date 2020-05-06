@@ -2,6 +2,7 @@ import &StandardImport, &Lib
 
 commands = {summarize, compare, copy, sync} = &S3P
 commands.cp = commands.copy
+commands.listBuckets = &lib/S3.listBuckets
 commands.version = -> &package.version
 commands.list = (options) =>
   &S3Comprehensions.each merge options,
@@ -62,6 +63,9 @@ main: ->
           AWS CREDS: s3p uses the same creds aws-cli uses, so see their documentation: https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html
 
       commands:
+        list-buckets:
+          description:  "" List all your S3 buckets.
+
         version:
           description:  "" Show s3p's version.
         summarize:

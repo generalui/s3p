@@ -13,6 +13,12 @@ class S3 extends BaseClass
   @classGetter
     s3: -> @awsSdkS3
 
+  @listBuckets: =>
+    @s3.listBuckets()
+    .promise()
+    .then ({Buckets}) ->
+      object {Name, CreationDate} from Buckets with-key Name with CreationDate
+
   @list: ({bucket, prefix, limit=1000, startAfter}) =>
     startTime = currentSecond()
     @s3.listObjectsV2

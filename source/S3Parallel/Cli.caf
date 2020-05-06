@@ -52,7 +52,7 @@ class Cli
 
   @_selectCommand: (commands, defaultCommand, parsedArgs) ->
     parsedArgs extract commandNames
-    commandFunction = commands[commandName = commandNames[0] || defaultCommand]
+    commandFunction = commands[commandName = lowerCamelCase commandNames[0] || defaultCommand]
     unless isFunction(commandFunction) && !isClass commandFunction
       commandFunction = null
       commandName = null
