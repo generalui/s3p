@@ -65,9 +65,12 @@ class Cli
       """
         #{startFile} help:
 
+        Usage: #{&path.basename startFile} command [options]
+
         Commands: #{}
           Object.keys commands
           .join ', '
+        \_
 
     doc? && log doc
 
