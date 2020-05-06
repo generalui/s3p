@@ -212,7 +212,7 @@ module.exports = require('neptune-namespaces' /* ABC - not inlining fellow NPM *
 /*! exports provided: author, bin, bugs, dependencies, description, devDependencies, homepage, license, name, repository, scripts, version, default */
 /***/ (function(module) {
 
-module.exports = JSON.parse("{\"author\":\"GenUI LLC\",\"bin\":{\"s3p\":\"./s3p\"},\"bugs\":\"https:/github.com/generalui/s3p/issues\",\"dependencies\":{\"art-class-system\":\"^1.11.2\",\"art-standard-lib\":\"^1.65.1\",\"aws-sdk\":\"^2.643.0\",\"caffeine-script-runtime\":\"^1.13.3\",\"neptune-namespaces\":\"^4.0.0\",\"shell-escape\":\"^0.2.0\"},\"description\":\"S3P is a CLI and Lib that is 5x to 50x faster than aws-cli for bulk S3 operations\",\"devDependencies\":{\"art-build-configurator\":\"^1.26.9\",\"art-testbench\":\"^1.17.2\",\"caffeine-script\":\"^0.72.1\",\"case-sensitive-paths-webpack-plugin\":\"^2.2.0\",\"chai\":\"^4.2.0\",\"coffee-loader\":\"^0.7.3\",\"css-loader\":\"^3.0.0\",\"json-loader\":\"^0.5.7\",\"mocha\":\"^7.1.1\",\"mock-fs\":\"^4.10.0\",\"script-loader\":\"^0.7.2\",\"style-loader\":\"^1.0.0\",\"webpack\":\"^4.39.1\",\"webpack-cli\":\"*\",\"webpack-dev-server\":\"^3.7.2\",\"webpack-merge\":\"^4.2.1\",\"webpack-node-externals\":\"^1.7.2\",\"webpack-stylish\":\"^0.1.8\"},\"homepage\":\"https://github.com/generalui/s3p\",\"license\":\"ISC\",\"name\":\"s3p\",\"repository\":{\"type\":\"git\",\"url\":\"https://github.com/generalui/s3p.git\"},\"scripts\":{\"build\":\"webpack --progress\",\"start\":\"webpack-dev-server --hot --inline --progress --env.devServer\",\"test\":\"nn -s;mocha -u tdd\",\"testInBrowser\":\"webpack-dev-server --progress --env.devServer\"},\"version\":\"2.4.0\"}");
+module.exports = JSON.parse("{\"author\":\"GenUI LLC\",\"bin\":{\"s3p\":\"./s3p\"},\"bugs\":\"https:/github.com/generalui/s3p/issues\",\"dependencies\":{\"art-class-system\":\"^1.11.2\",\"art-standard-lib\":\"^1.65.1\",\"aws-sdk\":\"^2.643.0\",\"caffeine-script-runtime\":\"^1.13.3\",\"neptune-namespaces\":\"^4.0.0\",\"shell-escape\":\"^0.2.0\"},\"description\":\"S3P is a CLI and Lib that is 5x to 50x faster than aws-cli for bulk S3 operations\",\"devDependencies\":{\"art-build-configurator\":\"^1.26.9\",\"art-testbench\":\"^1.17.2\",\"caffeine-script\":\"^0.72.1\",\"case-sensitive-paths-webpack-plugin\":\"^2.2.0\",\"chai\":\"^4.2.0\",\"coffee-loader\":\"^0.7.3\",\"css-loader\":\"^3.0.0\",\"json-loader\":\"^0.5.7\",\"mocha\":\"^7.1.1\",\"mock-fs\":\"^4.10.0\",\"script-loader\":\"^0.7.2\",\"style-loader\":\"^1.0.0\",\"webpack\":\"^4.39.1\",\"webpack-cli\":\"*\",\"webpack-dev-server\":\"^3.7.2\",\"webpack-merge\":\"^4.2.1\",\"webpack-node-externals\":\"^1.7.2\",\"webpack-stylish\":\"^0.1.8\"},\"homepage\":\"https://github.com/generalui/s3p\",\"license\":\"ISC\",\"name\":\"s3p\",\"repository\":{\"type\":\"git\",\"url\":\"https://github.com/generalui/s3p.git\"},\"scripts\":{\"build\":\"webpack --progress\",\"start\":\"webpack-dev-server --hot --inline --progress --env.devServer\",\"test\":\"nn -s;mocha -u tdd\",\"testInBrowser\":\"webpack-dev-server --progress --env.devServer\"},\"version\":\"2.4.1\"}");
 
 /***/ }),
 /* 8 */
@@ -2673,6 +2673,7 @@ Caf.defMod(module, () => {
       "isFunction",
       "isClass",
       "merge",
+      "dashCase",
       "colors",
       "String",
       "Array",
@@ -2688,6 +2689,7 @@ Caf.defMod(module, () => {
       isFunction,
       isClass,
       merge,
+      dashCase,
       colors,
       String,
       Array,
@@ -2778,14 +2780,15 @@ Caf.defMod(module, () => {
           return merge(parsedArgs, { commandFunction, commandName });
         };
         this._showCommandSummary = function(
-          command,
+          commandName,
           { alias, description, options }
         ) {
           let from, into, temp;
+          commandName = dashCase(commandName);
           log(
             `\n-----------------------\n${Caf.toString(
               colors.bold(
-                colors.brightWhite(`Command: ${Caf.toString(command)}`)
+                colors.brightWhite(`commandName: ${Caf.toString(commandName)}`)
               )
             )} ${Caf.toString(alias && `(${Caf.toString(alias)})`)}`
           );
@@ -2814,7 +2817,7 @@ Caf.defMod(module, () => {
               ),
               log(
                 "detailed help: " +
-                  colors.green(`${Caf.toString(command)} --help`)
+                  colors.green(`${Caf.toString(commandName)} --help`)
               ))
             : undefined;
         };
@@ -2882,11 +2885,14 @@ Caf.defMod(module, () => {
               log(`\n${Caf.toString(description)}\n`);
             }
             if (commands) {
+              commands = Caf.object(commands, null, null, null, (v, k) =>
+                lowerCamelCase(k)
+              );
               if (help && commands[commandName]) {
                 this._showCommandDetails(commandName, commands[commandName]);
               } else {
-                Caf.each2(commands, (details, command) =>
-                  this._showCommandSummary(command, details)
+                Caf.each2(Object.keys(commands).sort(), commandName =>
+                  this._showCommandSummary(commandName, commands[commandName])
                 );
               }
             }
@@ -3090,7 +3096,7 @@ Caf.defMod(module, () => {
           advanced: true,
           argument: "104857600",
           description:
-            "Files larger than this byte-size will use the large-copy strategy, which is currently a shell-exec of 'aws s3 cp'."
+            "Files larger than this byte-size will use the large-copy strategy, which is currently a shell-exec of 'aws s3 cp'. Currently this must be set <= 5368709120 (5 gigabytes). This is s3.copyObject's max supported size, so S3P must shell-exec aws-cli for larger files."
         }
       });
       return {
@@ -3099,13 +3105,13 @@ Caf.defMod(module, () => {
             commands,
             doc: {
               description:
-                "A realy fast, massively parallel way to do bulk operations over S3 buckets.\n\nsource: https://github.com/generalui/s3p\n\nAWS CREDS: s3p uses the same creds aws-cli uses, so see their documentation: https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html",
+                "A realy fast, massively parallel way to do bulk operations over S3 buckets. Uses s3.listBuckets.\n\nsource: https://github.com/generalui/s3p\n\nAWS CREDS: s3p uses the same creds aws-cli uses, so see their documentation: https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html",
               commands: {
                 "list-buckets": { description: "List all your S3 buckets." },
                 version: { description: "Show s3p's version." },
                 summarize: {
                   description:
-                    "Scan all items in one bucket and produce a summary of all the items. Only uses s3-list.",
+                    "Scan all items in one bucket and produce a summary of all the items. Uses s3.listObjectsV2.",
                   options: merge(
                     allCommandOptions,
                     {
@@ -3122,12 +3128,13 @@ Caf.defMod(module, () => {
                 },
                 list: {
                   alias: "ls",
-                  description: "List all matching files. Only uses s3-list.",
+                  description:
+                    "List all matching files. Uses s3.listObjectsV2.",
                   options: merge(allCommandOptions, advancedOptionsForAll)
                 },
                 compare: {
                   description:
-                    "Compare two buckets and produce a summary of their differences. Only uses s3-list.",
+                    "Compare two buckets and produce a summary of their differences. Uses s3.listObjectsV2.",
                   options: merge(
                     allCommandOptions,
                     toBucketOptions,
@@ -3141,7 +3148,7 @@ Caf.defMod(module, () => {
                 copy: {
                   alias: "cp",
                   description:
-                    "Blindly copy all files from one bucket to another bucket. Uses s3-list and s3-copy-object.",
+                    "Blindly copy all files from one bucket to another bucket. Uses s3.listObjectsV2, s3.copyObject and shell-exec 'aws s3 cp'.",
                   options: merge(
                     allCommandOptions,
                     toBucketOptions,
@@ -3163,7 +3170,7 @@ Caf.defMod(module, () => {
                 },
                 sync: {
                   description:
-                    "Only copy files which do not exist in the target bucket. Uses s3-list and s3-copy-object.",
+                    "Only copy files which do not exist in the target bucket. Uses s3.listObjectsV2, s3.copyObject and shell-exec 'aws s3 cp'.",
                   options: merge(
                     allCommandOptions,
                     toBucketOptions,
