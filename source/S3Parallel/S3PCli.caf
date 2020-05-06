@@ -59,6 +59,8 @@ main: ->
 
           source: https://github.com/generalui/s3p
 
+          AWS CREDS: s3p uses the same creds aws-cli uses, so see their documentation: https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html
+
       commands:
         version:
           description:  "" Show s3p's version.

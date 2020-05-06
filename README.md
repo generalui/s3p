@@ -26,6 +26,9 @@ S3P is really just a fancy, really fast, s3 listing tool.
     ```
     > Why? Since Aws-S3 doesn't support listing Keys in descending order, S3P uses a character-range-based bisection algorithm.
 
+# AWS Credentials
+
+s3p uses the same credentials aws-cli uses, so see their documentation: https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html
 
 # CLI
 
