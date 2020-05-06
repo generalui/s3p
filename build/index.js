@@ -212,7 +212,7 @@ module.exports = require('neptune-namespaces' /* ABC - not inlining fellow NPM *
 /*! exports provided: author, bin, bugs, dependencies, description, devDependencies, homepage, license, name, repository, scripts, version, default */
 /***/ (function(module) {
 
-module.exports = JSON.parse("{\"author\":\"GenUI LLC\",\"bin\":{\"s3p\":\"./s3p\"},\"bugs\":\"https:/github.com/generalui/s3p/issues\",\"dependencies\":{\"art-class-system\":\"^1.11.2\",\"art-standard-lib\":\"^1.65.1\",\"aws-sdk\":\"^2.643.0\",\"caffeine-script-runtime\":\"^1.13.3\",\"neptune-namespaces\":\"^4.0.0\",\"shell-escape\":\"^0.2.0\"},\"description\":\"S3p\",\"devDependencies\":{\"art-build-configurator\":\"^1.26.9\",\"art-testbench\":\"^1.17.2\",\"caffeine-script\":\"^0.72.1\",\"case-sensitive-paths-webpack-plugin\":\"^2.2.0\",\"chai\":\"^4.2.0\",\"coffee-loader\":\"^0.7.3\",\"css-loader\":\"^3.0.0\",\"json-loader\":\"^0.5.7\",\"mocha\":\"^7.1.1\",\"mock-fs\":\"^4.10.0\",\"script-loader\":\"^0.7.2\",\"style-loader\":\"^1.0.0\",\"webpack\":\"^4.39.1\",\"webpack-cli\":\"*\",\"webpack-dev-server\":\"^3.7.2\",\"webpack-merge\":\"^4.2.1\",\"webpack-node-externals\":\"^1.7.2\",\"webpack-stylish\":\"^0.1.8\"},\"homepage\":\"https://github.com/generalui/s3p\",\"license\":\"ISC\",\"name\":\"s3p\",\"repository\":{\"type\":\"git\",\"url\":\"https://github.com/generalui/s3p.git\"},\"scripts\":{\"build\":\"webpack --progress\",\"start\":\"webpack-dev-server --hot --inline --progress --env.devServer\",\"test\":\"nn -s;mocha -u tdd\",\"testInBrowser\":\"webpack-dev-server --progress --env.devServer\"},\"version\":\"2.2.2\"}");
+module.exports = JSON.parse("{\"author\":\"GenUI LLC\",\"bin\":{\"s3p\":\"./s3p\"},\"bugs\":\"https:/github.com/generalui/s3p/issues\",\"dependencies\":{\"art-class-system\":\"^1.11.2\",\"art-standard-lib\":\"^1.65.1\",\"aws-sdk\":\"^2.643.0\",\"caffeine-script-runtime\":\"^1.13.3\",\"neptune-namespaces\":\"^4.0.0\",\"shell-escape\":\"^0.2.0\"},\"description\":\"S3p\",\"devDependencies\":{\"art-build-configurator\":\"^1.26.9\",\"art-testbench\":\"^1.17.2\",\"caffeine-script\":\"^0.72.1\",\"case-sensitive-paths-webpack-plugin\":\"^2.2.0\",\"chai\":\"^4.2.0\",\"coffee-loader\":\"^0.7.3\",\"css-loader\":\"^3.0.0\",\"json-loader\":\"^0.5.7\",\"mocha\":\"^7.1.1\",\"mock-fs\":\"^4.10.0\",\"script-loader\":\"^0.7.2\",\"style-loader\":\"^1.0.0\",\"webpack\":\"^4.39.1\",\"webpack-cli\":\"*\",\"webpack-dev-server\":\"^3.7.2\",\"webpack-merge\":\"^4.2.1\",\"webpack-node-externals\":\"^1.7.2\",\"webpack-stylish\":\"^0.1.8\"},\"homepage\":\"https://github.com/generalui/s3p\",\"license\":\"ISC\",\"name\":\"s3p\",\"repository\":{\"type\":\"git\",\"url\":\"https://github.com/generalui/s3p.git\"},\"scripts\":{\"build\":\"webpack --progress\",\"start\":\"webpack-dev-server --hot --inline --progress --env.devServer\",\"test\":\"nn -s;mocha -u tdd\",\"testInBrowser\":\"webpack-dev-server --progress --env.devServer\"},\"version\":\"2.3.0\"}");
 
 /***/ }),
 /* 8 */
@@ -1176,8 +1176,11 @@ Caf.defMod(module, () => {
               }
             })
           ).then(stats => {
-            let humanize;
-            summary.averageSize = (summary.size / stats.items) | 0;
+            let humanize, temp;
+            summary.averageSize =
+              (summary.size /
+                ((temp = stats.matchingItems) != null ? temp : stats.items)) |
+              0;
             if (summarizeFolders) {
               humanize = folder => {
                 if (Caf.is(folder.size, Number)) {
@@ -1398,7 +1401,7 @@ Caf.defMod(module, () => {
             let copyFile,
               stats,
               overwrite,
-              dryRun,
+              dryrun,
               pretend,
               toKey,
               toBucket,
@@ -1406,8 +1409,8 @@ Caf.defMod(module, () => {
             copyFile = options2.map;
             stats = options2.stats;
             overwrite = options2.overwrite;
-            dryRun = options2.dryRun;
-            pretend = undefined !== (temp = options2.pretend) ? temp : dryRun;
+            dryrun = options2.dryrun;
+            pretend = undefined !== (temp = options2.pretend) ? temp : dryrun;
             toKey = options2.toKey;
             toBucket = options2.toBucket;
             stats.toDeleteFiles = 0;
@@ -1773,7 +1776,7 @@ Caf.defMod(module, () => {
         function(S3Comprehensions, classSuper, instanceSuper) {
           let filterNone;
           this.normalizeOptions = options => {
-            let dryRun,
+            let dryrun,
               toPrefix,
               addPrefix,
               prefix,
@@ -1795,13 +1798,14 @@ Caf.defMod(module, () => {
               temp,
               temp1,
               temp2,
-              temp3;
-            dryRun = options.dryRun;
+              temp3,
+              temp4;
+            dryrun = options.dryrun;
             toPrefix = options.toPrefix;
             addPrefix = options.addPrefix;
             prefix = undefined !== (temp = options.prefix) ? temp : "";
             pattern = options.pattern;
-            pretend = undefined !== (temp1 = options.pretend) ? temp1 : dryRun;
+            pretend = undefined !== (temp1 = options.pretend) ? temp1 : dryrun;
             toKey = options.toKey;
             map = options.map;
             mapList = options.mapList;
@@ -1816,7 +1820,7 @@ Caf.defMod(module, () => {
               (temp3 = options.returning) != null ? temp3 : options.into;
             if (
               !(
-                dryRun ||
+                dryrun ||
                 toPrefix ||
                 withFn ||
                 pattern ||
@@ -1882,7 +1886,7 @@ Caf.defMod(module, () => {
             return merge(
               objectWithout(
                 options,
-                "dryRun",
+                "dryrun",
                 "toPrefix",
                 "withFn",
                 "pattern",
@@ -1893,7 +1897,8 @@ Caf.defMod(module, () => {
                 "addPrefix"
               ),
               {
-                originalOptions: options,
+                originalOptions:
+                  (temp4 = options.originalOptions) != null ? temp4 : options,
                 pretend,
                 toKey,
                 filter,
@@ -1911,7 +1916,7 @@ Caf.defMod(module, () => {
           this.eachPromises = options => {
             let failed, map, filter, temp;
             options = this.normalizeOptions(options);
-            failed = null;
+            failed = undefined;
             map = options.map;
             filter = undefined !== (temp = options.filter) ? temp : filterNone;
             if (!Caf.is(map, Function)) {
@@ -1951,7 +1956,9 @@ Caf.defMod(module, () => {
                   );
                 }
               })
-            ).then(result => merge(result, { failed }));
+            ).then(result =>
+              failed != null ? merge(result, { failed }) : result
+            );
           };
           this.find = options => {
             let withFn, temp;
@@ -2010,8 +2017,7 @@ Caf.defMod(module, () => {
             );
           };
           this.each = options => {
-            let originalOptions,
-              quiet,
+            let quiet,
               showProgress,
               debug,
               bucket,
@@ -2053,7 +2059,7 @@ Caf.defMod(module, () => {
               temp3,
               temp4,
               temp5;
-            options = this.normalizeOptions((originalOptions = options));
+            options = this.normalizeOptions(options);
             quiet = options.quiet;
             showProgress =
               undefined !== (temp = options.showProgress) ? temp : !quiet;
@@ -2137,56 +2143,120 @@ Caf.defMod(module, () => {
             ) => {
               itemsFound += items.length;
               return Promise.then(() => {
-                let from, into, to, i, from1, into1, to1, i1, temp6, temp7;
+                let filteredItems,
+                  from,
+                  into,
+                  to,
+                  i,
+                  from1,
+                  into1,
+                  to1,
+                  i1,
+                  from2,
+                  into2,
+                  to2,
+                  i2,
+                  from3,
+                  into3,
+                  to3,
+                  i3,
+                  temp6,
+                  temp7,
+                  temp8,
+                  temp9;
                 return (() => {
                   switch (false) {
                     case !mapList:
-                      return mapList(
-                        items,
-                        compareItems,
-                        compareStartAfter,
-                        compareStopAt
-                      );
+                      return filter
+                        ? ((filteredItems =
+                            ((from = items),
+                            (into = []),
+                            from != null
+                              ? ((to = from.length),
+                                (i = 0),
+                                (() => {
+                                  while (i < to) {
+                                    let item;
+                                    item = from[i];
+                                    if (filter(item)) {
+                                      into.push(item);
+                                    }
+                                    temp6 = i++;
+                                  }
+                                  return temp6;
+                                })())
+                              : undefined,
+                            into)),
+                          (matchingItems += filteredItems.length),
+                          mapList(
+                            filteredItems,
+                            ((from1 = compareItems),
+                            (into1 = []),
+                            from1 != null
+                              ? ((to1 = from1.length),
+                                (i1 = 0),
+                                (() => {
+                                  while (i1 < to1) {
+                                    let item;
+                                    item = from1[i1];
+                                    if (filter(item)) {
+                                      into1.push(item);
+                                    }
+                                    temp7 = i1++;
+                                  }
+                                  return temp7;
+                                })())
+                              : undefined,
+                            into1),
+                            compareStartAfter,
+                            compareStopAt
+                          ))
+                        : mapList(
+                            items,
+                            compareItems,
+                            compareStartAfter,
+                            compareStopAt
+                          );
                     case !(map && filter):
                       return (
-                        (from = items),
-                        (into = from),
-                        from != null
-                          ? ((to = from.length),
-                            (i = 0),
+                        (from2 = items),
+                        (into2 = from2),
+                        from2 != null
+                          ? ((to2 = from2.length),
+                            (i2 = 0),
                             (() => {
-                              while (i < to) {
+                              while (i2 < to2) {
                                 let item;
-                                item = from[i];
+                                item = from2[i2];
                                 if (filter(item)) {
                                   matchingItems++;
                                   map(item);
                                 }
-                                temp6 = i++;
+                                temp8 = i2++;
                               }
-                              return temp6;
+                              return temp8;
                             })())
                           : undefined,
-                        into
+                        into2
                       );
                     case !map:
                       return (
-                        (from1 = items),
-                        (into1 = from1),
-                        from1 != null
-                          ? ((to1 = from1.length),
-                            (i1 = 0),
+                        (from3 = items),
+                        (into3 = from3),
+                        from3 != null
+                          ? ((to3 = from3.length),
+                            (i3 = 0),
                             (() => {
-                              while (i1 < to1) {
+                              while (i3 < to3) {
                                 let item;
-                                item = from1[i1];
+                                item = from3[i3];
                                 map(item);
-                                temp7 = i1++;
+                                temp9 = i3++;
                               }
-                              return temp7;
+                              return temp9;
                             })())
                           : undefined,
-                        into1
+                        into3
                       );
                   }
                 })();
@@ -2517,7 +2587,7 @@ Caf.defMod(module, () => {
                       ? log({
                           final: {
                             options: Caf.object(
-                              originalOptions,
+                              options.originalOptions,
                               null,
                               v => !isFunction(v)
                             ),
@@ -2528,15 +2598,8 @@ Caf.defMod(module, () => {
                     returnValue != null
                       ? returnValue
                       : merge(stats, info, {
-                          options: Caf.object(
-                            originalOptions,
-                            (o, k) =>
-                              isFunction(o) ? `${Caf.toString(o)}` : o,
-                            (o, k) =>
-                              k !== "map" &&
-                              k !== "mapList" &&
-                              k !== "getProgress"
-                          )
+                          pretend: options.pretend,
+                          options: Caf.object(options.originalOptions)
                         }));
               });
           };
@@ -2639,7 +2702,7 @@ Caf.defMod(module, () => {
                         case !this.numberRegExp.test(arg):
                           return arg / 1;
                         case !this.evalJsRegExp.test(arg):
-                          evalMatch = arg.match(this.optionRegExp);
+                          evalMatch = arg.match(this.evalJsRegExp);
                           return (() => {
                             try {
                               return eval(evalMatch[1]);
@@ -2753,25 +2816,65 @@ Caf.defMod(module, () => {
 /* WEBPACK VAR INJECTION */(function(module) {
 let Caf = __webpack_require__(/*! caffeine-script-runtime */ 2);
 Caf.defMod(module, () => {
-  return (() => {
-    let commands, summarize, compare, copy, sync;
-    commands =
-      (({ summarize, compare, copy, sync } = __webpack_require__(/*! ./S3P */ 23)),
-      { summarize, compare, copy, sync });
-    commands.cp = commands.copy;
-    commands.version = function() {
-      return __webpack_require__(/*! ../../package */ 7).version;
-    };
-    return {
-      main: function() {
-        return __webpack_require__(/*! ./Cli */ 27).start({
-          commands,
-          doc:
-            'read-only commands:\n  summarize   scan all items in one bucket and produce a summary of all the items (only uses s3-list)\n  compare     compare two buckets and produce a summary of their differences      (only uses s3-list)\n\nwrite-commands:\n  copy / cp   blindly copy all files from one bucket to another bucket\n  sync        only copy files which do not exist in the target bucket\n\noptions:\n  all-commands:\n    --bucket bucket-name\n      The source bucket\n\n    --prefix key\n      Only iterate over keys with this prefix.\n\n    --start-after key\n      Start iteratating after this key\n      If prefix and startAfter are specified, both will be enforced.\n\n    --stop-at key\n      Iterate up to, and including, this key\n      If prefix and stopAt are specified, both will be enforced.\n\n    --pattern\n      Source keys must contain this pattern.\n      If you pass a string, it will be matched exactly.\n\n    --filter function\n      Source keys must return true when passed to this function.\n      Example: \'js:(key)=>key.length>10\'\n\n    --quiet\n      no output\n\n    --verbose\n      extra output\n\n    --dry-run / --pretend\n      Will not modify anything.\n      For sync/copy commands, do everything except actually copy files.\n\n  summarize-command\n    --summarize-folders\n\n  compare, copy, sync commands\n    --to-bucket bucket-name\n      The target bucket. Can be the same bucket.\n\n    --to-prefix key-prefix\n      if prefix is specified, the target key will REPLACE it\'s source prefix with toPrefix\n      Otherwise, this is the same as addPrefix.\n\n    --add-prefix key-prefix\n      The source key is prepended with this string for the target bucket.\n\n  sync-only:\n    --overwrite\n      If set, sync will overwrite existing files with different file sizes.\n\n  all-commands advanced:\n    --list-concurrency        100\n      Maximum number of simultaneous list operations\n\n    --copy-concurrency        500\n      Maximum number of simultaneous small-copies\n\n    --large-copy-concurrency  75\n      Maximum number of simultaneous large-copies\n\n    --max-queue-size          50000\n      Maximum number of files that can be queued for copying before list-reading is throttled.\n\n    --large-copy-threshold    104857600\n      Files larger than this byte-size will use the large-copy strategy, which is currently\n      a shell-exec of \'aws s3 cp\'.\n\n    --max-list-requests       number\n      Not set by default; If set, will stop when hit. Use to limit how many requests\n      get used.\n\nexamples:\n\n  # get a detailed summary of item counts and sizes in my-bucket\n  s3p summarize --bucket my-bucket\n\n  # compare items from my-mucket with my-to-bucket\n  # shows how many items exist in both, only one, or are difference sizes\n  s3p compare --bucket my-bucket --to-bucket my-to-bucket\n\n  # copy everything from my-mucket to my-to-bucket\n  s3p cp --bucket my-bucket --to-bucket my-to-bucket\n\n  # copy everything from my-mucket to my-to-bucket\n  s3p sync --bucket my-bucket --to-bucket my-to-bucket\n\n  # copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/"\n  # the copied items will have the same keys as source items.\n  s3p cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/\n\n  # copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/"\n  # The copied items will have their "2020-04-14/" prefix REPLACED with "2020-04-14-backup/"\n  s3p cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/ --to-prefix 2020-04-14-backup/\n\n  # copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/"\n  # The copied items will have their "2020-04-14/" prepended for a total prefix of: "backup/2020-04-14/"\n  s3p cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/ --add-prefix backup/'
-        });
-      }
-    };
-  })();
+  return Caf.importInvoke(
+    ["merge", "console", "formatDate", "pad", "humanByteSize"],
+    [global, __webpack_require__(/*! ./StandardImport */ 15), __webpack_require__(/*! ./Lib */ 10)],
+    (merge, console, formatDate, pad, humanByteSize) => {
+      let commands, summarize, compare, copy, sync;
+      commands =
+        (({ summarize, compare, copy, sync } = __webpack_require__(/*! ./S3P */ 23)),
+        { summarize, compare, copy, sync });
+      commands.cp = commands.copy;
+      commands.version = function() {
+        return __webpack_require__(/*! ../../package */ 7).version;
+      };
+      commands.list = options =>
+        __webpack_require__(/*! ./S3Comprehensions */ 26).each(
+          merge(options, {
+            quiet: true,
+            mapList: l => {
+              let from, into, to, i, temp;
+              return (
+                (from = l),
+                (into = []),
+                from != null
+                  ? ((to = from.length),
+                    (i = 0),
+                    (() => {
+                      while (i < to) {
+                        let LastModified, Size, Key;
+                        ({ LastModified, Size, Key } = from[i]);
+                        into.push(
+                          console.log(
+                            `${Caf.toString(
+                              formatDate(LastModified, "yyyy-mm-dd HH:MM:ss")
+                            )} ${Caf.toString(
+                              pad(humanByteSize(Size), 10, " ", true)
+                            )} ${Caf.toString(Key)}`
+                          )
+                        );
+                        temp = i++;
+                      }
+                      return temp;
+                    })())
+                  : undefined,
+                into
+              );
+            }
+          })
+        );
+      commands.ls = commands.list;
+      return {
+        main: function() {
+          return __webpack_require__(/*! ./Cli */ 27).start({
+            commands,
+            doc:
+              'read-only commands:\n  summarize   scan all items in one bucket and produce a summary of all the items (only uses s3-list)\n  compare     compare two buckets and produce a summary of their differences      (only uses s3-list)\n  list / ls   list all matching files\n\nwrite-commands:\n  copy / cp   blindly copy all files from one bucket to another bucket\n  sync        only copy files which do not exist in the target bucket\n\noptions:\n  all-commands:\n    --bucket bucket-name\n      The source bucket\n\n    --prefix key\n      Only iterate over keys with this prefix.\n\n    --start-after key\n      Start iteratating after this key\n      If prefix and startAfter are specified, both will be enforced.\n\n    --stop-at key\n      Iterate up to, and including, this key\n      If prefix and stopAt are specified, both will be enforced.\n\n    --pattern string\n      Source keys must contain this exact string\n\n    --pattern "js:/^any-javascript-regexp/i"\n      Source keys must match this JavaScript regexp.\n\n    --filter "js:({Key, Size, LastModified, ETag, StorageClass, Owner}) => true"\n      Filter results of listObjects.\n\n    --quiet\n      no output\n\n    --verbose\n      extra output\n\n    --dryrun / --pretend\n      Will not modify anything.\n      For sync/copy commands, do everything except actually copy files.\n\n  summarize-command\n    --summarize-folders\n\n  compare, copy, sync commands\n    --to-bucket bucket-name\n      The target bucket. Can be the same bucket.\n\n    --to-prefix key-prefix\n      if prefix is specified, the target key will REPLACE it\'s source prefix with toPrefix\n      Otherwise, this is the same as addPrefix.\n\n    --add-prefix key-prefix\n      The source key is prepended with this string for the target bucket.\n\n    --to-key "js:(key) => key"\n      Provide an arbitrary JavaScript function for re-keying keys.\n\n  sync-only:\n    --overwrite\n      If set, sync will overwrite existing files with different file sizes.\n\n  all-commands advanced:\n    --list-concurrency        100\n      Maximum number of simultaneous list operations\n\n    --copy-concurrency        500\n      Maximum number of simultaneous small-copies\n\n    --large-copy-concurrency  75\n      Maximum number of simultaneous large-copies\n\n    --max-queue-size          50000\n      Maximum number of files that can be queued for copying before list-reading is throttled.\n\n    --large-copy-threshold    104857600\n      Files larger than this byte-size will use the large-copy strategy, which is currently\n      a shell-exec of \'aws s3 cp\'.\n\n    --max-list-requests       number\n      Not set by default; If set, will stop when hit. Use to limit how many requests\n      get used.\n\nexamples:\n\n  # get a detailed summary of item counts and sizes in my-bucket\n  s3p summarize --bucket my-bucket\n\n  # compare items from my-mucket with my-to-bucket\n  # shows how many items exist in both, only one, or are difference sizes\n  s3p compare --bucket my-bucket --to-bucket my-to-bucket\n\n  # copy everything from my-mucket to my-to-bucket\n  s3p cp --bucket my-bucket --to-bucket my-to-bucket\n\n  # copy everything from my-mucket to my-to-bucket\n  s3p sync --bucket my-bucket --to-bucket my-to-bucket\n\n  # copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/"\n  # the copied items will have the same keys as source items.\n  s3p cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/\n\n  # copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/"\n  # The copied items will have their "2020-04-14/" prefix REPLACED with "2020-04-14-backup/"\n  s3p cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/ --to-prefix 2020-04-14-backup/\n\n  # copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/"\n  # The copied items will have their "2020-04-14/" prepended for a total prefix of: "backup/2020-04-14/"\n  s3p cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/ --add-prefix backup/\n\n  # summarize all files larger than 1 Megabyte\n  s3p summarize --bucket my-bucket --filter "js:({Size}) => Size > 1024*1024"'
+          });
+        }
+      };
+    }
+  );
 });
 
 /* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../../node_modules/webpack/buildin/module.js */ 1)(module)))
