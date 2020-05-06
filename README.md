@@ -21,3 +21,17 @@ sequentially as the aws-cli does, S3P bisects the key-space and can have as many
     ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`
     abcdefghijklmnopqrstuvwxyz{|}~
     ```
+
+
+# Performance
+
+Listing performance can hit almost 20,000 items per second.
+
+Copying can be as fast as 8gB/s. Yes, I've seen 8 gigabytes per second sustained! This was on a bucket with an average file size slightly larger than 100 megabytes. S3P was running on a single c5.2xlarge instance. By comparison, I've never seen aws-s3-cp get more than 150mB/s. That's over 53x faster.
+
+Here are some other tests. Note that the copy was running on an average file size of 555k, which capped S3P's speed-up at just 5x. Still, a big win.
+
+|location | command | items   | aws-cli | s3p              | speedup | average size |
+|   -     |-        |-        |-        |-                 |-        | - |
+|home     | ls      | 490838  | 2043/s  | 18179/s       | 8.6x    | |
+|home     | cp      | 490838  | 30.5 mB/s     | 152mB/s    | 5.0x    | 555k |
