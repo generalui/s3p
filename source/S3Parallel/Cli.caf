@@ -61,12 +61,13 @@ class Cli
       commandFunction
       commandName
 
-  @_showCommandSummary: (command, {alias, description, options}) ->
-    log "\n-----------------------\n#{colors.bold colors.brightWhite 'Command: #{command}'} #{alias && '(#{alias})'}"
+  @_showCommandSummary: (commandName, {alias, description, options}) ->
+    commandName = dashCase commandName
+    log "\n-----------------------\n#{colors.bold colors.brightWhite 'commandName: #{commandName}'} #{alias && '(#{alias})'}"
     log description
     if options
       log "\noptions: " + colors.green (array v, k from-object options with k when !v.advanced).sort().join ', '
-      log "detailed help: " + colors.green "#{command} --help"
+      log "detailed help: " + colors.green "#{commandName} --help"
 
   @_showOptionDetails: (option, details) ->
     switch
@@ -98,11 +99,12 @@ class Cli
         log "\n#{description}\n"
 
       if commands
+        commands = object v, k from commands with-key lowerCamelCase k
         if help && commands[commandName]
           @_showCommandDetails commandName, commands[commandName]
         else
-          each details, command in commands
-            @_showCommandSummary command, details
+          each commandName in Object.keys(commands).sort()
+            @_showCommandSummary commandName, commands[commandName]
 
     unless doc?.commands
       log
