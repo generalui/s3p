@@ -108,27 +108,31 @@ main: ->
           # get a detailed summary of item counts and sizes in my-bucket
           s3p summarize --bucket my-bucket
 
-          # compare items from my-mucket with my-to-bucket
-          # shows how many items exist in both, only one, or are difference sizes
+          # Compare items from my-mucket with my-to-bucket.
+          # Shows how many items exist in both, only one, or are difference sizes.
           s3p compare --bucket my-bucket --to-bucket my-to-bucket
 
-          # copy everything from my-mucket to my-to-bucket
+          # Copy everything from my-mucket to my-to-bucket
           s3p cp --bucket my-bucket --to-bucket my-to-bucket
 
-          # copy everything from my-mucket to my-to-bucket
+          # Copy everything from my-mucket to my-to-bucket
           s3p sync --bucket my-bucket --to-bucket my-to-bucket
 
-          # copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/"
-          # the copied items will have the same keys as source items.
+          # Copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/"
+          # The copied items will have the same keys as source items.
           s3p cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/
 
-          # copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/"
-          # The copied items will have their "2020-04-14/" prefix REPLACED with "2020-04-14-backup/"
+          # Copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/" AND:
+          # REPLACES prefixes. Example: "2020-04-14/foo.jpg" is copied to "2020-04-14-backup/foo.jpg"
           s3p cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/ --to-prefix 2020-04-14-backup/
 
-          # copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/"
-          # The copied items will have their "2020-04-14/" prepended for a total prefix of: "backup/2020-04-14/"
+          # copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/" AND:
+          # ADDS prefixes. Example: "2020-04-14/foo.jpg" is copied to "backup/2020-04-14/foo.jpg"
           s3p cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/ --add-prefix backup/
+
+          # Copy everything from my-mucket to my-to-bucket with a custom key rewrite function
+          # CUSTOM function adds suffixes. Example: "2020-04-14/foo.jpg" is copied to "2020-04-14/foo.jpg-old"
+          s3p cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/ --to-key "js:(key) => key + 'old'"
 
           # summarize all files larger than 1 Megabyte
           s3p summarize --bucket my-bucket --filter "js:({Size}) => Size > 1024*1024"
