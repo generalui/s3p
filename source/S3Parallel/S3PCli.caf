@@ -60,6 +60,8 @@ main: ->
           source: https://github.com/generalui/s3p
 
       commands:
+        version:
+          description:  "" Show s3p's version.
         summarize:
           description:  "" Scan all items in one bucket and produce a summary of all the items. Only uses s3-list.
           options:      merge allCommandOptions,

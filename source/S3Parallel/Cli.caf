@@ -63,9 +63,10 @@ class Cli
 
   @_showCommandSummary: (command, {alias, description, options}) ->
     log "\n-----------------------\n#{colors.bold colors.brightWhite 'Command: #{command}'} #{alias && '(#{alias})'}"
-    log description + "\n"
-    options && log "options: " + colors.green (array v, k from-object options with k when !v.advanced).sort().join ', '
-    options && log "detailed help: " + colors.green "#{command} --help"
+    log description
+    if options
+      log "\noptions: " + colors.green (array v, k from-object options with k when !v.advanced).sort().join ', '
+      log "detailed help: " + colors.green "#{command} --help"
 
   @_showOptionDetails: (option, details) ->
     switch
