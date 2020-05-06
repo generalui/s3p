@@ -1,4 +1,4 @@
-import &StandardImport
+import &StandardImport, {} &colors
 
 class Cli
   @optionRegExp: /^--(.+)$/
@@ -21,7 +21,7 @@ class Cli
 
   @parseArgs: (args)->
     currentOptionName = :arg
-    commands = currentOption = []
+    commandNames = currentOption = []
     each arg, i in args into options = {}
       if option = arg.match @optionRegExp
         currentOption = options[currentOptionName = lowerCamelCase option[1]] = []
@@ -43,7 +43,7 @@ class Cli
           else arg
 
     {}
-      commands
+      commandNames
       options: object o, k in options
         switch o.length
         when 0 then true
@@ -51,7 +51,8 @@ class Cli
         else o
 
   @_selectCommand: (commands, defaultCommand, parsedArgs) ->
-    commandFunction = commands[commandName = parsedArgs.commands[0] || defaultCommand]
+    parsedArgs extract commandNames
+    commandFunction = commands[commandName = commandNames[0] || defaultCommand]
     unless isFunction(commandFunction) && !isClass commandFunction
       commandFunction = null
       commandName = null
@@ -60,27 +61,62 @@ class Cli
       commandFunction
       commandName
 
-  @_showDoc: ({doc, commands}, parsedArgs, startFile) =>
+  @_showCommandSummary: (command, {alias, description, options}) ->
+    log "\n-----------------------\n#{colors.bold colors.brightWhite 'Command: #{command}'} #{alias && '(#{alias})'}"
+    log description + "\n"
+    options && log "options: " + colors.green (array v, k from-object options with k when !v.advanced).sort().join ', '
+    options && log "detailed help: " + colors.green "#{command} --help"
+
+  @_showOptionDetails: (option, details) ->
+    switch
+    when details is String  then description = details
+    when (details is Array) && details.length == 2  then [argument, description] = details
+    when details is Object                          then {argument, description, advanced} = details
+    else
+      log.warn {} option, details
+      throw new Error "expecting options details to be string, 2-length array or object"
+    log colors.blue("option: ") + colors.green " --#{option} #{colors.yellow argument if argument}" + if advanced then colors.grey " (advanced)" else ''
+    log "  " + description + "\n"
+
+  @_showCommandDetails: (command, {alias, description, options}) ->
+    log "\n-----------------------\n#{colors.bold colors.brightWhite 'Command: #{command}'} #{alias && '(#{alias})'}"
+    log description + "\n"
+    options && each option in Object.keys(options).sort()
+      @_showOptionDetails option, options[option]
+
+  @_showDoc: (doc, {options: {help}, commandName}, startFile) =>
     log
       """
         #{startFile} help:
 
         Usage: #{&path.basename startFile} command [options]
 
-        Commands: #{}
-          Object.keys commands
-          .join ', '
-        \_
+    if doc?
+      {commands, description} = doc
+      if description
+        log "\n#{description}\n"
 
-    doc? && log doc
+      if commands
+        if help && commands[commandName]
+          @_showCommandDetails commandName, commands[commandName]
+        else
+          each details, command in commands
+            @_showCommandSummary command, details
 
-  @start: (cliOptions) =>
-    cliOptions extract commands, defaultCommand, doc, argv = process.argv
+    unless doc?.commands
+      log
+        """
+          Commands: #{}
+            Object.keys commands
+            .join ', '
+
+  @start: (cliConfig) =>
+    cliConfig extract commands, defaultCommand, doc, argv = process.argv
     [nodeJs, startFile, args...] = argv
-    parsed = @_selectCommand commands, defaultCommand, @parseArgs args
-    if parsed extract options, commandName, commandFunction
+    parsedComandLine = @_selectCommand commands, defaultCommand, @parseArgs args
+    if (parsedComandLine extract options, commandName, commandFunction) && !options.help
 
-      if parsed.options.verbose
+      if parsedComandLine.options.verbose
         log {}
           command: commandName
           options
@@ -89,4 +125,4 @@ class Cli
       .then (result) -> result? && log result
 
     else
-      @_showDoc cliOptions, parsed, startFile
+      @_showDoc cliConfig.doc, parsedComandLine, startFile

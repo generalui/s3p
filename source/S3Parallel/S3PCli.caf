@@ -12,127 +12,225 @@ commands.list = (options) =>
 
 commands.ls = commands.list
 
+allCommandOptions =
+  quiet:                      "" no output
+  verbose:                    "" extra output
+  bucket:       :bucket-name  "" The source bucket
+  prefix:       :key          "" Only iterate over keys with this prefix. If 'startAfter' or 'stopAt' are also specified, the set-intersection of the two will be used.
+  start-after:  :key          "" Start iteratating after this key. If 'prefix' is also specified, the set-intersection of the two will be used.
+  stop-at:      :key          "" Iterate up to, and including, this key. If 'prefix' is also specified, the set-intersection of the two will be used.
+
+  pattern:
+    "" string OR js:/^any-javascript-regexp/i
+    "" Source keys must contain the string, OR source keys must match the JavaScript regexp.
+
+  filter:
+    "" "js:({Key, Size, LastModified, ETag, StorageClass, Owner}) => true"
+    "" Filter results of listObjects.
+
+writeOptions =
+  dryrun:
+    description: "" Will not modify anything. For sync/copy commands, do everything except actually copy files.
+  pretend: description: "" alias for 'dryrun'
+
+toBucketOptions =
+  to-bucket:    :bucket-name        "" The target bucket. It can be the same bucket.
+  to-prefix:    :key-prefix         "" If 'prefix' is specified, the target key will REPLACE it's source prefix with toPrefix Otherwise, this is the same as add-prefix.
+  add-prefix:   :key-prefix         "" The source key is prepended with this string for the target bucket.
+  to-key:       '"js:(key) => key"' "" Provide an arbitrary JavaScript function for re-keying keys.
+
+advancedOptionsForAll =
+  list-concurrency:        advanced: true argument: :100     description: ""Maximum number of simultaneous list operations
+  max-list-requests:       advanced: true argument: :number  description: "" Not set by default; If set, will stop when hit. Use to limit how many requests get used.
+
+advancedOptionsForCopy = merge advancedOptionsForAll,
+  copy-concurrency:        advanced: true argument: :500       description: "" Maximum number of simultaneous small-copies
+  large-copy-concurrency:  advanced: true argument: :75        description: "" Maximum number of simultaneous large-copies
+  max-queue-size:          advanced: true argument: :50000     description: "" Maximum number of files that can be queued for copying before list-reading is throttled.
+  large-copy-threshold:    advanced: true argument: :104857600 description: "" Files larger than this byte-size will use the large-copy strategy, which is currently a shell-exec of 'aws s3 cp'.
+
 main: ->
   &Cli.start {}
     commands
     doc:
-      """
-        read-only commands:
-          summarize   scan all items in one bucket and produce a summary of all the items (only uses s3-list)
-          compare     compare two buckets and produce a summary of their differences      (only uses s3-list)
-          list / ls   list all matching files
+      description:
+        """
+          A realy fast, massively parallel way to do bulk operations over S3 buckets.
 
-        write-commands:
-          copy / cp   blindly copy all files from one bucket to another bucket
-          sync        only copy files which do not exist in the target bucket
+          source: https://github.com/generalui/s3p
 
-        options:
-          all-commands:
-            --bucket bucket-name
-              The source bucket
+      commands:
+        summarize:
+          description:  "" Scan all items in one bucket and produce a summary of all the items. Only uses s3-list.
+          options:      merge allCommandOptions,
+                        summarize-folders: "" show count and size of each folder
+                        advancedOptionsForAll
+          examples:
+            "" s3p summarize --bucket my-bucket
+            "" get a detailed summary of item counts and sizes in my-bucket
 
-            --prefix key
-              Only iterate over keys with this prefix.
+            "" s3p summarize --bucket my-bucket --filter "js:({Size}) => Size > 1024*1024"
+            "" summarize all files larger than 1 Megabyte
 
-            --start-after key
-              Start iteratating after this key
-              If prefix and startAfter are specified, both will be enforced.
+        list:
+          alias:        :ls
+          description:  "" List all matching files. Only uses s3-list.
+          options:      merge allCommandOptions, advancedOptionsForAll
 
-            --stop-at key
-              Iterate up to, and including, this key
-              If prefix and stopAt are specified, both will be enforced.
+        compare:
+          description:  "" Compare two buckets and produce a summary of their differences. Only uses s3-list.
+          options:      merge allCommandOptions, toBucketOptions, advancedOptionsForAll
+          examples:
+            "" s3p compare --bucket my-bucket --to-bucket my-to-bucket
+            "" Compare items from my-mucket with my-to-bucket. Shows how many items exist in both, only one, or are difference sizes.
 
-            --pattern string
-              Source keys must contain this exact string
+        copy:
+          alias:        :cp
+          description:  "" Blindly copy all files from one bucket to another bucket. Uses s3-list and s3-copy-object.
+          options:      merge allCommandOptions, toBucketOptions, writeOptions, advancedOptionsForCopy
+          examples:
+            "" s3p cp --bucket my-bucket --to-bucket my-to-bucket
+            "" Copy everything from my-mucket to my-to-bucket
 
-            --pattern "js:/^any-javascript-regexp/i"
-              Source keys must match this JavaScript regexp.
+            "" s3p cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/
+            "" Copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/". The copied items will have the same keys as source items.
 
-            --filter "js:({Key, Size, LastModified, ETag, StorageClass, Owner}) => true"
-              Filter results of listObjects.
+            "" s3p cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/ --to-prefix 2020-04-14-backup/
+            "" Copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/" and REPLACES prefixes. Example: "2020-04-14/foo.jpg" is copied to "2020-04-14-backup/foo.jpg"
 
-            --quiet
-              no output
+            "" s3p cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/ --add-prefix backup/
+            "" Copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/" and ADDS prefixes. Example: "2020-04-14/foo.jpg" is copied to "backup/2020-04-14/foo.jpg"
 
-            --verbose
-              extra output
+            "" s3p cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/ --to-key "js:(key) => key + 'old'"
+            "" Copy everything from my-mucket to my-to-bucket with CUSTOM function that adds suffixes. Example: "2020-04-14/foo.jpg" is copied to "2020-04-14/foo.jpg-old"
 
-            --dryrun / --pretend
-              Will not modify anything.
-              For sync/copy commands, do everything except actually copy files.
+        sync:
+          description:  "" Only copy files which do not exist in the target bucket. Uses s3-list and s3-copy-object.
+          options:      merge allCommandOptions, toBucketOptions, writeOptions, advancedOptionsForCopy,
+                        overwrite: "" If set, sync will overwrite existing files with different file sizes.
 
-          summarize-command
-            --summarize-folders
+          examples:
+            "" s3p sync --bucket my-bucket --to-bucket my-to-bucket
+            "" Copy everything from my-mucket to my-to-bucket
 
-          compare, copy, sync commands
-            --to-bucket bucket-name
-              The target bucket. Can be the same bucket.
+  ###
+        """
+          read-only commands:
+            summarize   scan all items in one bucket and produce a summary of all the items (only uses s3-list)
+            compare     compare two buckets and produce a summary of their differences      (only uses s3-list)
+            list / ls   list all matching files
 
-            --to-prefix key-prefix
-              if prefix is specified, the target key will REPLACE it's source prefix with toPrefix
-              Otherwise, this is the same as addPrefix.
+          write-commands:
+            copy / cp   blindly copy all files from one bucket to another bucket
+            sync        only copy files which do not exist in the target bucket
 
-            --add-prefix key-prefix
-              The source key is prepended with this string for the target bucket.
+          options:
+            all-commands:
+              --bucket bucket-name
+                The source bucket
 
-            --to-key "js:(key) => key"
-              Provide an arbitrary JavaScript function for re-keying keys.
+              --prefix key
+                Only iterate over keys with this prefix.
 
-          sync-only:
-            --overwrite
-              If set, sync will overwrite existing files with different file sizes.
+              --start-after key
+                Start iteratating after this key
+                If prefix and startAfter are specified, both will be enforced.
 
-          all-commands advanced:
-            --list-concurrency        100
-              Maximum number of simultaneous list operations
+              --stop-at key
+                Iterate up to, and including, this key
+                If prefix and stopAt are specified, both will be enforced.
 
-            --copy-concurrency        500
-              Maximum number of simultaneous small-copies
+              --pattern string
+                Source keys must contain this exact string
 
-            --large-copy-concurrency  75
-              Maximum number of simultaneous large-copies
+              --pattern "js:/^any-javascript-regexp/i"
+                Source keys must match this JavaScript regexp.
 
-            --max-queue-size          50000
-              Maximum number of files that can be queued for copying before list-reading is throttled.
+              --filter "js:({Key, Size, LastModified, ETag, StorageClass, Owner}) => true"
+                Filter results of listObjects.
 
-            --large-copy-threshold    104857600
-              Files larger than this byte-size will use the large-copy strategy, which is currently
-              a shell-exec of 'aws s3 cp'.
+              --quiet
+                no output
 
-            --max-list-requests       number
-              Not set by default; If set, will stop when hit. Use to limit how many requests
-              get used.
+              --verbose
+                extra output
 
-        examples:
+              --dryrun / --pretend
+                Will not modify anything.
+                For sync/copy commands, do everything except actually copy files.
 
-          # get a detailed summary of item counts and sizes in my-bucket
-          s3p summarize --bucket my-bucket
+            summarize-command
+              --summarize-folders
 
-          # Compare items from my-mucket with my-to-bucket.
-          # Shows how many items exist in both, only one, or are difference sizes.
-          s3p compare --bucket my-bucket --to-bucket my-to-bucket
+            compare, copy, sync commands
+              --to-bucket bucket-name
+                The target bucket. Can be the same bucket.
 
-          # Copy everything from my-mucket to my-to-bucket
-          s3p cp --bucket my-bucket --to-bucket my-to-bucket
+              --to-prefix key-prefix
+                if prefix is specified, the target key will REPLACE it's source prefix with toPrefix
+                Otherwise, this is the same as addPrefix.
 
-          # Copy everything from my-mucket to my-to-bucket
-          s3p sync --bucket my-bucket --to-bucket my-to-bucket
+              --add-prefix key-prefix
+                The source key is prepended with this string for the target bucket.
 
-          # Copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/"
-          # The copied items will have the same keys as source items.
-          s3p cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/
+              --to-key "js:(key) => key"
+                Provide an arbitrary JavaScript function for re-keying keys.
 
-          # Copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/" AND:
-          # REPLACES prefixes. Example: "2020-04-14/foo.jpg" is copied to "2020-04-14-backup/foo.jpg"
-          s3p cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/ --to-prefix 2020-04-14-backup/
+            sync-only:
+              --overwrite
+                If set, sync will overwrite existing files with different file sizes.
 
-          # copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/" AND:
-          # ADDS prefixes. Example: "2020-04-14/foo.jpg" is copied to "backup/2020-04-14/foo.jpg"
-          s3p cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/ --add-prefix backup/
+            all-commands advanced:
+              --list-concurrency        100
+                Maximum number of simultaneous list operations
 
-          # Copy everything from my-mucket to my-to-bucket with a custom key rewrite function
-          # CUSTOM function adds suffixes. Example: "2020-04-14/foo.jpg" is copied to "2020-04-14/foo.jpg-old"
-          s3p cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/ --to-key "js:(key) => key + 'old'"
+              --copy-concurrency        500
+                Maximum number of simultaneous small-copies
 
-          # summarize all files larger than 1 Megabyte
-          s3p summarize --bucket my-bucket --filter "js:({Size}) => Size > 1024*1024"
+              --large-copy-concurrency  75
+                Maximum number of simultaneous large-copies
+
+              --max-queue-size          50000
+                Maximum number of files that can be queued for copying before list-reading is throttled.
+
+              --large-copy-threshold    104857600
+                Files larger than this byte-size will use the large-copy strategy, which is currently
+                a shell-exec of 'aws s3 cp'.
+
+              --max-list-requests       number
+                Not set by default; If set, will stop when hit. Use to limit how many requests
+                get used.
+
+          examples:
+
+            # get a detailed summary of item counts and sizes in my-bucket
+            s3p summarize --bucket my-bucket
+
+            # Compare items from my-mucket with my-to-bucket.
+            # Shows how many items exist in both, only one, or are difference sizes.
+            s3p compare --bucket my-bucket --to-bucket my-to-bucket
+
+            # Copy everything from my-mucket to my-to-bucket
+            s3p cp --bucket my-bucket --to-bucket my-to-bucket
+
+            # Copy everything from my-mucket to my-to-bucket
+            s3p sync --bucket my-bucket --to-bucket my-to-bucket
+
+            # Copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/"
+            # The copied items will have the same keys as source items.
+            s3p cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/
+
+            # Copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/" AND:
+            # REPLACES prefixes. Example: "2020-04-14/foo.jpg" is copied to "2020-04-14-backup/foo.jpg"
+            s3p cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/ --to-prefix 2020-04-14-backup/
+
+            # copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/" AND:
+            # ADDS prefixes. Example: "2020-04-14/foo.jpg" is copied to "backup/2020-04-14/foo.jpg"
+            s3p cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/ --add-prefix backup/
+
+            # Copy everything from my-mucket to my-to-bucket with a custom key rewrite function
+            # CUSTOM function adds suffixes. Example: "2020-04-14/foo.jpg" is copied to "2020-04-14/foo.jpg-old"
+            s3p cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/ --to-key "js:(key) => key + 'old'"
+
+            # summarize all files larger than 1 Megabyte
+            s3p summarize --bucket my-bucket --filter "js:({Size}) => Size > 1024*1024"
