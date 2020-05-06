@@ -212,7 +212,7 @@ module.exports = require('neptune-namespaces' /* ABC - not inlining fellow NPM *
 /*! exports provided: author, bin, bugs, dependencies, description, devDependencies, homepage, license, name, repository, scripts, version, default */
 /***/ (function(module) {
 
-module.exports = JSON.parse("{\"author\":\"GenUI LLC\",\"bin\":{\"s3p\":\"./s3p\"},\"bugs\":\"https:/github.com/generalui/s3p/issues\",\"dependencies\":{\"art-class-system\":\"^1.11.2\",\"art-standard-lib\":\"^1.65.1\",\"aws-sdk\":\"^2.643.0\",\"caffeine-script-runtime\":\"^1.13.3\",\"neptune-namespaces\":\"^4.0.0\",\"shell-escape\":\"^0.2.0\"},\"description\":\"S3P is a CLI and Lib that is 5x to 50x faster than aws-cli for bulk S3 operations\",\"devDependencies\":{\"art-build-configurator\":\"^1.26.9\",\"art-testbench\":\"^1.17.2\",\"caffeine-script\":\"^0.72.1\",\"case-sensitive-paths-webpack-plugin\":\"^2.2.0\",\"chai\":\"^4.2.0\",\"coffee-loader\":\"^0.7.3\",\"css-loader\":\"^3.0.0\",\"json-loader\":\"^0.5.7\",\"mocha\":\"^7.1.1\",\"mock-fs\":\"^4.10.0\",\"script-loader\":\"^0.7.2\",\"style-loader\":\"^1.0.0\",\"webpack\":\"^4.39.1\",\"webpack-cli\":\"*\",\"webpack-dev-server\":\"^3.7.2\",\"webpack-merge\":\"^4.2.1\",\"webpack-node-externals\":\"^1.7.2\",\"webpack-stylish\":\"^0.1.8\"},\"homepage\":\"https://github.com/generalui/s3p\",\"license\":\"ISC\",\"name\":\"s3p\",\"repository\":{\"type\":\"git\",\"url\":\"https://github.com/generalui/s3p.git\"},\"scripts\":{\"build\":\"webpack --progress\",\"start\":\"webpack-dev-server --hot --inline --progress --env.devServer\",\"test\":\"nn -s;mocha -u tdd\",\"testInBrowser\":\"webpack-dev-server --progress --env.devServer\"},\"version\":\"2.3.4\"}");
+module.exports = JSON.parse("{\"author\":\"GenUI LLC\",\"bin\":{\"s3p\":\"./s3p\"},\"bugs\":\"https:/github.com/generalui/s3p/issues\",\"dependencies\":{\"art-class-system\":\"^1.11.2\",\"art-standard-lib\":\"^1.65.1\",\"aws-sdk\":\"^2.643.0\",\"caffeine-script-runtime\":\"^1.13.3\",\"neptune-namespaces\":\"^4.0.0\",\"shell-escape\":\"^0.2.0\"},\"description\":\"S3P is a CLI and Lib that is 5x to 50x faster than aws-cli for bulk S3 operations\",\"devDependencies\":{\"art-build-configurator\":\"^1.26.9\",\"art-testbench\":\"^1.17.2\",\"caffeine-script\":\"^0.72.1\",\"case-sensitive-paths-webpack-plugin\":\"^2.2.0\",\"chai\":\"^4.2.0\",\"coffee-loader\":\"^0.7.3\",\"css-loader\":\"^3.0.0\",\"json-loader\":\"^0.5.7\",\"mocha\":\"^7.1.1\",\"mock-fs\":\"^4.10.0\",\"script-loader\":\"^0.7.2\",\"style-loader\":\"^1.0.0\",\"webpack\":\"^4.39.1\",\"webpack-cli\":\"*\",\"webpack-dev-server\":\"^3.7.2\",\"webpack-merge\":\"^4.2.1\",\"webpack-node-externals\":\"^1.7.2\",\"webpack-stylish\":\"^0.1.8\"},\"homepage\":\"https://github.com/generalui/s3p\",\"license\":\"ISC\",\"name\":\"s3p\",\"repository\":{\"type\":\"git\",\"url\":\"https://github.com/generalui/s3p.git\"},\"scripts\":{\"build\":\"webpack --progress\",\"start\":\"webpack-dev-server --hot --inline --progress --env.devServer\",\"test\":\"nn -s;mocha -u tdd\",\"testInBrowser\":\"webpack-dev-server --progress --env.devServer\"},\"version\":\"2.4.0\"}");
 
 /***/ }),
 /* 8 */
@@ -706,6 +706,19 @@ Caf.defMod(module, () => {
             return this.awsSdkS3;
           }
         });
+        this.listBuckets = () =>
+          this.s3
+            .listBuckets()
+            .promise()
+            .then(({ Buckets }) =>
+              Caf.object(
+                Buckets,
+                ({ Name, CreationDate }) => CreationDate,
+                null,
+                null,
+                ({ Name, CreationDate }) => Name
+              )
+            );
         this.list = ({ bucket, prefix, limit = 1000, startAfter }) => {
           let startTime;
           startTime = currentSecond();
@@ -2755,7 +2768,9 @@ Caf.defMod(module, () => {
           let commandNames, commandFunction, commandName;
           commandNames = parsedArgs.commandNames;
           commandFunction =
-            commands[(commandName = commandNames[0] || defaultCommand)];
+            commands[
+              (commandName = lowerCamelCase(commandNames[0] || defaultCommand))
+            ];
           if (!(isFunction(commandFunction) && !isClass(commandFunction))) {
             commandFunction = null;
             commandName = null;
@@ -2951,6 +2966,7 @@ Caf.defMod(module, () => {
         (({ summarize, compare, copy, sync } = __webpack_require__(/*! ./S3P */ 23)),
         { summarize, compare, copy, sync });
       commands.cp = commands.copy;
+      commands.listBuckets = __webpack_require__(/*! ./Lib/S3 */ 19).listBuckets;
       commands.version = function() {
         return __webpack_require__(/*! ../../package */ 7).version;
       };
@@ -3085,6 +3101,7 @@ Caf.defMod(module, () => {
               description:
                 "A realy fast, massively parallel way to do bulk operations over S3 buckets.\n\nsource: https://github.com/generalui/s3p\n\nAWS CREDS: s3p uses the same creds aws-cli uses, so see their documentation: https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html",
               commands: {
+                "list-buckets": { description: "List all your S3 buckets." },
                 version: { description: "Show s3p's version." },
                 summarize: {
                   description:
