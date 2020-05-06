@@ -212,7 +212,7 @@ module.exports = require('neptune-namespaces' /* ABC - not inlining fellow NPM *
 /*! exports provided: author, bin, bugs, dependencies, description, devDependencies, homepage, license, name, repository, scripts, version, default */
 /***/ (function(module) {
 
-module.exports = JSON.parse("{\"author\":\"GenUI LLC\",\"bin\":{\"s3p\":\"./s3p\"},\"bugs\":\"https:/github.com/generalui/s3p/issues\",\"dependencies\":{\"art-class-system\":\"^1.11.2\",\"art-standard-lib\":\"^1.65.1\",\"aws-sdk\":\"^2.643.0\",\"caffeine-script-runtime\":\"^1.13.3\",\"neptune-namespaces\":\"^4.0.0\",\"shell-escape\":\"^0.2.0\"},\"description\":\"S3P is a CLI and Lib that is 5x to 50x faster than aws-cli for bulk S3 operations\",\"devDependencies\":{\"art-build-configurator\":\"^1.26.9\",\"art-testbench\":\"^1.17.2\",\"caffeine-script\":\"^0.72.1\",\"case-sensitive-paths-webpack-plugin\":\"^2.2.0\",\"chai\":\"^4.2.0\",\"coffee-loader\":\"^0.7.3\",\"css-loader\":\"^3.0.0\",\"json-loader\":\"^0.5.7\",\"mocha\":\"^7.1.1\",\"mock-fs\":\"^4.10.0\",\"script-loader\":\"^0.7.2\",\"style-loader\":\"^1.0.0\",\"webpack\":\"^4.39.1\",\"webpack-cli\":\"*\",\"webpack-dev-server\":\"^3.7.2\",\"webpack-merge\":\"^4.2.1\",\"webpack-node-externals\":\"^1.7.2\",\"webpack-stylish\":\"^0.1.8\"},\"homepage\":\"https://github.com/generalui/s3p\",\"license\":\"ISC\",\"name\":\"s3p\",\"repository\":{\"type\":\"git\",\"url\":\"https://github.com/generalui/s3p.git\"},\"scripts\":{\"build\":\"webpack --progress\",\"start\":\"webpack-dev-server --hot --inline --progress --env.devServer\",\"test\":\"nn -s;mocha -u tdd\",\"testInBrowser\":\"webpack-dev-server --progress --env.devServer\"},\"version\":\"2.3.1\"}");
+module.exports = JSON.parse("{\"author\":\"GenUI LLC\",\"bin\":{\"s3p\":\"./s3p\"},\"bugs\":\"https:/github.com/generalui/s3p/issues\",\"dependencies\":{\"art-class-system\":\"^1.11.2\",\"art-standard-lib\":\"^1.65.1\",\"aws-sdk\":\"^2.643.0\",\"caffeine-script-runtime\":\"^1.13.3\",\"neptune-namespaces\":\"^4.0.0\",\"shell-escape\":\"^0.2.0\"},\"description\":\"S3P is a CLI and Lib that is 5x to 50x faster than aws-cli for bulk S3 operations\",\"devDependencies\":{\"art-build-configurator\":\"^1.26.9\",\"art-testbench\":\"^1.17.2\",\"caffeine-script\":\"^0.72.1\",\"case-sensitive-paths-webpack-plugin\":\"^2.2.0\",\"chai\":\"^4.2.0\",\"coffee-loader\":\"^0.7.3\",\"css-loader\":\"^3.0.0\",\"json-loader\":\"^0.5.7\",\"mocha\":\"^7.1.1\",\"mock-fs\":\"^4.10.0\",\"script-loader\":\"^0.7.2\",\"style-loader\":\"^1.0.0\",\"webpack\":\"^4.39.1\",\"webpack-cli\":\"*\",\"webpack-dev-server\":\"^3.7.2\",\"webpack-merge\":\"^4.2.1\",\"webpack-node-externals\":\"^1.7.2\",\"webpack-stylish\":\"^0.1.8\"},\"homepage\":\"https://github.com/generalui/s3p\",\"license\":\"ISC\",\"name\":\"s3p\",\"repository\":{\"type\":\"git\",\"url\":\"https://github.com/generalui/s3p.git\"},\"scripts\":{\"build\":\"webpack --progress\",\"start\":\"webpack-dev-server --hot --inline --progress --env.devServer\",\"test\":\"nn -s;mocha -u tdd\",\"testInBrowser\":\"webpack-dev-server --progress --env.devServer\"},\"version\":\"2.3.2\"}");
 
 /***/ }),
 /* 8 */
@@ -2660,18 +2660,26 @@ Caf.defMod(module, () => {
       "isFunction",
       "isClass",
       "merge",
+      "colors",
+      "String",
+      "Array",
       "Object",
+      "Error",
       "process",
       "Promise"
     ],
-    [global, __webpack_require__(/*! ./StandardImport */ 15)],
+    [global, __webpack_require__(/*! ./StandardImport */ 15), { colors: __webpack_require__(/*! colors */ 25) }],
     (
       lowerCamelCase,
       log,
       isFunction,
       isClass,
       merge,
+      colors,
+      String,
+      Array,
       Object,
+      Error,
       process,
       Promise
     ) => {
@@ -2685,9 +2693,9 @@ Caf.defMod(module, () => {
         this.evalJsRegExp = /^js:(.*)$/;
         this.numberRegExp = /^[-+]?([0-9]*\.[0-9]+|[0-9]+)([eE][-+]?[0-9]+)?$/i;
         this.parseArgs = function(args) {
-          let currentOptionName, commands, currentOption, options;
+          let currentOptionName, commandNames, currentOption, options;
           currentOptionName = "arg";
-          commands = currentOption = [];
+          commandNames = currentOption = [];
           Caf.each2(
             args,
             (arg, i) => {
@@ -2728,7 +2736,7 @@ Caf.defMod(module, () => {
             (options = {})
           );
           return {
-            commands,
+            commandNames,
             options: Caf.object(options, (o, k) =>
               (() => {
                 switch (o.length) {
@@ -2744,26 +2752,137 @@ Caf.defMod(module, () => {
           };
         };
         this._selectCommand = function(commands, defaultCommand, parsedArgs) {
-          let commandFunction, commandName;
+          let commandNames, commandFunction, commandName;
+          commandNames = parsedArgs.commandNames;
           commandFunction =
-            commands[(commandName = parsedArgs.commands[0] || defaultCommand)];
+            commands[(commandName = commandNames[0] || defaultCommand)];
           if (!(isFunction(commandFunction) && !isClass(commandFunction))) {
             commandFunction = null;
             commandName = null;
           }
           return merge(parsedArgs, { commandFunction, commandName });
         };
-        this._showDoc = ({ doc, commands }, parsedArgs, startFile) => {
+        this._showCommandSummary = function(
+          command,
+          { alias, description, options }
+        ) {
+          let from, into, temp;
+          log(
+            `\n-----------------------\n${Caf.toString(
+              colors.bold(
+                colors.brightWhite(`Command: ${Caf.toString(command)}`)
+              )
+            )} ${Caf.toString(alias && `(${Caf.toString(alias)})`)}`
+          );
+          log(description + "\n");
+          options &&
+            log(
+              "options: " +
+                colors.green(
+                  ((from = options),
+                  (into = []),
+                  from != null
+                    ? (() => {
+                        for (let k1 in from) {
+                          let v, k;
+                          v = from[k1];
+                          k = k1;
+                          temp = !v.advanced ? into.push(k) : undefined;
+                        }
+                        return temp;
+                      })()
+                    : undefined,
+                  into)
+                    .sort()
+                    .join(", ")
+                )
+            );
+          return (
+            options &&
+            log(
+              "detailed help: " +
+                colors.green(`${Caf.toString(command)} --help`)
+            )
+          );
+        };
+        this._showOptionDetails = function(option, details) {
+          let description, argument, advanced;
+          switch (false) {
+            case !Caf.is(details, String):
+              description = details;
+              break;
+            case !(Caf.is(details, Array) && details.length === 2):
+              [argument, description] = details;
+              break;
+            case !Caf.is(details, Object):
+              ({ argument, description, advanced } = details);
+              break;
+            default:
+              log.warn({ option, details });
+              throw new Error(
+                "expecting options details to be string, 2-length array or object"
+              );
+          }
+          log(
+            colors.blue("option: ") +
+              colors.green(
+                ` --${Caf.toString(option)} ${Caf.toString(
+                  argument ? colors.yellow(argument) : undefined
+                )}` + (advanced ? colors.grey(" (advanced)") : "")
+              )
+          );
+          return log("  " + description + "\n");
+        };
+        this._showCommandDetails = function(
+          command,
+          { alias, description, options }
+        ) {
+          log(
+            `\n-----------------------\n${Caf.toString(
+              colors.bold(
+                colors.brightWhite(`Command: ${Caf.toString(command)}`)
+              )
+            )} ${Caf.toString(alias && `(${Caf.toString(alias)})`)}`
+          );
+          log(description + "\n");
+          return (
+            options &&
+            Caf.each2(Object.keys(options).sort(), option =>
+              this._showOptionDetails(option, options[option])
+            )
+          );
+        };
+        this._showDoc = (
+          doc,
+          { options: { help }, commandName },
+          startFile
+        ) => {
+          let commands, description;
           log(
             `${Caf.toString(startFile)} help:\n\nUsage: ${Caf.toString(
               __webpack_require__(/*! path */ 24).basename(startFile)
-            )} command [options]\n\nCommands: ${Caf.toString(
-              Object.keys(commands).join(", ")
-            )}\n `
+            )} command [options]`
           );
-          return doc != null && log(doc);
+          if (doc != null) {
+            ({ commands, description } = doc);
+            if (description) {
+              log(`\n${Caf.toString(description)}\n`);
+            }
+            if (commands) {
+              if (help && commands[commandName]) {
+                this._showCommandDetails(commandName, commands[commandName]);
+              } else {
+                Caf.each2(commands, (details, command) =>
+                  this._showCommandSummary(command, details)
+                );
+              }
+            }
+          }
+          return !(Caf.exists(doc) && doc.commands)
+            ? log(`Commands: ${Caf.toString(Object.keys(commands).join(", "))}`)
+            : undefined;
         };
-        this.start = cliOptions => {
+        this.start = cliConfig => {
           let commands,
             defaultCommand,
             doc,
@@ -2771,31 +2890,31 @@ Caf.defMod(module, () => {
             nodeJs,
             startFile,
             args,
-            parsed,
+            parsedComandLine,
             options,
             commandName,
             commandFunction,
             temp;
-          commands = cliOptions.commands;
-          defaultCommand = cliOptions.defaultCommand;
-          doc = cliOptions.doc;
-          argv = undefined !== (temp = cliOptions.argv) ? temp : process.argv;
+          commands = cliConfig.commands;
+          defaultCommand = cliConfig.defaultCommand;
+          doc = cliConfig.doc;
+          argv = undefined !== (temp = cliConfig.argv) ? temp : process.argv;
           [nodeJs, startFile, ...args] = argv;
-          parsed = this._selectCommand(
+          parsedComandLine = this._selectCommand(
             commands,
             defaultCommand,
             this.parseArgs(args)
           );
-          return ((options = parsed.options),
-          (commandName = parsed.commandName),
-          (commandFunction = parsed.commandFunction))
-            ? (parsed.options.verbose
+          return ((options = parsedComandLine.options),
+          (commandName = parsedComandLine.commandName),
+          (commandFunction = parsedComandLine.commandFunction)) && !options.help
+            ? (parsedComandLine.options.verbose
                 ? log({ command: commandName, options })
                 : undefined,
               Promise.then(() => commandFunction(options)).then(
                 result => result != null && log(result)
               ))
-            : this._showDoc(cliOptions, parsed, startFile);
+            : this._showDoc(cliConfig.doc, parsedComandLine, startFile);
         };
       }));
     }
@@ -2820,7 +2939,16 @@ Caf.defMod(module, () => {
     ["merge", "console", "formatDate", "pad", "humanByteSize"],
     [global, __webpack_require__(/*! ./StandardImport */ 15), __webpack_require__(/*! ./Lib */ 10)],
     (merge, console, formatDate, pad, humanByteSize) => {
-      let commands, summarize, compare, copy, sync;
+      let commands,
+        summarize,
+        compare,
+        copy,
+        sync,
+        allCommandOptions,
+        writeOptions,
+        toBucketOptions,
+        advancedOptionsForAll,
+        advancedOptionsForCopy;
       commands =
         (({ summarize, compare, copy, sync } = __webpack_require__(/*! ./S3P */ 23)),
         { summarize, compare, copy, sync });
@@ -2864,12 +2992,179 @@ Caf.defMod(module, () => {
           })
         );
       commands.ls = commands.list;
+      allCommandOptions = {
+        quiet: "no output",
+        verbose: "extra output",
+        bucket: ["bucket-name", "The source bucket"],
+        prefix: [
+          "key",
+          "Only iterate over keys with this prefix. If 'startAfter' or 'stopAt' are also specified, the set-intersection of the two will be used."
+        ],
+        "start-after": [
+          "key",
+          "Start iteratating after this key. If 'prefix' is also specified, the set-intersection of the two will be used."
+        ],
+        "stop-at": [
+          "key",
+          "Iterate up to, and including, this key. If 'prefix' is also specified, the set-intersection of the two will be used."
+        ],
+        pattern: [
+          "string OR js:/^any-javascript-regexp/i",
+          "Source keys must contain the string, OR source keys must match the JavaScript regexp."
+        ],
+        filter: [
+          '"js:({Key, Size, LastModified, ETag, StorageClass, Owner}) => true"',
+          "Filter results of listObjects."
+        ]
+      };
+      writeOptions = {
+        dryrun: {
+          description:
+            "Will not modify anything. For sync/copy commands, do everything except actually copy files."
+        },
+        pretend: { description: "alias for 'dryrun'" }
+      };
+      toBucketOptions = {
+        "to-bucket": [
+          "bucket-name",
+          "The target bucket. It can be the same bucket."
+        ],
+        "to-prefix": [
+          "key-prefix",
+          "If 'prefix' is specified, the target key will REPLACE it's source prefix with toPrefix Otherwise, this is the same as add-prefix."
+        ],
+        "add-prefix": [
+          "key-prefix",
+          "The source key is prepended with this string for the target bucket."
+        ],
+        "to-key": [
+          '"js:(key) => key"',
+          "Provide an arbitrary JavaScript function for re-keying keys."
+        ]
+      };
+      advancedOptionsForAll = {
+        "list-concurrency": {
+          advanced: true,
+          argument: "100",
+          description: "Maximum number of simultaneous list operations"
+        },
+        "max-list-requests": {
+          advanced: true,
+          argument: "number",
+          description:
+            "Not set by default; If set, will stop when hit. Use to limit how many requests get used."
+        }
+      };
+      advancedOptionsForCopy = merge(advancedOptionsForAll, {
+        "copy-concurrency": {
+          advanced: true,
+          argument: "500",
+          description: "Maximum number of simultaneous small-copies"
+        },
+        "large-copy-concurrency": {
+          advanced: true,
+          argument: "75",
+          description: "Maximum number of simultaneous large-copies"
+        },
+        "max-queue-size": {
+          advanced: true,
+          argument: "50000",
+          description:
+            "Maximum number of files that can be queued for copying before list-reading is throttled."
+        },
+        "large-copy-threshold": {
+          advanced: true,
+          argument: "104857600",
+          description:
+            "Files larger than this byte-size will use the large-copy strategy, which is currently a shell-exec of 'aws s3 cp'."
+        }
+      });
       return {
         main: function() {
           return __webpack_require__(/*! ./Cli */ 27).start({
             commands,
-            doc:
-              'read-only commands:\n  summarize   scan all items in one bucket and produce a summary of all the items (only uses s3-list)\n  compare     compare two buckets and produce a summary of their differences      (only uses s3-list)\n  list / ls   list all matching files\n\nwrite-commands:\n  copy / cp   blindly copy all files from one bucket to another bucket\n  sync        only copy files which do not exist in the target bucket\n\noptions:\n  all-commands:\n    --bucket bucket-name\n      The source bucket\n\n    --prefix key\n      Only iterate over keys with this prefix.\n\n    --start-after key\n      Start iteratating after this key\n      If prefix and startAfter are specified, both will be enforced.\n\n    --stop-at key\n      Iterate up to, and including, this key\n      If prefix and stopAt are specified, both will be enforced.\n\n    --pattern string\n      Source keys must contain this exact string\n\n    --pattern "js:/^any-javascript-regexp/i"\n      Source keys must match this JavaScript regexp.\n\n    --filter "js:({Key, Size, LastModified, ETag, StorageClass, Owner}) => true"\n      Filter results of listObjects.\n\n    --quiet\n      no output\n\n    --verbose\n      extra output\n\n    --dryrun / --pretend\n      Will not modify anything.\n      For sync/copy commands, do everything except actually copy files.\n\n  summarize-command\n    --summarize-folders\n\n  compare, copy, sync commands\n    --to-bucket bucket-name\n      The target bucket. Can be the same bucket.\n\n    --to-prefix key-prefix\n      if prefix is specified, the target key will REPLACE it\'s source prefix with toPrefix\n      Otherwise, this is the same as addPrefix.\n\n    --add-prefix key-prefix\n      The source key is prepended with this string for the target bucket.\n\n    --to-key "js:(key) => key"\n      Provide an arbitrary JavaScript function for re-keying keys.\n\n  sync-only:\n    --overwrite\n      If set, sync will overwrite existing files with different file sizes.\n\n  all-commands advanced:\n    --list-concurrency        100\n      Maximum number of simultaneous list operations\n\n    --copy-concurrency        500\n      Maximum number of simultaneous small-copies\n\n    --large-copy-concurrency  75\n      Maximum number of simultaneous large-copies\n\n    --max-queue-size          50000\n      Maximum number of files that can be queued for copying before list-reading is throttled.\n\n    --large-copy-threshold    104857600\n      Files larger than this byte-size will use the large-copy strategy, which is currently\n      a shell-exec of \'aws s3 cp\'.\n\n    --max-list-requests       number\n      Not set by default; If set, will stop when hit. Use to limit how many requests\n      get used.\n\nexamples:\n\n  # get a detailed summary of item counts and sizes in my-bucket\n  s3p summarize --bucket my-bucket\n\n  # compare items from my-mucket with my-to-bucket\n  # shows how many items exist in both, only one, or are difference sizes\n  s3p compare --bucket my-bucket --to-bucket my-to-bucket\n\n  # copy everything from my-mucket to my-to-bucket\n  s3p cp --bucket my-bucket --to-bucket my-to-bucket\n\n  # copy everything from my-mucket to my-to-bucket\n  s3p sync --bucket my-bucket --to-bucket my-to-bucket\n\n  # copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/"\n  # the copied items will have the same keys as source items.\n  s3p cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/\n\n  # copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/"\n  # The copied items will have their "2020-04-14/" prefix REPLACED with "2020-04-14-backup/"\n  s3p cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/ --to-prefix 2020-04-14-backup/\n\n  # copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/"\n  # The copied items will have their "2020-04-14/" prepended for a total prefix of: "backup/2020-04-14/"\n  s3p cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/ --add-prefix backup/\n\n  # summarize all files larger than 1 Megabyte\n  s3p summarize --bucket my-bucket --filter "js:({Size}) => Size > 1024*1024"'
+            doc: {
+              description:
+                "A realy fast, massively parallel way to do bulk operations over S3 buckets.\n\nsource: https://github.com/generalui/s3p",
+              commands: {
+                summarize: {
+                  description:
+                    "Scan all items in one bucket and produce a summary of all the items. Only uses s3-list.",
+                  options: merge(
+                    allCommandOptions,
+                    {
+                      "summarize-folders": "show count and size of each folder"
+                    },
+                    advancedOptionsForAll
+                  ),
+                  examples: [
+                    "s3p summarize --bucket my-bucket",
+                    "get a detailed summary of item counts and sizes in my-bucket",
+                    's3p summarize --bucket my-bucket --filter "js:({Size}) => Size > 1024*1024"',
+                    "summarize all files larger than 1 Megabyte"
+                  ]
+                },
+                list: {
+                  alias: "ls",
+                  description: "List all matching files. Only uses s3-list.",
+                  options: merge(allCommandOptions, advancedOptionsForAll)
+                },
+                compare: {
+                  description:
+                    "Compare two buckets and produce a summary of their differences. Only uses s3-list.",
+                  options: merge(
+                    allCommandOptions,
+                    toBucketOptions,
+                    advancedOptionsForAll
+                  ),
+                  examples: [
+                    "s3p compare --bucket my-bucket --to-bucket my-to-bucket",
+                    "Compare items from my-mucket with my-to-bucket. Shows how many items exist in both, only one, or are difference sizes."
+                  ]
+                },
+                copy: {
+                  alias: "cp",
+                  description:
+                    "Blindly copy all files from one bucket to another bucket. Uses s3-list and s3-copy-object.",
+                  options: merge(
+                    allCommandOptions,
+                    toBucketOptions,
+                    writeOptions,
+                    advancedOptionsForCopy
+                  ),
+                  examples: [
+                    "s3p cp --bucket my-bucket --to-bucket my-to-bucket",
+                    "Copy everything from my-mucket to my-to-bucket",
+                    "s3p cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/",
+                    'Copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/". The copied items will have the same keys as source items.',
+                    "s3p cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/ --to-prefix 2020-04-14-backup/",
+                    'Copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/" and REPLACES prefixes. Example: "2020-04-14/foo.jpg" is copied to "2020-04-14-backup/foo.jpg"',
+                    "s3p cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/ --add-prefix backup/",
+                    'Copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/" and ADDS prefixes. Example: "2020-04-14/foo.jpg" is copied to "backup/2020-04-14/foo.jpg"',
+                    "s3p cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/ --to-key \"js:(key) => key + 'old'\"",
+                    'Copy everything from my-mucket to my-to-bucket with CUSTOM function that adds suffixes. Example: "2020-04-14/foo.jpg" is copied to "2020-04-14/foo.jpg-old"'
+                  ]
+                },
+                sync: {
+                  description:
+                    "Only copy files which do not exist in the target bucket. Uses s3-list and s3-copy-object.",
+                  options: merge(
+                    allCommandOptions,
+                    toBucketOptions,
+                    writeOptions,
+                    advancedOptionsForCopy,
+                    {
+                      overwrite:
+                        "If set, sync will overwrite existing files with different file sizes."
+                    }
+                  ),
+                  examples: [
+                    "s3p sync --bucket my-bucket --to-bucket my-to-bucket",
+                    "Copy everything from my-mucket to my-to-bucket"
+                  ]
+                }
+              }
+            }
           });
         }
       };
