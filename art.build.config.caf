@@ -4,7 +4,7 @@ target: node: true
 
 npm: (currentJson) -> merge currentJson,
   author: "" GenUI LLC
-  description: "" S3P is a CLI and Lib that is 5x to 50x faster than aws-cli for bulk S3 operations
+  description: "" S3P is a CLI and library that is 5x to 50x faster than aws-cli for bulk S3 operations including: summarize, compare, copy and sync.
   bin: s3p: :./s3p
   dependencies: merge &package.dependencies,
     aws-sdk:                  :^2.643.0

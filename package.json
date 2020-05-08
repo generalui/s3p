@@ -13,7 +13,7 @@
     "neptune-namespaces": "^4.0.0",
     "shell-escape": "^0.2.0"
   },
-  "description": "S3P is a CLI and Lib that is 5x to 50x faster than aws-cli for bulk S3 operations",
+  "description": "S3P is a CLI and library that is 5x to 50x faster than aws-cli for bulk S3 operations including: summarize, compare, copy and sync.",
   "devDependencies": {
     "art-build-configurator": "^1.26.9",
     "art-testbench": "^1.17.2",

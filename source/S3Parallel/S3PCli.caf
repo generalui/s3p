@@ -57,11 +57,15 @@ main: ->
     help:
       description:
         """
-          A realy fast, massively parallel way to do bulk operations over S3 buckets. Uses s3.listBuckets.
+          S3 summarize, compare, copy, sync and more with massively parallel power.
 
-          source: https://github.com/generalui/s3p
+          configure AWS credentials with environment variables:
+            s3p uses the same creds as the aws-cli. Learn more:
+            https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html
 
-          AWS CREDS: s3p uses the same creds aws-cli uses, so see their documentation: https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html
+          s3p source:
+            https://github.com/generalui/s3p
+
 
       commands:
         list-buckets:
