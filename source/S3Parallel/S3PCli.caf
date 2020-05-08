@@ -24,7 +24,10 @@ commands.ls = commands.list
 allCommandOptions =
   quiet:                      "" no output
   verbose:                    "" extra output
-  bucket:       :bucket-name  "" The source bucket
+  bucket:
+    argument:     :bucket-name
+    description:  "" The source bucket
+    required:     true
   prefix:       :key          "" Only iterate over keys with this prefix. If 'startAfter' or 'stopAt' are also specified, the set-intersection of the two will be used.
   start-after:  :key          "" Start iteratating after this key. If 'prefix' is also specified, the set-intersection of the two will be used.
   stop-at:      :key          "" Iterate up to, and including, this key. If 'prefix' is also specified, the set-intersection of the two will be used.
@@ -43,7 +46,7 @@ writeOptions =
   pretend: description: "" alias for 'dryrun'
 
 toBucketOptions =
-  to-bucket:    :bucket-name        "" The target bucket. It can be the same bucket.
+  to-bucket:    argument: :bucket-name  required: true description:     "" The target bucket. It can be the same bucket.
   to-prefix:    :key-prefix         "" If 'prefix' is specified, the target key will REPLACE it's source prefix with toPrefix Otherwise, this is the same as add-prefix.
   add-prefix:   :key-prefix         "" The source key is prepended with this string for the target bucket.
   to-key:       '"js:(key) => key"' "" Provide an arbitrary JavaScript function for re-keying keys.
@@ -97,10 +100,10 @@ main: ->
                         summarize-folders: "" show count and size of each folder
                         advancedOptionsForAll
           examples:
-            "" summarize --bucket my-bucket
+            bucket: :my-bucket
             "" get a detailed summary of item counts and sizes in my-bucket
 
-            "" summarize --bucket my-bucket --filter "js:({Size}) => Size > 1024*1024"
+            bucket: :my-bucket filter: "" "js:({Size}) => Size > 1024*1024"
             "" summarize all files larger than 1 Megabyte
 
         list:
@@ -112,27 +115,31 @@ main: ->
           description:  "" Compare two buckets and produce a summary of their differences. Uses s3.listObjectsV2.
           options:      merge allCommandOptions, toBucketOptions, advancedOptionsForAll
           examples:
-            "" compare --bucket my-bucket --to-bucket my-to-bucket
+            bucket: :my-bucket to-bucket: :my-to-bucket
             "" Compare items from my-mucket with my-to-bucket. Shows how many items exist in both, only one, or are difference sizes.
 
         copy:
           alias:        :cp
-          description:  "" Blindly copy all files from one bucket to another bucket. Uses s3.listObjectsV2, s3.copyObject and shell-exec 'aws s3 cp'.
+          description:
+            """
+              Copy all files from one bucket to another bucket. Uses s3.listObjectsV2, s3.copyObject and shell-exec 'aws s3 cp'.
+
+              NOTE: This overwrites existing files in the target bucket. Try the 'sync' command for smarter copies when some of the files have already been copied.
           options:      merge allCommandOptions, toBucketOptions, writeOptions, advancedOptionsForCopy
           examples:
-            "" cp --bucket my-bucket --to-bucket my-to-bucket
+            bucket: :my-bucket to-bucket: :my-to-bucket
             "" Copy everything from my-mucket to my-to-bucket
 
-            "" cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/
+            bucket: :my-bucket to-bucket: :my-to-bucket prefix: :2020-04-14/
             "" Copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/". The copied items will have the same keys as source items.
 
-            "" cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/ --to-prefix 2020-04-14-backup/
+            bucket: :my-bucket to-bucket: :my-to-bucket prefix: :2020-04-14/ to-prefix: :2020-04-14-backup/
             "" Copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/" and REPLACES prefixes. Example: "2020-04-14/foo.jpg" is copied to "2020-04-14-backup/foo.jpg"
 
-            "" cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/ --add-prefix backup/
+            bucket: :my-bucket to-bucket: :my-to-bucket prefix: :2020-04-14/ add-prefix: :backup/
             "" Copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/" and ADDS prefixes. Example: "2020-04-14/foo.jpg" is copied to "backup/2020-04-14/foo.jpg"
 
-            "" cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/ --to-key "js:(key) => key + 'old'"
+            bucket: :my-bucket to-bucket: :my-to-bucket prefix: :2020-04-14/ to-key: "" "js:(key) => key + 'old'"
             "" Copy everything from my-mucket to my-to-bucket with CUSTOM function that adds suffixes. Example: "2020-04-14/foo.jpg" is copied to "2020-04-14/foo.jpg-old"
 
         sync:
@@ -141,7 +148,7 @@ main: ->
                         overwrite: "" If set, sync will overwrite existing files with different file sizes.
 
           examples:
-            "" sync --bucket my-bucket --to-bucket my-to-bucket
+            bucket: :my-bucket to-bucket: :my-to-bucket
             "" Copy everything from my-mucket to my-to-bucket
 
   ###
