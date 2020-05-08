@@ -211,7 +211,7 @@ module.exports = require('neptune-namespaces' /* ABC - not inlining fellow NPM *
 /*! exports provided: author, bin, bugs, dependencies, description, devDependencies, homepage, license, name, repository, scripts, version, default */
 /***/ (function(module) {
 
-module.exports = JSON.parse("{\"author\":\"GenUI LLC\",\"bin\":{\"s3p\":\"./s3p\"},\"bugs\":\"https:/github.com/generalui/s3p/issues\",\"dependencies\":{\"@art-suite/cli\":\"^1.0.0\",\"art-class-system\":\"^1.11.2\",\"art-standard-lib\":\"^1.65.1\",\"aws-sdk\":\"^2.643.0\",\"caffeine-script-runtime\":\"^1.13.3\",\"neptune-namespaces\":\"^4.0.0\",\"shell-escape\":\"^0.2.0\"},\"description\":\"S3P is a CLI and library that is 5x to 50x faster than aws-cli for bulk S3 operations including: summarize, compare, copy and sync.\",\"devDependencies\":{\"art-build-configurator\":\"^1.26.9\",\"art-testbench\":\"^1.17.2\",\"caffeine-script\":\"^0.72.1\",\"case-sensitive-paths-webpack-plugin\":\"^2.2.0\",\"chai\":\"^4.2.0\",\"coffee-loader\":\"^0.7.3\",\"css-loader\":\"^3.0.0\",\"json-loader\":\"^0.5.7\",\"mocha\":\"^7.1.1\",\"mock-fs\":\"^4.10.0\",\"script-loader\":\"^0.7.2\",\"style-loader\":\"^1.0.0\",\"webpack\":\"^4.39.1\",\"webpack-cli\":\"*\",\"webpack-dev-server\":\"^3.7.2\",\"webpack-merge\":\"^4.2.1\",\"webpack-node-externals\":\"^1.7.2\",\"webpack-stylish\":\"^0.1.8\"},\"homepage\":\"https://github.com/generalui/s3p\",\"license\":\"ISC\",\"name\":\"s3p\",\"repository\":{\"type\":\"git\",\"url\":\"https://github.com/generalui/s3p.git\"},\"scripts\":{\"build\":\"webpack --progress\",\"start\":\"webpack-dev-server --hot --inline --progress --env.devServer\",\"test\":\"nn -s;mocha -u tdd\",\"testInBrowser\":\"webpack-dev-server --progress --env.devServer\"},\"version\":\"2.6.0\"}");
+module.exports = JSON.parse("{\"author\":\"GenUI LLC\",\"bin\":{\"s3p\":\"./s3p\"},\"bugs\":\"https:/github.com/generalui/s3p/issues\",\"dependencies\":{\"@art-suite/cli\":\"^1.1.1\",\"art-class-system\":\"^1.11.2\",\"art-standard-lib\":\"^1.65.1\",\"aws-sdk\":\"^2.643.0\",\"caffeine-script-runtime\":\"^1.13.3\",\"neptune-namespaces\":\"^4.0.0\",\"shell-escape\":\"^0.2.0\"},\"description\":\"S3P is a CLI and library that is 5x to 50x faster than aws-cli for bulk S3 operations including: summarize, compare, copy and sync.\",\"devDependencies\":{\"art-build-configurator\":\"^1.26.9\",\"art-testbench\":\"^1.17.2\",\"caffeine-script\":\"^0.72.1\",\"case-sensitive-paths-webpack-plugin\":\"^2.2.0\",\"chai\":\"^4.2.0\",\"coffee-loader\":\"^0.7.3\",\"css-loader\":\"^3.0.0\",\"json-loader\":\"^0.5.7\",\"mocha\":\"^7.1.1\",\"mock-fs\":\"^4.10.0\",\"script-loader\":\"^0.7.2\",\"style-loader\":\"^1.0.0\",\"webpack\":\"^4.39.1\",\"webpack-cli\":\"*\",\"webpack-dev-server\":\"^3.7.2\",\"webpack-merge\":\"^4.2.1\",\"webpack-node-externals\":\"^1.7.2\",\"webpack-stylish\":\"^0.1.8\"},\"homepage\":\"https://github.com/generalui/s3p\",\"license\":\"ISC\",\"name\":\"s3p\",\"repository\":{\"type\":\"git\",\"url\":\"https://github.com/generalui/s3p.git\"},\"scripts\":{\"build\":\"webpack --progress\",\"start\":\"webpack-dev-server --hot --inline --progress --env.devServer\",\"test\":\"nn -s;mocha -u tdd\",\"testInBrowser\":\"webpack-dev-server --progress --env.devServer\"},\"version\":\"2.6.1\"}");
 
 /***/ }),
 /* 8 */
@@ -2746,7 +2746,11 @@ Caf.defMod(module, () => {
       allCommandOptions = {
         quiet: "no output",
         verbose: "extra output",
-        bucket: ["bucket-name", "The source bucket"],
+        bucket: {
+          argument: "bucket-name",
+          description: "The source bucket",
+          required: true
+        },
         prefix: [
           "key",
           "Only iterate over keys with this prefix. If 'startAfter' or 'stopAt' are also specified, the set-intersection of the two will be used."
@@ -2776,10 +2780,11 @@ Caf.defMod(module, () => {
         pretend: { description: "alias for 'dryrun'" }
       };
       toBucketOptions = {
-        "to-bucket": [
-          "bucket-name",
-          "The target bucket. It can be the same bucket."
-        ],
+        "to-bucket": {
+          argument: "bucket-name",
+          required: true,
+          description: "The target bucket. It can be the same bucket."
+        },
         "to-prefix": [
           "key-prefix",
           "If 'prefix' is specified, the target key will REPLACE it's source prefix with toPrefix Otherwise, this is the same as add-prefix."
@@ -2869,9 +2874,12 @@ Caf.defMod(module, () => {
                     advancedOptionsForAll
                   ),
                   examples: [
-                    "summarize --bucket my-bucket",
+                    { bucket: "my-bucket" },
                     "get a detailed summary of item counts and sizes in my-bucket",
-                    'summarize --bucket my-bucket --filter "js:({Size}) => Size > 1024*1024"',
+                    {
+                      bucket: "my-bucket",
+                      filter: '"js:({Size}) => Size > 1024*1024"'
+                    },
                     "summarize all files larger than 1 Megabyte"
                   ]
                 },
@@ -2890,14 +2898,14 @@ Caf.defMod(module, () => {
                     advancedOptionsForAll
                   ),
                   examples: [
-                    "compare --bucket my-bucket --to-bucket my-to-bucket",
+                    { bucket: "my-bucket", "to-bucket": "my-to-bucket" },
                     "Compare items from my-mucket with my-to-bucket. Shows how many items exist in both, only one, or are difference sizes."
                   ]
                 },
                 copy: {
                   alias: "cp",
                   description:
-                    "Blindly copy all files from one bucket to another bucket. Uses s3.listObjectsV2, s3.copyObject and shell-exec 'aws s3 cp'.",
+                    "Copy all files from one bucket to another bucket. Uses s3.listObjectsV2, s3.copyObject and shell-exec 'aws s3 cp'.\n\nNOTE: This overwrites existing files in the target bucket. Try the 'sync' command for smarter copies when some of the files have already been copied.",
                   options: merge(
                     allCommandOptions,
                     toBucketOptions,
@@ -2905,15 +2913,34 @@ Caf.defMod(module, () => {
                     advancedOptionsForCopy
                   ),
                   examples: [
-                    "cp --bucket my-bucket --to-bucket my-to-bucket",
+                    { bucket: "my-bucket", "to-bucket": "my-to-bucket" },
                     "Copy everything from my-mucket to my-to-bucket",
-                    "cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/",
+                    {
+                      bucket: "my-bucket",
+                      "to-bucket": "my-to-bucket",
+                      prefix: "2020-04-14/"
+                    },
                     'Copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/". The copied items will have the same keys as source items.',
-                    "cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/ --to-prefix 2020-04-14-backup/",
+                    {
+                      bucket: "my-bucket",
+                      "to-bucket": "my-to-bucket",
+                      prefix: "2020-04-14/",
+                      "to-prefix": "2020-04-14-backup/"
+                    },
                     'Copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/" and REPLACES prefixes. Example: "2020-04-14/foo.jpg" is copied to "2020-04-14-backup/foo.jpg"',
-                    "cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/ --add-prefix backup/",
+                    {
+                      bucket: "my-bucket",
+                      "to-bucket": "my-to-bucket",
+                      prefix: "2020-04-14/",
+                      "add-prefix": "backup/"
+                    },
                     'Copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/" and ADDS prefixes. Example: "2020-04-14/foo.jpg" is copied to "backup/2020-04-14/foo.jpg"',
-                    "cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/ --to-key \"js:(key) => key + 'old'\"",
+                    {
+                      bucket: "my-bucket",
+                      "to-bucket": "my-to-bucket",
+                      prefix: "2020-04-14/",
+                      "to-key": "\"js:(key) => key + 'old'\""
+                    },
                     'Copy everything from my-mucket to my-to-bucket with CUSTOM function that adds suffixes. Example: "2020-04-14/foo.jpg" is copied to "2020-04-14/foo.jpg-old"'
                   ]
                 },
@@ -2931,7 +2958,7 @@ Caf.defMod(module, () => {
                     }
                   ),
                   examples: [
-                    "sync --bucket my-bucket --to-bucket my-to-bucket",
+                    { bucket: "my-bucket", "to-bucket": "my-to-bucket" },
                     "Copy everything from my-mucket to my-to-bucket"
                   ]
                 }
