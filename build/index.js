@@ -211,7 +211,7 @@ module.exports = require('neptune-namespaces' /* ABC - not inlining fellow NPM *
 /*! exports provided: author, bin, bugs, dependencies, description, devDependencies, homepage, license, name, repository, scripts, version, default */
 /***/ (function(module) {
 
-module.exports = JSON.parse("{\"author\":\"GenUI LLC\",\"bin\":{\"s3p\":\"./s3p\"},\"bugs\":\"https:/github.com/generalui/s3p/issues\",\"dependencies\":{\"@art-suite/cli\":\"^0.2.3\",\"art-class-system\":\"^1.11.2\",\"art-standard-lib\":\"^1.65.1\",\"aws-sdk\":\"^2.643.0\",\"caffeine-script-runtime\":\"^1.13.3\",\"neptune-namespaces\":\"^4.0.0\",\"shell-escape\":\"^0.2.0\"},\"description\":\"S3P is a CLI and library that is 5x to 50x faster than aws-cli for bulk S3 operations including: summarize, compare, copy and sync.\",\"devDependencies\":{\"art-build-configurator\":\"^1.26.9\",\"art-testbench\":\"^1.17.2\",\"caffeine-script\":\"^0.72.1\",\"case-sensitive-paths-webpack-plugin\":\"^2.2.0\",\"chai\":\"^4.2.0\",\"coffee-loader\":\"^0.7.3\",\"css-loader\":\"^3.0.0\",\"json-loader\":\"^0.5.7\",\"mocha\":\"^7.1.1\",\"mock-fs\":\"^4.10.0\",\"script-loader\":\"^0.7.2\",\"style-loader\":\"^1.0.0\",\"webpack\":\"^4.39.1\",\"webpack-cli\":\"*\",\"webpack-dev-server\":\"^3.7.2\",\"webpack-merge\":\"^4.2.1\",\"webpack-node-externals\":\"^1.7.2\",\"webpack-stylish\":\"^0.1.8\"},\"homepage\":\"https://github.com/generalui/s3p\",\"license\":\"ISC\",\"name\":\"s3p\",\"repository\":{\"type\":\"git\",\"url\":\"https://github.com/generalui/s3p.git\"},\"scripts\":{\"build\":\"webpack --progress\",\"start\":\"webpack-dev-server --hot --inline --progress --env.devServer\",\"test\":\"nn -s;mocha -u tdd\",\"testInBrowser\":\"webpack-dev-server --progress --env.devServer\"},\"version\":\"2.5.1\"}");
+module.exports = JSON.parse("{\"author\":\"GenUI LLC\",\"bin\":{\"s3p\":\"./s3p\"},\"bugs\":\"https:/github.com/generalui/s3p/issues\",\"dependencies\":{\"@art-suite/cli\":\"^1.0.0\",\"art-class-system\":\"^1.11.2\",\"art-standard-lib\":\"^1.65.1\",\"aws-sdk\":\"^2.643.0\",\"caffeine-script-runtime\":\"^1.13.3\",\"neptune-namespaces\":\"^4.0.0\",\"shell-escape\":\"^0.2.0\"},\"description\":\"S3P is a CLI and library that is 5x to 50x faster than aws-cli for bulk S3 operations including: summarize, compare, copy and sync.\",\"devDependencies\":{\"art-build-configurator\":\"^1.26.9\",\"art-testbench\":\"^1.17.2\",\"caffeine-script\":\"^0.72.1\",\"case-sensitive-paths-webpack-plugin\":\"^2.2.0\",\"chai\":\"^4.2.0\",\"coffee-loader\":\"^0.7.3\",\"css-loader\":\"^3.0.0\",\"json-loader\":\"^0.5.7\",\"mocha\":\"^7.1.1\",\"mock-fs\":\"^4.10.0\",\"script-loader\":\"^0.7.2\",\"style-loader\":\"^1.0.0\",\"webpack\":\"^4.39.1\",\"webpack-cli\":\"*\",\"webpack-dev-server\":\"^3.7.2\",\"webpack-merge\":\"^4.2.1\",\"webpack-node-externals\":\"^1.7.2\",\"webpack-stylish\":\"^0.1.8\"},\"homepage\":\"https://github.com/generalui/s3p\",\"license\":\"ISC\",\"name\":\"s3p\",\"repository\":{\"type\":\"git\",\"url\":\"https://github.com/generalui/s3p.git\"},\"scripts\":{\"build\":\"webpack --progress\",\"start\":\"webpack-dev-server --hot --inline --progress --env.devServer\",\"test\":\"nn -s;mocha -u tdd\",\"testInBrowser\":\"webpack-dev-server --progress --env.devServer\"},\"version\":\"2.6.0\"}");
 
 /***/ }),
 /* 8 */
@@ -970,8 +970,7 @@ Caf.defMod(module, () => {
       "objectWithout",
       "Promise",
       "PromiseWorkerPool",
-      "present",
-      "isFunction"
+      "present"
     ],
     [
       global,
@@ -996,8 +995,7 @@ Caf.defMod(module, () => {
       objectWithout,
       Promise,
       PromiseWorkerPool,
-      present,
-      isFunction
+      present
     ) => {
       let S3C,
         itemsByKey,
@@ -1657,10 +1655,7 @@ Caf.defMod(module, () => {
                     bucket: options.bucket,
                     toBucket: options.toBucket,
                     key,
-                    size: Size,
-                    toKey: isFunction(toKey)
-                      ? toKey
-                      : `${Caf.toString(options.toPrefix)}${Caf.toString(key)}`
+                    size: Size
                   };
                   return (Size < largeCopyThreshold
                     ? s3.copy(options)
@@ -2611,7 +2606,12 @@ Caf.defMod(module, () => {
                       ? returnValue
                       : merge(stats, info, {
                           pretend: options.pretend,
-                          options: Caf.object(options.originalOptions)
+                          options: Caf.object(
+                            options.originalOptions,
+                            null,
+                            (v, k) =>
+                              !isFunction(v) || k === "filter" || k === "toKey"
+                          )
                         }));
               });
           };
@@ -2666,9 +2666,17 @@ Caf.defMod(module, () => {
 let Caf = __webpack_require__(/*! caffeine-script-runtime */ 2);
 Caf.defMod(module, () => {
   return Caf.importInvoke(
-    ["merge", "console", "formatDate", "pad", "humanByteSize"],
+    [
+      "merge",
+      "Error",
+      "isFunction",
+      "console",
+      "formatDate",
+      "pad",
+      "humanByteSize"
+    ],
     [global, __webpack_require__(/*! ./StandardImport */ 15), __webpack_require__(/*! ./Lib */ 10)],
-    (merge, console, formatDate, pad, humanByteSize) => {
+    (merge, Error, isFunction, console, formatDate, pad, humanByteSize) => {
       let commands,
         summarize,
         compare,
@@ -2687,15 +2695,29 @@ Caf.defMod(module, () => {
       commands.version = function() {
         return __webpack_require__(/*! ../../package */ 7).version;
       };
+      commands.each = options => {
+        let map, mapList;
+        map = options.map;
+        mapList = options.mapList;
+        if (!(options.map || options.mapList)) {
+          throw new Error("--map or --map-list option required");
+        }
+        if (!(map && !isFunction(map))) {
+          throw new Error("--map must be a function");
+        }
+        if (!(mapList && !isFunction(mapList))) {
+          throw new Error("--map-list must be a function");
+        }
+        return __webpack_require__(/*! ./S3Comprehensions */ 26).each(options);
+      };
       commands.list = options =>
         __webpack_require__(/*! ./S3Comprehensions */ 26).each(
-          merge(options, {
-            quiet: true,
+          merge({ quiet: true }, options, {
             mapList: l => {
               let from, into, to, i, temp;
               return (
                 (from = l),
-                (into = []),
+                (into = from),
                 from != null
                   ? ((to = from.length),
                     (i = 0),
@@ -2703,14 +2725,12 @@ Caf.defMod(module, () => {
                       while (i < to) {
                         let LastModified, Size, Key;
                         ({ LastModified, Size, Key } = from[i]);
-                        into.push(
-                          console.log(
-                            `${Caf.toString(
-                              formatDate(LastModified, "yyyy-mm-dd HH:MM:ss")
-                            )} ${Caf.toString(
-                              pad(humanByteSize(Size), 10, " ", true)
-                            )} ${Caf.toString(Key)}`
-                          )
+                        console.log(
+                          `${Caf.toString(
+                            formatDate(LastModified, "yyyy-mm-dd HH:MM:ss")
+                          )} ${Caf.toString(
+                            pad(humanByteSize(Size), 10, " ", true)
+                          )} ${Caf.toString(Key)}`
                         );
                         temp = i++;
                       }
@@ -2818,6 +2838,24 @@ Caf.defMod(module, () => {
               description:
                 "S3 summarize, compare, copy, sync and more with massively parallel power.\n\nconfigure AWS credentials with environment variables:\n  s3p uses the same creds as the aws-cli. Learn more:\n  https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html\n\ns3p source:\n  https://github.com/generalui/s3p",
               commands: {
+                each: {
+                  description:
+                    "Create your own iteration. Specify a --map or --map-list option.",
+                  options: merge(allCommandOptions, advancedOptionsForAll, {
+                    map: [
+                      "function",
+                      "This gets called for each item found. A javascript function of the form (item) => ..."
+                    ],
+                    "map-list": [
+                      "function",
+                      "This gets called with an array of items (length between 1 and 1000). A javascript function of the form (itemList) => ..."
+                    ]
+                  }),
+                  examples: [
+                    'each --bucket my-bucket --map "js:(item) => console.log(item)"',
+                    "Log every item found."
+                  ]
+                },
                 "list-buckets": { description: "List all your S3 buckets." },
                 version: { description: "Show s3p's version." },
                 summarize: {
