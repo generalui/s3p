@@ -348,7 +348,6 @@ class S3P
             options.toBucket
             key
             size: Size
-            toKey: if isFunction toKey then toKey else "" #{options.toPrefix}#{key}
 
           if Size < largeCopyThreshold then s3.copy options else s3.largeCopy options
           .then ->

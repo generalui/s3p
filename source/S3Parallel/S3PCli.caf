@@ -4,11 +4,19 @@ commands = {summarize, compare, copy, sync} = &S3P
 commands.cp = commands.copy
 commands.listBuckets = &lib/S3.listBuckets
 commands.version = -> &package.version
+commands.each = (options) =>
+  options extract map, mapList
+  throw new Error "--map or --map-list option required" unless options.map or options.mapList
+  throw new Error "--map must be a function" unless map && !isFunction map
+  throw new Error "--map-list must be a function" unless mapList && !isFunction mapList
+  &S3Comprehensions.each options
+
 commands.list = (options) =>
-  &S3Comprehensions.each merge options,
+  &S3Comprehensions.each merge
     quiet: true
+    options
     mapList: (l) ->
-      array {LastModified, Size, Key} from-array l
+      each {LastModified, Size, Key} from-array l
         console.log "" #{formatDate LastModified, "yyyy-mm-dd HH:MM:ss"} #{pad humanByteSize(Size), 10, ' ', true} #{Key}
 
 commands.ls = commands.list
@@ -68,6 +76,15 @@ main: ->
 
 
       commands:
+        each:
+          description:  "" Create your own iteration. Specify a --map or --map-list option.
+          options:      merge allCommandOptions, advancedOptionsForAll,
+                        map:        :function "" This gets called for each item found. A javascript function of the form (item) => ...
+                        map-list:   :function "" This gets called with an array of items (length between 1 and 1000). A javascript function of the form (itemList) => ...
+          examples: []
+            "" each --bucket my-bucket --map "js:(item) => console.log(item)"
+            "" Log every item found.
+
         list-buckets:
           description:  "" List all your S3 buckets.
 
