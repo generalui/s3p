@@ -51,9 +51,10 @@ advancedOptionsForCopy = merge advancedOptionsForAll,
   large-copy-threshold:    advanced: true argument: :104857600 description: "" Files larger than this byte-size will use the large-copy strategy, which is currently a shell-exec of 'aws s3 cp'. Currently this must be set <= 5368709120 (5 gigabytes). This is s3.copyObject's max supported size, so S3P must shell-exec aws-cli for larger files.
 
 main: ->
-  &Cli.start {}
+  require :@art-suite/cli
+  .start {}
     commands
-    doc:
+    help:
       description:
         """
           A realy fast, massively parallel way to do bulk operations over S3 buckets. Uses s3.listBuckets.
@@ -68,16 +69,17 @@ main: ->
 
         version:
           description:  "" Show s3p's version.
+
         summarize:
           description:  "" Scan all items in one bucket and produce a summary of all the items. Uses s3.listObjectsV2.
           options:      merge allCommandOptions,
                         summarize-folders: "" show count and size of each folder
                         advancedOptionsForAll
           examples:
-            "" s3p summarize --bucket my-bucket
+            "" summarize --bucket my-bucket
             "" get a detailed summary of item counts and sizes in my-bucket
 
-            "" s3p summarize --bucket my-bucket --filter "js:({Size}) => Size > 1024*1024"
+            "" summarize --bucket my-bucket --filter "js:({Size}) => Size > 1024*1024"
             "" summarize all files larger than 1 Megabyte
 
         list:
@@ -89,7 +91,7 @@ main: ->
           description:  "" Compare two buckets and produce a summary of their differences. Uses s3.listObjectsV2.
           options:      merge allCommandOptions, toBucketOptions, advancedOptionsForAll
           examples:
-            "" s3p compare --bucket my-bucket --to-bucket my-to-bucket
+            "" compare --bucket my-bucket --to-bucket my-to-bucket
             "" Compare items from my-mucket with my-to-bucket. Shows how many items exist in both, only one, or are difference sizes.
 
         copy:
@@ -97,19 +99,19 @@ main: ->
           description:  "" Blindly copy all files from one bucket to another bucket. Uses s3.listObjectsV2, s3.copyObject and shell-exec 'aws s3 cp'.
           options:      merge allCommandOptions, toBucketOptions, writeOptions, advancedOptionsForCopy
           examples:
-            "" s3p cp --bucket my-bucket --to-bucket my-to-bucket
+            "" cp --bucket my-bucket --to-bucket my-to-bucket
             "" Copy everything from my-mucket to my-to-bucket
 
-            "" s3p cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/
+            "" cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/
             "" Copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/". The copied items will have the same keys as source items.
 
-            "" s3p cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/ --to-prefix 2020-04-14-backup/
+            "" cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/ --to-prefix 2020-04-14-backup/
             "" Copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/" and REPLACES prefixes. Example: "2020-04-14/foo.jpg" is copied to "2020-04-14-backup/foo.jpg"
 
-            "" s3p cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/ --add-prefix backup/
+            "" cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/ --add-prefix backup/
             "" Copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/" and ADDS prefixes. Example: "2020-04-14/foo.jpg" is copied to "backup/2020-04-14/foo.jpg"
 
-            "" s3p cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/ --to-key "js:(key) => key + 'old'"
+            "" cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/ --to-key "js:(key) => key + 'old'"
             "" Copy everything from my-mucket to my-to-bucket with CUSTOM function that adds suffixes. Example: "2020-04-14/foo.jpg" is copied to "2020-04-14/foo.jpg-old"
 
         sync:
@@ -118,7 +120,7 @@ main: ->
                         overwrite: "" If set, sync will overwrite existing files with different file sizes.
 
           examples:
-            "" s3p sync --bucket my-bucket --to-bucket my-to-bucket
+            "" sync --bucket my-bucket --to-bucket my-to-bucket
             "" Copy everything from my-mucket to my-to-bucket
 
   ###

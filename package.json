@@ -5,6 +5,7 @@
   },
   "bugs": "https:/github.com/generalui/s3p/issues",
   "dependencies": {
+    "@art-suite/cli": "^0.2.3",
     "art-class-system": "^1.11.2",
     "art-standard-lib": "^1.65.1",
     "aws-sdk": "^2.643.0",
