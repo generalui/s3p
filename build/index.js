@@ -168,10 +168,9 @@ module.exports = __webpack_require__(/*! ./S3Parallel */ 4);
 (module.exports = __webpack_require__(/*! ./namespace */ 5))
 .includeInNamespace(__webpack_require__(/*! ./S3Parallel */ 9))
 .addModules({
-  Cli:              __webpack_require__(/*! ./Cli */ 27),
   S3Comprehensions: __webpack_require__(/*! ./S3Comprehensions */ 26),
   S3P:              __webpack_require__(/*! ./S3P */ 23),
-  S3PCli:           __webpack_require__(/*! ./S3PCli */ 28),
+  S3PCli:           __webpack_require__(/*! ./S3PCli */ 27),
   StandardImport:   __webpack_require__(/*! ./StandardImport */ 15)
 });
 __webpack_require__(/*! ./Lib */ 10);
@@ -212,7 +211,7 @@ module.exports = require('neptune-namespaces' /* ABC - not inlining fellow NPM *
 /*! exports provided: author, bin, bugs, dependencies, description, devDependencies, homepage, license, name, repository, scripts, version, default */
 /***/ (function(module) {
 
-module.exports = JSON.parse("{\"author\":\"GenUI LLC\",\"bin\":{\"s3p\":\"./s3p\"},\"bugs\":\"https:/github.com/generalui/s3p/issues\",\"dependencies\":{\"art-class-system\":\"^1.11.2\",\"art-standard-lib\":\"^1.65.1\",\"aws-sdk\":\"^2.643.0\",\"caffeine-script-runtime\":\"^1.13.3\",\"neptune-namespaces\":\"^4.0.0\",\"shell-escape\":\"^0.2.0\"},\"description\":\"S3P is a CLI and Lib that is 5x to 50x faster than aws-cli for bulk S3 operations\",\"devDependencies\":{\"art-build-configurator\":\"^1.26.9\",\"art-testbench\":\"^1.17.2\",\"caffeine-script\":\"^0.72.1\",\"case-sensitive-paths-webpack-plugin\":\"^2.2.0\",\"chai\":\"^4.2.0\",\"coffee-loader\":\"^0.7.3\",\"css-loader\":\"^3.0.0\",\"json-loader\":\"^0.5.7\",\"mocha\":\"^7.1.1\",\"mock-fs\":\"^4.10.0\",\"script-loader\":\"^0.7.2\",\"style-loader\":\"^1.0.0\",\"webpack\":\"^4.39.1\",\"webpack-cli\":\"*\",\"webpack-dev-server\":\"^3.7.2\",\"webpack-merge\":\"^4.2.1\",\"webpack-node-externals\":\"^1.7.2\",\"webpack-stylish\":\"^0.1.8\"},\"homepage\":\"https://github.com/generalui/s3p\",\"license\":\"ISC\",\"name\":\"s3p\",\"repository\":{\"type\":\"git\",\"url\":\"https://github.com/generalui/s3p.git\"},\"scripts\":{\"build\":\"webpack --progress\",\"start\":\"webpack-dev-server --hot --inline --progress --env.devServer\",\"test\":\"nn -s;mocha -u tdd\",\"testInBrowser\":\"webpack-dev-server --progress --env.devServer\"},\"version\":\"2.4.1\"}");
+module.exports = JSON.parse("{\"author\":\"GenUI LLC\",\"bin\":{\"s3p\":\"./s3p\"},\"bugs\":\"https:/github.com/generalui/s3p/issues\",\"dependencies\":{\"@art-suite/cli\":\"^0.2.3\",\"art-class-system\":\"^1.11.2\",\"art-standard-lib\":\"^1.65.1\",\"aws-sdk\":\"^2.643.0\",\"caffeine-script-runtime\":\"^1.13.3\",\"neptune-namespaces\":\"^4.0.0\",\"shell-escape\":\"^0.2.0\"},\"description\":\"S3P is a CLI and Lib that is 5x to 50x faster than aws-cli for bulk S3 operations\",\"devDependencies\":{\"art-build-configurator\":\"^1.26.9\",\"art-testbench\":\"^1.17.2\",\"caffeine-script\":\"^0.72.1\",\"case-sensitive-paths-webpack-plugin\":\"^2.2.0\",\"chai\":\"^4.2.0\",\"coffee-loader\":\"^0.7.3\",\"css-loader\":\"^3.0.0\",\"json-loader\":\"^0.5.7\",\"mocha\":\"^7.1.1\",\"mock-fs\":\"^4.10.0\",\"script-loader\":\"^0.7.2\",\"style-loader\":\"^1.0.0\",\"webpack\":\"^4.39.1\",\"webpack-cli\":\"*\",\"webpack-dev-server\":\"^3.7.2\",\"webpack-merge\":\"^4.2.1\",\"webpack-node-externals\":\"^1.7.2\",\"webpack-stylish\":\"^0.1.8\"},\"homepage\":\"https://github.com/generalui/s3p\",\"license\":\"ISC\",\"name\":\"s3p\",\"repository\":{\"type\":\"git\",\"url\":\"https://github.com/generalui/s3p.git\"},\"scripts\":{\"build\":\"webpack --progress\",\"start\":\"webpack-dev-server --hot --inline --progress --env.devServer\",\"test\":\"nn -s;mocha -u tdd\",\"testInBrowser\":\"webpack-dev-server --progress --env.devServer\"},\"version\":\"2.5.0\"}");
 
 /***/ }),
 /* 8 */
@@ -2656,294 +2655,6 @@ Caf.defMod(module, () => {
 
 /***/ }),
 /* 27 */
-/*!***********************************!*\
-  !*** ./source/S3Parallel/Cli.caf ***!
-  \***********************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-/* WEBPACK VAR INJECTION */(function(module) {
-let Caf = __webpack_require__(/*! caffeine-script-runtime */ 2);
-Caf.defMod(module, () => {
-  return Caf.importInvoke(
-    [
-      "lowerCamelCase",
-      "log",
-      "isFunction",
-      "isClass",
-      "merge",
-      "dashCase",
-      "colors",
-      "String",
-      "Array",
-      "Object",
-      "Error",
-      "process",
-      "Promise"
-    ],
-    [global, __webpack_require__(/*! ./StandardImport */ 15), { colors: __webpack_require__(/*! colors */ 25) }],
-    (
-      lowerCamelCase,
-      log,
-      isFunction,
-      isClass,
-      merge,
-      dashCase,
-      colors,
-      String,
-      Array,
-      Object,
-      Error,
-      process,
-      Promise
-    ) => {
-      let Cli;
-      return (Cli = Caf.defClass(class Cli extends Object {}, function(
-        Cli,
-        classSuper,
-        instanceSuper
-      ) {
-        this.optionRegExp = /^--(.+)$/;
-        this.evalJsRegExp = /^js:(.*)$/;
-        this.numberRegExp = /^[-+]?([0-9]*\.[0-9]+|[0-9]+)([eE][-+]?[0-9]+)?$/i;
-        this.parseArgs = function(args) {
-          let currentOptionName, commandNames, currentOption, options;
-          currentOptionName = "arg";
-          commandNames = currentOption = [];
-          Caf.each2(
-            args,
-            (arg, i) => {
-              let option, evalMatch, error;
-              return (option = arg.match(this.optionRegExp))
-                ? (currentOption = options[
-                    (currentOptionName = lowerCamelCase(option[1]))
-                  ] = [])
-                : currentOption.push(
-                    (() => {
-                      switch (false) {
-                        case !this.numberRegExp.test(arg):
-                          return arg / 1;
-                        case !this.evalJsRegExp.test(arg):
-                          evalMatch = arg.match(this.evalJsRegExp);
-                          return (() => {
-                            try {
-                              return eval(evalMatch[1]);
-                            } catch (error1) {
-                              error = error1;
-                              return log.error({
-                                evaluationError: {
-                                  option: currentOptionName,
-                                  source: evalMatch[1],
-                                  raw: arg,
-                                  error
-                                }
-                              });
-                            }
-                          })();
-                        default:
-                          return arg;
-                      }
-                    })()
-                  );
-            },
-            null,
-            (options = {})
-          );
-          return {
-            commandNames,
-            options: Caf.object(options, (o, k) =>
-              (() => {
-                switch (o.length) {
-                  case 0:
-                    return true;
-                  case 1:
-                    return o[0];
-                  default:
-                    return o;
-                }
-              })()
-            )
-          };
-        };
-        this._selectCommand = function(commands, defaultCommand, parsedArgs) {
-          let commandNames, commandFunction, commandName;
-          commandNames = parsedArgs.commandNames;
-          commandFunction =
-            commands[
-              (commandName = lowerCamelCase(commandNames[0] || defaultCommand))
-            ];
-          if (!(isFunction(commandFunction) && !isClass(commandFunction))) {
-            commandFunction = null;
-            commandName = null;
-          }
-          return merge(parsedArgs, { commandFunction, commandName });
-        };
-        this._showCommandSummary = function(
-          commandName,
-          { alias, description, options }
-        ) {
-          let from, into, temp;
-          commandName = dashCase(commandName);
-          log(
-            `\n-----------------------\n${Caf.toString(
-              colors.bold(
-                colors.brightWhite(`commandName: ${Caf.toString(commandName)}`)
-              )
-            )} ${Caf.toString(alias && `(${Caf.toString(alias)})`)}`
-          );
-          log(description);
-          return options
-            ? (log(
-                "\noptions: " +
-                  colors.green(
-                    ((from = options),
-                    (into = []),
-                    from != null
-                      ? (() => {
-                          for (let k1 in from) {
-                            let v, k;
-                            v = from[k1];
-                            k = k1;
-                            temp = !v.advanced ? into.push(k) : undefined;
-                          }
-                          return temp;
-                        })()
-                      : undefined,
-                    into)
-                      .sort()
-                      .join(", ")
-                  )
-              ),
-              log(
-                "detailed help: " +
-                  colors.green(`${Caf.toString(commandName)} --help`)
-              ))
-            : undefined;
-        };
-        this._showOptionDetails = function(option, details) {
-          let description, argument, advanced;
-          switch (false) {
-            case !Caf.is(details, String):
-              description = details;
-              break;
-            case !(Caf.is(details, Array) && details.length === 2):
-              [argument, description] = details;
-              break;
-            case !Caf.is(details, Object):
-              ({ argument, description, advanced } = details);
-              break;
-            default:
-              log.warn({ option, details });
-              throw new Error(
-                "expecting options details to be string, 2-length array or object"
-              );
-          }
-          log(
-            colors.blue("option: ") +
-              colors.green(
-                ` --${Caf.toString(option)} ${Caf.toString(
-                  argument ? colors.yellow(argument) : undefined
-                )}` + (advanced ? colors.grey(" (advanced)") : "")
-              )
-          );
-          return log("  " + description + "\n");
-        };
-        this._showCommandDetails = function(
-          command,
-          { alias, description, options }
-        ) {
-          log(
-            `\n-----------------------\n${Caf.toString(
-              colors.bold(
-                colors.brightWhite(`Command: ${Caf.toString(command)}`)
-              )
-            )} ${Caf.toString(alias && `(${Caf.toString(alias)})`)}`
-          );
-          log(description + "\n");
-          return (
-            options &&
-            Caf.each2(Object.keys(options).sort(), option =>
-              this._showOptionDetails(option, options[option])
-            )
-          );
-        };
-        this._showDoc = (
-          doc,
-          { options: { help }, commandName },
-          startFile
-        ) => {
-          let commands, description;
-          log(
-            `${Caf.toString(startFile)} help:\n\nUsage: ${Caf.toString(
-              __webpack_require__(/*! path */ 24).basename(startFile)
-            )} command [options]`
-          );
-          if (doc != null) {
-            ({ commands, description } = doc);
-            if (description) {
-              log(`\n${Caf.toString(description)}\n`);
-            }
-            if (commands) {
-              commands = Caf.object(commands, null, null, null, (v, k) =>
-                lowerCamelCase(k)
-              );
-              if (help && commands[commandName]) {
-                this._showCommandDetails(commandName, commands[commandName]);
-              } else {
-                Caf.each2(Object.keys(commands).sort(), commandName =>
-                  this._showCommandSummary(commandName, commands[commandName])
-                );
-              }
-            }
-          }
-          return !(Caf.exists(doc) && doc.commands)
-            ? log(`Commands: ${Caf.toString(Object.keys(commands).join(", "))}`)
-            : undefined;
-        };
-        this.start = cliConfig => {
-          let commands,
-            defaultCommand,
-            doc,
-            argv,
-            nodeJs,
-            startFile,
-            args,
-            parsedComandLine,
-            options,
-            commandName,
-            commandFunction,
-            temp;
-          commands = cliConfig.commands;
-          defaultCommand = cliConfig.defaultCommand;
-          doc = cliConfig.doc;
-          argv = undefined !== (temp = cliConfig.argv) ? temp : process.argv;
-          [nodeJs, startFile, ...args] = argv;
-          parsedComandLine = this._selectCommand(
-            commands,
-            defaultCommand,
-            this.parseArgs(args)
-          );
-          return ((options = parsedComandLine.options),
-          (commandName = parsedComandLine.commandName),
-          (commandFunction = parsedComandLine.commandFunction)) && !options.help
-            ? (parsedComandLine.options.verbose
-                ? log({ command: commandName, options })
-                : undefined,
-              Promise.then(() => commandFunction(options)).then(
-                result => result != null && log(result)
-              ))
-            : this._showDoc(cliConfig.doc, parsedComandLine, startFile);
-        };
-      }));
-    }
-  );
-});
-
-/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../../node_modules/webpack/buildin/module.js */ 1)(module)))
-
-/***/ }),
-/* 28 */
 /*!**************************************!*\
   !*** ./source/S3Parallel/S3PCli.caf ***!
   \**************************************/
@@ -3101,9 +2812,9 @@ Caf.defMod(module, () => {
       });
       return {
         main: function() {
-          return __webpack_require__(/*! ./Cli */ 27).start({
+          return __webpack_require__(/*! @art-suite/cli */ 28).start({
             commands,
-            doc: {
+            help: {
               description:
                 "A realy fast, massively parallel way to do bulk operations over S3 buckets. Uses s3.listBuckets.\n\nsource: https://github.com/generalui/s3p\n\nAWS CREDS: s3p uses the same creds aws-cli uses, so see their documentation: https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html",
               commands: {
@@ -3120,9 +2831,9 @@ Caf.defMod(module, () => {
                     advancedOptionsForAll
                   ),
                   examples: [
-                    "s3p summarize --bucket my-bucket",
+                    "summarize --bucket my-bucket",
                     "get a detailed summary of item counts and sizes in my-bucket",
-                    's3p summarize --bucket my-bucket --filter "js:({Size}) => Size > 1024*1024"',
+                    'summarize --bucket my-bucket --filter "js:({Size}) => Size > 1024*1024"',
                     "summarize all files larger than 1 Megabyte"
                   ]
                 },
@@ -3141,7 +2852,7 @@ Caf.defMod(module, () => {
                     advancedOptionsForAll
                   ),
                   examples: [
-                    "s3p compare --bucket my-bucket --to-bucket my-to-bucket",
+                    "compare --bucket my-bucket --to-bucket my-to-bucket",
                     "Compare items from my-mucket with my-to-bucket. Shows how many items exist in both, only one, or are difference sizes."
                   ]
                 },
@@ -3156,15 +2867,15 @@ Caf.defMod(module, () => {
                     advancedOptionsForCopy
                   ),
                   examples: [
-                    "s3p cp --bucket my-bucket --to-bucket my-to-bucket",
+                    "cp --bucket my-bucket --to-bucket my-to-bucket",
                     "Copy everything from my-mucket to my-to-bucket",
-                    "s3p cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/",
+                    "cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/",
                     'Copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/". The copied items will have the same keys as source items.',
-                    "s3p cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/ --to-prefix 2020-04-14-backup/",
+                    "cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/ --to-prefix 2020-04-14-backup/",
                     'Copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/" and REPLACES prefixes. Example: "2020-04-14/foo.jpg" is copied to "2020-04-14-backup/foo.jpg"',
-                    "s3p cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/ --add-prefix backup/",
+                    "cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/ --add-prefix backup/",
                     'Copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/" and ADDS prefixes. Example: "2020-04-14/foo.jpg" is copied to "backup/2020-04-14/foo.jpg"',
-                    "s3p cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/ --to-key \"js:(key) => key + 'old'\"",
+                    "cp --bucket my-bucket --to-bucket my-to-bucket --prefix 2020-04-14/ --to-key \"js:(key) => key + 'old'\"",
                     'Copy everything from my-mucket to my-to-bucket with CUSTOM function that adds suffixes. Example: "2020-04-14/foo.jpg" is copied to "2020-04-14/foo.jpg-old"'
                   ]
                 },
@@ -3182,7 +2893,7 @@ Caf.defMod(module, () => {
                     }
                   ),
                   examples: [
-                    "s3p sync --bucket my-bucket --to-bucket my-to-bucket",
+                    "sync --bucket my-bucket --to-bucket my-to-bucket",
                     "Copy everything from my-mucket to my-to-bucket"
                   ]
                 }
@@ -3196,6 +2907,16 @@ Caf.defMod(module, () => {
 });
 
 /* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../../node_modules/webpack/buildin/module.js */ 1)(module)))
+
+/***/ }),
+/* 28 */
+/*!*********************************************************************************!*\
+  !*** external "require('@art-suite/cli' /* ABC - not inlining fellow NPM *_/)" ***!
+  \*********************************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = require('@art-suite/cli' /* ABC - not inlining fellow NPM */);
 
 /***/ })
 /******/ ]);
