@@ -1,10 +1,10 @@
 # S3P - 5x to 50x faster than aws-cli
 
-S3P provides a radically faster way to do bulk operations over S3 buckets.
+S3P provides a radically faster way to do copy, list sync and do other bulk operations over large AWS S3 buckets.
 
 You can use it as a command-line tool for common operations, or you can use it as a library for nearly anything you can imagine.
 
-S3P's key innovation is the ability to list the items in an S3 bucket in a massively parallel way. Instead of doing one list after another sequentially, as the aws-cli does, S3P bisects the key-space and can have 100(*) or more simultaneous list operations running in parallel.
+S3P's key innovation is the ability to list the items in an S3 bucket in a massively parallel way. Instead of doing one list after another sequentially, as the aws-cli does, S3P divides the key-space and can have 100(*) or more simultaneous list operations running in parallel.
 
 S3P is really just a fancy, really fast, s3 listing tool.
 
@@ -24,7 +24,7 @@ S3P is really just a fancy, really fast, s3 listing tool.
     ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`
     abcdefghijklmnopqrstuvwxyz{|}~
     ```
-    > Why? Since Aws-S3 doesn't support listing Keys in descending order, S3P uses a character-range-based bisection algorithm.
+    > Why? Since Aws-S3 doesn't support listing Keys in descending order, S3P uses a character-range-based divide-and-conquer algorithm.
 
 # AWS Credentials
 
