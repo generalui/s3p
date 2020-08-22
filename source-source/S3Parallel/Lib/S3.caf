@@ -1,4 +1,4 @@
-import &StandardImport, {} &util.promisify
+import &StandardImport, {} &util.promisify, &fs, &path
 exec = promisify &child_process.exec
 shellEscape = &shellEscape
 escape = (single) -> shellEscape [] single
@@ -56,22 +56,29 @@ class S3 extends BaseClass
         key:      <String>
         fromKey:  from-key (default: key)
         toKey:    to-key (default: key)
+
+        toFolder:   local folder
     OUT:
       Promise.then -> see https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html#copyObject-property > Callback > Parameters
         {} CopyObjectResult, ...
   @copy: (options) =>
     @_normalizeCopyOptions(options) extract
       fromBucket, toBucket, fromKey, toKey, size
+      toFolder
       pretend
       verbose
 
     # NOTE: there appears to be a bug in the AWS s3 sdk copyObject - it can't handle spaces in the toKey
     if size >= 1024**3 || /\s/.test toKey
       # log largeCopy: {} fromBucket, toBucket, fromKey, toKey, size
-      @largeCopy {} fromBucket, toBucket, fromKey, toKey, pretend, verbose
+      @largeCopy {} fromBucket, toBucket, toFolder, fromKey, toKey, pretend, verbose
 
     else
-      copyOptions =
+      copyOptions = if toFolder
+        Bucket:     fromBucket
+        Key:        fromKey
+
+      else
         CopySource: "" #{fromBucket}/#{fromKey}
         Bucket:     toBucket
         Key:        toKey
@@ -81,8 +88,16 @@ class S3 extends BaseClass
 
       if pretend
         timeout 1 -> pretend: true
-      else
+      else if toFolder
+        Promise.then -> fs.createWriteStream path.join toFolder, fromKey
+        .then (writeStream) -> new Promise (resolve, reject) ->
+          @s3.getObject copyOptions
+          .createReadStream()
+          .pipe writeStream
+          .on :finish resolve
+          .on :error  reject
 
+      else
         @s3.copyObject copyOptions
         .promise()
 

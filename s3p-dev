@@ -1,4 +1,0 @@
-#!/usr/bin/env node
-
-require('./register.js')
-require('./source').S3PCli.main()

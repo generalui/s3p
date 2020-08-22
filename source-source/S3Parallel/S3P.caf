@@ -29,6 +29,12 @@ summarizeHistogramGroupUnits =
   :eB
   :zB
 
+createS3Url = (bucket, folder, key) ->
+  if folder
+    join folder, key
+  else
+    "" s3://#{bucket}/#{key}
+
 class S3P
   ###########################################################
     READONLY Commands
@@ -112,7 +118,9 @@ class S3P
     options extract
       logToDelete, logToCopy, logToReplace, verbose, toKey
       bucket
+      fromFolder
       toBucket
+      toFolder
     unless toBucket
       throw new Error "toBucket required"
 
@@ -154,18 +162,18 @@ class S3P
           # added
           (key, sourceValue) ->
             fromKey = reverseKeyMap?[key] ? key
-            log "aws s3 cp s3://#{bucket}/#{fromKey} s3://#{toBucket}/#{key} # #{humanByteSize sourceValue}" if logToCopy || verbose
+            log "aws s3 cp #{createS3Url bucket, fromFolder, fromKey} #{createS3Url toBucket, toFolder, key} # #{humanByteSize sourceValue}" if logToCopy || verbose
             bytes.needToCopy += sourceValue; counts.needToCopy++; counts.missingInTarget++
 
           # removed
           (key, targetValue) ->
-            log "rm s3://#{toBucket}/#{key} # #{humanByteSize targetValue}" if logToDelete || verbose
+            log "rm #{createS3Url toBucket, toFolder, key} # #{humanByteSize targetValue}" if logToDelete || verbose
             bytes.needToDelete += targetValue; counts.needToDelete++
 
           # changed
           (key, sourceValue, targetValue) ->
             fromKey = reverseKeyMap?[key] ? key
-            log "aws s3 cp s3://#{bucket}/#{fromKey} s3://#{toBucket}/#{key} # replace #{humanByteSize targetValue} with #{humanByteSize sourceValue}" if logToReplace || verbose
+            log "aws s3 cp #{createS3Url bucket, fromFolder, fromKey} #{createS3Url toBucket, toFolder, key} # replace #{humanByteSize targetValue} with #{humanByteSize sourceValue}" if logToReplace || verbose
             counts.different++
             counts.needToReplace++
             bytes.needToReplace+=targetValue
@@ -318,7 +326,7 @@ class S3P
     stats.copyingFilesStarted = 0
     stats.copiedFiles = 0
 
-    throw new Error "toBucket required" unless present options.toBucket
+    throw new Error "toBucket or toFolder required" unless (present options.toBucket) || present options.toFolder
     eachFunction merge options, {}
       stats
       throttle: -> copyPwp.queueSize + largeCopyPwp.queueSize >= maxQueueSize
@@ -346,6 +354,7 @@ class S3P
             verbose
             options.bucket
             options.toBucket
+            options.toFolder
             key
             size: Size
 

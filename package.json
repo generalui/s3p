@@ -8,31 +8,19 @@
     "@art-suite/cli": "^1.3.3",
     "art-class-system": "^1.11.6",
     "art-standard-lib": "^1.69.4",
-    "aws-sdk": "^2.738.0",
+    "aws-sdk": "^2.643.0",
     "caffeine-script-runtime": "^1.13.3",
-    "neptune-namespaces": "^4.2.3",
+    "neptune-namespaces": "^4.0.0",
     "shell-escape": "^0.2.0"
   },
   "description": "S3P is a CLI and library that is 5x to 50x faster than aws-cli for bulk S3 operations including: summarize, compare, copy and sync.",
   "devDependencies": {
-    "art-build-configurator": "^1.26.14",
-    "art-testbench": "^1.18.8",
-    "caffeine-script": "^0.72.3",
-    "case-sensitive-paths-webpack-plugin": "^2.2.0",
-    "chai": "^4.2.0",
-    "coffee-loader": "^0.7.3",
-    "css-loader": "^3.6.0",
-    "json-loader": "^0.5.7",
-    "mocha": "^7.2.0",
-    "mock-fs": "^4.13.0",
-    "script-loader": "^0.7.2",
-    "style-loader": "^1.0.0",
-    "webpack": "^4.44.1",
-    "webpack-cli": "^3.3.12",
-    "webpack-dev-server": "^3.11.0",
-    "webpack-merge": "^4.2.1",
-    "webpack-node-externals": "^1.7.2",
-    "webpack-stylish": "^0.1.8"
+    "art-build-configurator": "^1.26.9",
+    "art-testbench": "^1.17.2",
+    "caffeine-script": "^0.72.1",
+    "mocha": "^7.1.1",
+    "mock-fs": "^4.10.0",
+    "npm-watch": "^0.7.0"
   },
   "homepage": "https://github.com/generalui/s3p",
   "license": "ISC",
@@ -42,10 +30,21 @@
     "url": "https://github.com/generalui/s3p.git"
   },
   "scripts": {
-    "build": "webpack --progress",
+    "build": "caf -p -c source-source -o source\nnn -sq",
+    "build-clean": "rm -rf source/*; npm run build",
     "start": "webpack-dev-server --hot --inline --progress --env.devServer",
     "test": "nn -s;mocha -u tdd",
-    "testInBrowser": "webpack-dev-server --progress --env.devServer"
+    "testInBrowser": "webpack-dev-server --progress --env.devServer",
+    "watch": "npm-watch"
   },
-  "version": "2.6.3"
+  "version": "2.6.3",
+  "watch": {
+    "build": {
+      "extensions": "caf",
+      "patterns": [
+        "source-source"
+      ],
+      "quiet": false
+    }
+  }
 }
