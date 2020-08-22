@@ -37,7 +37,7 @@
     "testInBrowser": "webpack-dev-server --progress --env.devServer",
     "watch": "npm-watch"
   },
-  "version": "2.6.3",
+  "version": "2.7.0",
   "watch": {
     "build": {
       "extensions": "caf",
