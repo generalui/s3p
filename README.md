@@ -10,6 +10,10 @@ S3P is really just a fancy, really fast, s3 listing tool.
 
 > (*) The default list-concurrency is 100, but you can set it higher.
 
+# S3P Blog Post
+
+Read more about [S3P on Medium](https://medium.com/@shanebdavis/s3p-massively-parallel-s3-copying-9a9e466d0d74).
+
 # Requirements
 
 1. [NodeJS](https://nodejs.org/en/download/)

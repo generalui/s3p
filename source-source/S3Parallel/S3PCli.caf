@@ -51,12 +51,11 @@ main: (options) ->
       """
         S3 summarize, compare, copy, sync and more with massively parallel power.
 
-        configure AWS credentials with environment variables:
+        Configure AWS credentials with environment variables:
           s3p uses the same creds as the aws-cli. Learn more:
           https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html
 
-        s3p source:
-          https://github.com/generalui/s3p
+        Source: https://github.com/generalui/s3p
 
     commands:
       each:

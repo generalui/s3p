@@ -118,7 +118,7 @@ Caf.defMod(module, () => {
           return require("@art-suite/cli").start(
             merge(options, {
               description:
-                "S3 summarize, compare, copy, sync and more with massively parallel power.\n\nconfigure AWS credentials with environment variables:\n  s3p uses the same creds as the aws-cli. Learn more:\n  https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html\n\ns3p source:\n  https://github.com/generalui/s3p",
+                "S3 summarize, compare, copy, sync and more with massively parallel power.\n\nConfigure AWS credentials with environment variables:\n  s3p uses the same creds as the aws-cli. Learn more:\n  https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html\n\nSource: https://github.com/generalui/s3p",
               commands: {
                 each: {
                   run: require("./S3PCliCommands").each,
