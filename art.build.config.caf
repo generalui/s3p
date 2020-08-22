@@ -12,8 +12,10 @@ package: (abcPackage) ->
       build-clean:  "" rm -rf source/*; npm run build
       watch:        "" npm-watch
 
+    jest: testEnvironment: :node
+
     watch:
       build:
         extensions: :caf
-        patterns: [] :source-source
-        "quiet": false
+        patterns:   [] :source-source
+        quiet:      false

@@ -1,0 +1,17 @@
+import &StandardImport, &Lib
+
+ls: (options) ->
+  output = options.output ? (args...) -> console.log args
+  &S3Comprehensions.each merge
+    quiet: true
+    options
+    mapList: (l) ->
+      each {LastModified, Size, Key} from-array l
+        output "" #{formatDate LastModified, "yyyy-mm-dd HH:MM:ss"} #{pad humanByteSize(Size), 10, ' ', true} #{Key}
+
+each: (options) ->
+  options extract map, mapList
+  throw new Error "--map or --map-list option required" unless options.map or options.mapList
+  throw new Error "--map must be a function" unless map && !isFunction map
+  throw new Error "--map-list must be a function" unless mapList && !isFunction mapList
+  &S3Comprehensions.each options

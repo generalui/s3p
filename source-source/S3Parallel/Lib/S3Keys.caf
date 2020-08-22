@@ -9,12 +9,6 @@ import &StandardImport
   middleKeyChar = supportedKeyChars[supportedKeyChars.length / 2 | 0]
 
   getKeyCharIndex = (character) -> if character then supportedKeyChars.indexOf character else 0
-  getNextKeyChar = (character) -> supportedKeyChars[1 + getKeyCharIndex character]
-
-  getBisectChar = (c1, c2) ->
-    i1 = if present c1 then getKeyCharIndex c1 else 0
-    i2 = if present c2 then getKeyCharIndex c2 else supportedKeyChars.length - 1
-    supportedKeyChars[(i1 + i2) / 2 | 0]
 
   getUpToNextSlash = (key, i) ->
     m =

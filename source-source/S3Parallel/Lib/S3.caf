@@ -1,6 +1,4 @@
-import &StandardImport, {} &util.promisify, &fs, &path
-exec = promisify &child_process.exec
-shellEscape = &shellEscape
+import &StandardImport, &FsEasy, &LibMisc, {} &shellEscape, &util.promisify, &fs, &path
 escape = (single) -> shellEscape [] single
 
 &AwsSdk.config.setPromisesDependency &bluebird
@@ -62,6 +60,9 @@ class S3 extends BaseClass
       Promise.then -> see https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html#copyObject-property > Callback > Parameters
         {} CopyObjectResult, ...
   @copy: (options) =>
+    if options extract scratchState
+      copyScratchState = scratchState.copyScratchState ?= {}
+
     @_normalizeCopyOptions(options) extract
       fromBucket, toBucket, fromKey, toKey, size
       toFolder
@@ -89,7 +90,10 @@ class S3 extends BaseClass
       if pretend
         timeout 1 -> pretend: true
       else if toFolder
-        Promise.then -> fs.createWriteStream path.join toFolder, fromKey
+        createWriteStreamSafe
+          path.join toFolder, fromKey
+          copyScratchState
+
         .then (writeStream) -> new Promise (resolve, reject) ->
           @s3.getObject copyOptions
           .createReadStream()
@@ -107,20 +111,20 @@ class S3 extends BaseClass
       Key:    options.key
 
   @largeCopy: (options) =>
-    @_normalizeCopyOptions(options) extract fromBucket, toBucket, fromKey, toKey, pretend, verbose
+    @_normalizeCopyOptions(options) extract fromBucket, fromFolder, toBucket, toFolder, fromKey, toKey, pretend, verbose
 
     command =
       ""
         aws s3 cp
-        #{} escape "" s3://#{fromBucket}/#{fromKey}
-        #{} escape "" s3://#{toBucket}/#{toKey}
+        #{} escape createS3Url fromBucket, fromFolder, fromKey
+        #{} escape createS3Url toBucket, toFolder, toKey
     if verbose
       log command
 
     if pretend
       timeout 1 -> pretend: true
     else
-      exec command
+      shellExec command
 
   # get object's metdata
   @headObject: ({bucket, key}) =>

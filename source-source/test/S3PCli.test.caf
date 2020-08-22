@@ -1,0 +1,23 @@
+import &StandardImport
+
+test "S3PCli" ->
+  output = []
+  S3PCli.main
+    output: (out) => output.push out
+    argv: [] :nodeJs :s3p :version
+  .then (version) ->
+    assert.match
+      version
+      ///
+        ^
+        \d+
+        \.
+        \d+
+        \.
+        \d+
+        $
+
+
+    assert.eq
+      output
+      [] version

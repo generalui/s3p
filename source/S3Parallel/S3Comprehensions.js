@@ -183,6 +183,7 @@ Caf.defMod(module, () => {
               {
                 originalOptions:
                   (temp4 = options.originalOptions) != null ? temp4 : options,
+                scratchState: {},
                 pretend,
                 toKey,
                 filter,

@@ -3,7 +3,6 @@ let Caf = require("caffeine-script-runtime");
 Caf.defMod(module, () => {
   return Caf.importInvoke(
     [
-      "join",
       "merge",
       "compactFlatten",
       "colors",
@@ -15,6 +14,7 @@ Caf.defMod(module, () => {
       "Error",
       "objectDiff",
       "log",
+      "createS3Url",
       "objectWithout",
       "Promise",
       "PromiseWorkerPool",
@@ -29,7 +29,6 @@ Caf.defMod(module, () => {
       { colors: require("colors") },
     ],
     (
-      join,
       merge,
       compactFlatten,
       colors,
@@ -41,6 +40,7 @@ Caf.defMod(module, () => {
       Error,
       objectDiff,
       log,
+      createS3Url,
       objectWithout,
       Promise,
       PromiseWorkerPool,
@@ -50,7 +50,6 @@ Caf.defMod(module, () => {
         itemsByKey,
         summarizeHistogramGroups,
         summarizeHistogramGroupUnits,
-        createS3Url,
         S3P;
       S3C = require("./S3Comprehensions");
       itemsByKey = function (itemList, toKey) {
@@ -94,11 +93,6 @@ Caf.defMod(module, () => {
         "eB",
         "zB",
       ];
-      createS3Url = function (bucket, folder, key) {
-        return folder
-          ? join(folder, key)
-          : `s3://${Caf.toString(bucket)}/${Caf.toString(key)}`;
-      };
       return (S3P = Caf.defClass(class S3P extends Object {}, function (
         S3P,
         classSuper,

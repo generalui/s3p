@@ -44,9 +44,9 @@ advancedOptionsForCopy = merge advancedOptionsForAll,
   max-queue-size:          advanced: true argument: :50000     description: "" Maximum number of files that can be queued for copying before list-reading is throttled.
   large-copy-threshold:    advanced: true argument: :104857600 description: "" Files larger than this byte-size will use the large-copy strategy, which is currently a shell-exec of 'aws s3 cp'. Currently this must be set <= 5368709120 (5 gigabytes). This is s3.copyObject's max supported size, so S3P must shell-exec aws-cli for larger files.
 
-main: ->
+main: (options) ->
   require :@art-suite/cli
-  .start
+  .start merge options,
     description:
       """
         S3 summarize, compare, copy, sync and more with massively parallel power.
@@ -60,12 +60,7 @@ main: ->
 
     commands:
       each:
-        run: (options) =>
-          options extract map, mapList
-          throw new Error "--map or --map-list option required" unless options.map or options.mapList
-          throw new Error "--map must be a function" unless map && !isFunction map
-          throw new Error "--map-list must be a function" unless mapList && !isFunction mapList
-          &S3Comprehensions.each options
+        run: &S3PCliCommands.each
 
         description:  "" Create your own iteration. Specify a --map or --map-list option.
         options:      merge allCommandOptions, advancedOptionsForAll,
@@ -97,14 +92,7 @@ main: ->
           "" summarize all files larger than 1 Megabyte
 
       ls:
-        run: (options) =>
-          &S3Comprehensions.each merge
-            quiet: true
-            options
-            mapList: (l) ->
-              each {LastModified, Size, Key} from-array l
-                console.log "" #{formatDate LastModified, "yyyy-mm-dd HH:MM:ss"} #{pad humanByteSize(Size), 10, ' ', true} #{Key}
-
+        run: &S3PCliCommands.ls
         description:  "" List all matching files. Uses s3.listObjectsV2.
         options:      merge allCommandOptions, advancedOptionsForAll
 

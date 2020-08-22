@@ -1,0 +1,59 @@
+import &StandardImport, {}
+  fs: &fs.promises
+  &path
+
+&fs extract createWriteStream
+
+class FsEasy
+  ## createParentDirs
+    EFFECT: Create all filename's parent directories
+    OUT: Promise.then -> number of directories actually created
+    IN:
+      filename <string>
+      scratchState <object> (optional)
+        If provided, this object will be mutated.
+        This is used to ensure  we only attempt to create each
+        folder exactly once. If we have already attempted it, use
+        the Promise for the previous attempt instead.
+  @createParentDirs: (filename, scratchState) =>
+    dir = path.dirname filename
+    if scratchState?
+      p = path.resolve dir
+      scratchState[p] ?= @_createParentDirs dir
+    else
+      @_createParentDirs dir
+
+  ## createWriteStreamSafe
+    EFFECT: create all filename's parent directories
+    OUT: Promise.then -> valid WriteStream ready to write to filename
+    IN:
+      filename <string>
+      scratchState <object> (optional)
+        If provided, this object will be mutated.
+        This is used to ensure  we only attempt to create each
+        folder exactly once. If we have already attempted it, use
+        the Promise for the previous attempt instead.
+
+  @createWriteStreamSafe: (filename, scratchState) =>
+    @createParentDirs filename, scratchState
+    .then -> createWriteStream filename
+
+  ###########################
+    PRIVATE
+  ###########################
+  @_createParentDirs: (dir) ->
+    Promise.then -> fs.stat dir
+    .then
+      # exists
+      -> 0
+      # rejected, does not exist
+      ->
+        @createParentDirs dir
+        .then (numMade) ->
+          fs.mkdir dir
+          .then -> numMade + 1
+          .catch (error) ->
+            # maybe the dir exists now...
+            fs.stat dir
+            .then   -> 0
+            .catch  -> throw error # throw the original error if not...

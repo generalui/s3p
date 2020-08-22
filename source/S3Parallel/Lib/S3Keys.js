@@ -2,16 +2,14 @@
 let Caf = require("caffeine-script-runtime");
 Caf.defMod(module, () => {
   return Caf.importInvoke(
-    ["peek", "present", "Error", "formattedInspect", "pad", "Math"],
+    ["peek", "Error", "formattedInspect", "pad", "Math"],
     [global, require("../StandardImport")],
-    (peek, present, Error, formattedInspect, pad, Math) => {
+    (peek, Error, formattedInspect, pad, Math) => {
       let supportedKeyChars,
         maxKeyLength,
         lastKeyChar,
         middleKeyChar,
         getKeyCharIndex,
-        getNextKeyChar,
-        getBisectChar,
         getUpToNextSlash,
         getBisectKey,
         escapeKey,
@@ -27,15 +25,6 @@ Caf.defMod(module, () => {
           supportedKeyChars[(supportedKeyChars.length / 2) | 0]),
         getKeyCharIndex: (getKeyCharIndex = function (character) {
           return character ? supportedKeyChars.indexOf(character) : 0;
-        }),
-        getNextKeyChar: (getNextKeyChar = function (character) {
-          return supportedKeyChars[1 + getKeyCharIndex(character)];
-        }),
-        getBisectChar: (getBisectChar = function (c1, c2) {
-          let i1, i2;
-          i1 = present(c1) ? getKeyCharIndex(c1) : 0;
-          i2 = present(c2) ? getKeyCharIndex(c2) : supportedKeyChars.length - 1;
-          return supportedKeyChars[((i1 + i2) / 2) | 0];
         }),
         getUpToNextSlash: (getUpToNextSlash = function (key, i) {
           let m, found;

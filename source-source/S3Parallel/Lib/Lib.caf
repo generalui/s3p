@@ -1,17 +1,4 @@
-exec = &util.promisify &child_process.exec
-
 []
   &S3Keys
-  shellExec: (command) ->
-    exec command
-    .then ({stdout}) -> stdout
-
-  humanByteSize: (bytes, decimals = 2) ->
-    switch
-    when bytes < 1024     then "" #{bytes/1024**0 | 0}_B
-    when bytes < 1024**2  then "" #{(bytes/1024**1).toFixed decimals}kB
-    when bytes < 1024**3  then "" #{(bytes/1024**2).toFixed decimals}mB
-    when bytes < 1024**4  then "" #{(bytes/1024**3).toFixed decimals}gB
-    when bytes < 1024**5  then "" #{(bytes/1024**4).toFixed decimals}tB
-    when bytes < 1024**6  then "" #{(bytes/1024**5).toFixed decimals}pB
-    else                       "" #{(bytes/1024**6).toFixed decimals}eB
+  &FsEasy
+  &LibMisc

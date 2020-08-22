@@ -66,6 +66,7 @@ class S3Comprehensions
       objectWithout options, :dryrun :toPrefix :withFn :pattern :into :returning :whenFn :prefix :addPrefix
       {}
         originalOptions: options.originalOptions ? options
+        scratchState: {}
         pretend
         toKey
         filter

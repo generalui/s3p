@@ -29,12 +29,6 @@ summarizeHistogramGroupUnits =
   :eB
   :zB
 
-createS3Url = (bucket, folder, key) ->
-  if folder
-    join folder, key
-  else
-    "" s3://#{bucket}/#{key}
-
 class S3P
   ###########################################################
     READONLY Commands

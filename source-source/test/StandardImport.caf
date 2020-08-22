@@ -1,0 +1,3 @@
+&ArtStandardLib.mergeWithSelf
+  &ArtTestbench
+  &S3Parallel

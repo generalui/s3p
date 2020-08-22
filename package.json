@@ -16,13 +16,17 @@
   "description": "S3P is a CLI and library that is 5x to 50x faster than aws-cli for bulk S3 operations including: summarize, compare, copy and sync.",
   "devDependencies": {
     "art-build-configurator": "^1.26.9",
-    "art-testbench": "^1.17.2",
+    "art-testbench": "^2.0.0",
     "caffeine-script": "^0.72.1",
+    "jest": "^26.4.2",
     "mocha": "^7.1.1",
     "mock-fs": "^4.10.0",
     "npm-watch": "^0.7.0"
   },
   "homepage": "https://github.com/generalui/s3p",
+  "jest": {
+    "testEnvironment": "node"
+  },
   "license": "ISC",
   "name": "s3p",
   "repository": {

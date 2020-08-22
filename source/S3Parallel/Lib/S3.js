@@ -3,47 +3,52 @@ let Caf = require("caffeine-script-runtime");
 Caf.defMod(module, () => {
   return Caf.importInvoke(
     [
-      "promisify",
       "BaseClass",
+      "shellEscape",
       "currentSecond",
       "log",
       "Array",
       "Error",
       "merge",
       "timeout",
-      "Promise",
-      "fs",
+      "createWriteStreamSafe",
       "path",
+      "Promise",
+      "createS3Url",
+      "shellExec",
       "isFunction",
       "present",
     ],
     [
       global,
       require("../StandardImport"),
+      require("./FsEasy"),
+      require("./LibMisc"),
       {
+        shellEscape: require("shell-escape"),
         promisify: require("util").promisify,
         fs: require("fs"),
         path: require("path"),
       },
     ],
     (
-      promisify,
       BaseClass,
+      shellEscape,
       currentSecond,
       log,
       Array,
       Error,
       merge,
       timeout,
-      Promise,
-      fs,
+      createWriteStreamSafe,
       path,
+      Promise,
+      createS3Url,
+      shellExec,
       isFunction,
       present
     ) => {
-      let exec, shellEscape, escape, S3;
-      exec = promisify(require("child_process").exec);
-      shellEscape = require("shell-escape");
+      let escape, S3;
       escape = function (single) {
         return shellEscape([single]);
       };
@@ -125,7 +130,9 @@ Caf.defMod(module, () => {
             });
         };
         this.copy = (options) => {
-          let fromBucket,
+          let scratchState,
+            copyScratchState,
+            fromBucket,
             toBucket,
             fromKey,
             toKey,
@@ -134,16 +141,23 @@ Caf.defMod(module, () => {
             pretend,
             verbose,
             copyOptions,
-            temp;
-          temp = this._normalizeCopyOptions(options);
-          fromBucket = temp.fromBucket;
-          toBucket = temp.toBucket;
-          fromKey = temp.fromKey;
-          toKey = temp.toKey;
-          size = temp.size;
-          toFolder = temp.toFolder;
-          pretend = temp.pretend;
-          verbose = temp.verbose;
+            temp,
+            temp1;
+          if ((scratchState = options.scratchState)) {
+            copyScratchState =
+              (temp = scratchState.copyScratchState) != null
+                ? temp
+                : (scratchState.copyScratchState = {});
+          }
+          temp1 = this._normalizeCopyOptions(options);
+          fromBucket = temp1.fromBucket;
+          toBucket = temp1.toBucket;
+          fromKey = temp1.fromKey;
+          toKey = temp1.toKey;
+          size = temp1.size;
+          toFolder = temp1.toFolder;
+          pretend = temp1.pretend;
+          verbose = temp1.verbose;
           return size >= Caf.pow(1024, 3) || /\s/.test(toKey)
             ? this.largeCopy({
                 fromBucket,
@@ -169,8 +183,9 @@ Caf.defMod(module, () => {
                     return { pretend: true };
                   })
                 : toFolder
-                ? Promise.then(() =>
-                    fs.createWriteStream(path.join(toFolder, fromKey))
+                ? createWriteStreamSafe(
+                    path.join(toFolder, fromKey),
+                    copyScratchState
                   ).then(
                     (writeStream) =>
                       new Promise((resolve, reject) =>
@@ -188,7 +203,9 @@ Caf.defMod(module, () => {
           this.s3.deleteObject({ Bucket: options.bucket, Key: options.key });
         this.largeCopy = (options) => {
           let fromBucket,
+            fromFolder,
             toBucket,
+            toFolder,
             fromKey,
             toKey,
             pretend,
@@ -197,16 +214,16 @@ Caf.defMod(module, () => {
             temp;
           temp = this._normalizeCopyOptions(options);
           fromBucket = temp.fromBucket;
+          fromFolder = temp.fromFolder;
           toBucket = temp.toBucket;
+          toFolder = temp.toFolder;
           fromKey = temp.fromKey;
           toKey = temp.toKey;
           pretend = temp.pretend;
           verbose = temp.verbose;
           command = `aws s3 cp ${Caf.toString(
-            escape(`s3://${Caf.toString(fromBucket)}/${Caf.toString(fromKey)}`)
-          )} ${Caf.toString(
-            escape(`s3://${Caf.toString(toBucket)}/${Caf.toString(toKey)}`)
-          )}`;
+            escape(createS3Url(fromBucket, fromFolder, fromKey))
+          )} ${Caf.toString(escape(createS3Url(toBucket, toFolder, toKey)))}`;
           if (verbose) {
             log(command);
           }
@@ -214,7 +231,7 @@ Caf.defMod(module, () => {
             ? timeout(1, () => {
                 return { pretend: true };
               })
-            : exec(command);
+            : shellExec(command);
         };
         this.headObject = ({ bucket, key }) =>
           this.s3.headObject({ Bucket: bucket, Key: key }).promise();

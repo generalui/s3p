@@ -1,0 +1,47 @@
+import &StandardImport, {} &mockFs
+
+describe
+  createParentDirs: ->
+    beforeAll ->
+      mockFs {}
+
+    afterAll ->
+      mockFs.restore()
+
+    chainedTest "createParentDirs foo/bar.txt" ->
+      createParentDirs :foo/bar.txt
+      .then (numCreated) ->
+        assert.eq numCreated, 1
+
+    .thenTest "called twice" ->
+      createParentDirs :foo/bar.txt
+      .then (numCreated) ->
+        assert.eq numCreated, 0
+
+    .thenTest "many subdirs" ->
+      createParentDirs :foo/baz/bud/bob/bar.txt
+      .then (numCreated) ->
+        assert.eq numCreated, 3
+
+    test "race condidtion" ->
+      Promise.all []
+        createParentDirs :race/bar.txt
+        createParentDirs :race/bar.txt
+      .then ([a, b]) ->
+        assert.eq a + b, 1
+        assert.ok a == 0 || b == 0
+
+    test "scratchState" ->
+      createParentDirs :withss/bar.text, scratchState = {}
+      .then ->
+        assert.eq 1, objectKeyCount scratchState
+        each entry in scratchState
+          assert.isPromise entry
+
+        Promise.all Object.values scratchState
+
+  createWriteStreamSafe: ->
+    test "createWriteStreamSafe :food/baz" ->
+      createWriteStreamSafe :food/baz
+      .then (writeStream) ->
+        writeStream.close()

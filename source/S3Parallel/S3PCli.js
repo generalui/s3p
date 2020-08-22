@@ -2,17 +2,9 @@
 let Caf = require("caffeine-script-runtime");
 Caf.defMod(module, () => {
   return Caf.importInvoke(
-    [
-      "merge",
-      "Error",
-      "isFunction",
-      "console",
-      "formatDate",
-      "pad",
-      "humanByteSize",
-    ],
+    ["merge"],
     [global, require("./StandardImport"), require("./Lib")],
-    (merge, Error, isFunction, console, formatDate, pad, humanByteSize) => {
+    (merge) => {
       let allCommandOptions,
         writeOptions,
         toBucketOptions,
@@ -122,188 +114,145 @@ Caf.defMod(module, () => {
         },
       });
       return {
-        main: function () {
-          return require("@art-suite/cli").start({
-            description:
-              "S3 summarize, compare, copy, sync and more with massively parallel power.\n\nconfigure AWS credentials with environment variables:\n  s3p uses the same creds as the aws-cli. Learn more:\n  https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html\n\ns3p source:\n  https://github.com/generalui/s3p",
-            commands: {
-              each: {
-                run: (options) => {
-                  let map, mapList;
-                  map = options.map;
-                  mapList = options.mapList;
-                  if (!(options.map || options.mapList)) {
-                    throw new Error("--map or --map-list option required");
-                  }
-                  if (!(map && !isFunction(map))) {
-                    throw new Error("--map must be a function");
-                  }
-                  if (!(mapList && !isFunction(mapList))) {
-                    throw new Error("--map-list must be a function");
-                  }
-                  return require("./S3Comprehensions").each(options);
+        main: function (options) {
+          return require("@art-suite/cli").start(
+            merge(options, {
+              description:
+                "S3 summarize, compare, copy, sync and more with massively parallel power.\n\nconfigure AWS credentials with environment variables:\n  s3p uses the same creds as the aws-cli. Learn more:\n  https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html\n\ns3p source:\n  https://github.com/generalui/s3p",
+              commands: {
+                each: {
+                  run: require("./S3PCliCommands").each,
+                  description:
+                    "Create your own iteration. Specify a --map or --map-list option.",
+                  options: merge(allCommandOptions, advancedOptionsForAll, {
+                    map: [
+                      "function",
+                      "This gets called for each item found. A javascript function of the form (item) => ...",
+                    ],
+                    "map-list": [
+                      "function",
+                      "This gets called with an array of items (length between 1 and 1000). A javascript function of the form (itemList) => ...",
+                    ],
+                  }),
+                  examples: [
+                    'each --bucket my-bucket --map "js:(item) => console.log(item)"',
+                    "Log every item found.",
+                  ],
                 },
-                description:
-                  "Create your own iteration. Specify a --map or --map-list option.",
-                options: merge(allCommandOptions, advancedOptionsForAll, {
-                  map: [
-                    "function",
-                    "This gets called for each item found. A javascript function of the form (item) => ...",
-                  ],
-                  "map-list": [
-                    "function",
-                    "This gets called with an array of items (length between 1 and 1000). A javascript function of the form (itemList) => ...",
-                  ],
-                }),
-                examples: [
-                  'each --bucket my-bucket --map "js:(item) => console.log(item)"',
-                  "Log every item found.",
-                ],
-              },
-              "list-buckets": {
-                run: require("./Lib/S3").listBuckets,
-                description: "List all your S3 buckets.",
-              },
-              version: {
-                run: () => require("../../package").version,
-                description: "Show s3p's version.",
-              },
-              summarize: {
-                run: require("./S3P").summarize,
-                description:
-                  "Scan all items in one bucket and produce a summary of all the items. Uses s3.listObjectsV2.",
-                options: merge(
-                  allCommandOptions,
-                  { "summarize-folders": "show count and size of each folder" },
-                  advancedOptionsForAll
-                ),
-                examples: [
-                  { bucket: "my-bucket" },
-                  "get a detailed summary of item counts and sizes in my-bucket",
-                  {
-                    bucket: "my-bucket",
-                    filter: '"js:({Size}) => Size > 1024*1024"',
-                  },
-                  "summarize all files larger than 1 Megabyte",
-                ],
-              },
-              ls: {
-                run: (options) =>
-                  require("./S3Comprehensions").each(
-                    merge({ quiet: true }, options, {
-                      mapList: (l) => {
-                        let from, into, to, i, temp;
-                        return (
-                          (from = l),
-                          (into = from),
-                          from != null
-                            ? ((to = from.length),
-                              (i = 0),
-                              (() => {
-                                while (i < to) {
-                                  let LastModified, Size, Key;
-                                  ({ LastModified, Size, Key } = from[i]);
-                                  console.log(
-                                    `${Caf.toString(
-                                      formatDate(
-                                        LastModified,
-                                        "yyyy-mm-dd HH:MM:ss"
-                                      )
-                                    )} ${Caf.toString(
-                                      pad(humanByteSize(Size), 10, " ", true)
-                                    )} ${Caf.toString(Key)}`
-                                  );
-                                  temp = i++;
-                                }
-                                return temp;
-                              })())
-                            : undefined,
-                          into
-                        );
-                      },
-                    })
+                "list-buckets": {
+                  run: require("./Lib/S3").listBuckets,
+                  description: "List all your S3 buckets.",
+                },
+                version: {
+                  run: () => require("../../package").version,
+                  description: "Show s3p's version.",
+                },
+                summarize: {
+                  run: require("./S3P").summarize,
+                  description:
+                    "Scan all items in one bucket and produce a summary of all the items. Uses s3.listObjectsV2.",
+                  options: merge(
+                    allCommandOptions,
+                    {
+                      "summarize-folders": "show count and size of each folder",
+                    },
+                    advancedOptionsForAll
                   ),
-                description: "List all matching files. Uses s3.listObjectsV2.",
-                options: merge(allCommandOptions, advancedOptionsForAll),
+                  examples: [
+                    { bucket: "my-bucket" },
+                    "get a detailed summary of item counts and sizes in my-bucket",
+                    {
+                      bucket: "my-bucket",
+                      filter: '"js:({Size}) => Size > 1024*1024"',
+                    },
+                    "summarize all files larger than 1 Megabyte",
+                  ],
+                },
+                ls: {
+                  run: require("./S3PCliCommands").ls,
+                  description:
+                    "List all matching files. Uses s3.listObjectsV2.",
+                  options: merge(allCommandOptions, advancedOptionsForAll),
+                },
+                compare: {
+                  run: require("./S3P").compare,
+                  description:
+                    "Compare two buckets and produce a summary of their differences. Uses s3.listObjectsV2.",
+                  options: merge(
+                    allCommandOptions,
+                    toBucketOptions,
+                    advancedOptionsForAll
+                  ),
+                  examples: [
+                    { bucket: "my-bucket", "to-bucket": "my-to-bucket" },
+                    "Compare items from my-mucket with my-to-bucket. Shows how many items exist in both, only one, or are difference sizes.",
+                  ],
+                },
+                cp: {
+                  run: require("./S3P").copy,
+                  description:
+                    "Copy all files from one bucket to another bucket. Uses s3.listObjectsV2, s3.copyObject and shell-exec 'aws s3 cp'.\n\nNOTE: This overwrites existing files in the target bucket. Try the 'sync' command for smarter copies when some of the files have already been copied.",
+                  options: merge(
+                    allCommandOptions,
+                    toBucketOptions,
+                    writeOptions,
+                    advancedOptionsForCopy,
+                    toFolderOptions
+                  ),
+                  examples: [
+                    { bucket: "my-bucket", "to-bucket": "my-to-bucket" },
+                    "Copy everything from my-mucket to my-to-bucket",
+                    {
+                      bucket: "my-bucket",
+                      "to-bucket": "my-to-bucket",
+                      prefix: "2020-04-14/",
+                    },
+                    'Copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/". The copied items will have the same keys as source items.',
+                    {
+                      bucket: "my-bucket",
+                      "to-bucket": "my-to-bucket",
+                      prefix: "2020-04-14/",
+                      "to-prefix": "2020-04-14-backup/",
+                    },
+                    'Copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/" and REPLACES prefixes. Example: "2020-04-14/foo.jpg" is copied to "2020-04-14-backup/foo.jpg"',
+                    {
+                      bucket: "my-bucket",
+                      "to-bucket": "my-to-bucket",
+                      prefix: "2020-04-14/",
+                      "add-prefix": "backup/",
+                    },
+                    'Copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/" and ADDS prefixes. Example: "2020-04-14/foo.jpg" is copied to "backup/2020-04-14/foo.jpg"',
+                    {
+                      bucket: "my-bucket",
+                      "to-bucket": "my-to-bucket",
+                      prefix: "2020-04-14/",
+                      "to-key": "\"js:(key) => key + 'old'\"",
+                    },
+                    'Copy everything from my-mucket to my-to-bucket with CUSTOM function that adds suffixes. Example: "2020-04-14/foo.jpg" is copied to "2020-04-14/foo.jpg-old"',
+                  ],
+                },
+                sync: {
+                  run: require("./S3P").sync,
+                  description:
+                    "Only copy files which do not exist in the target bucket. Uses s3.listObjectsV2, s3.copyObject and shell-exec 'aws s3 cp'.",
+                  options: merge(
+                    allCommandOptions,
+                    toBucketOptions,
+                    writeOptions,
+                    advancedOptionsForCopy,
+                    {
+                      overwrite:
+                        "If set, sync will overwrite existing files with different file sizes.",
+                    }
+                  ),
+                  examples: [
+                    { bucket: "my-bucket", "to-bucket": "my-to-bucket" },
+                    "Copy everything from my-mucket to my-to-bucket",
+                  ],
+                },
               },
-              compare: {
-                run: require("./S3P").compare,
-                description:
-                  "Compare two buckets and produce a summary of their differences. Uses s3.listObjectsV2.",
-                options: merge(
-                  allCommandOptions,
-                  toBucketOptions,
-                  advancedOptionsForAll
-                ),
-                examples: [
-                  { bucket: "my-bucket", "to-bucket": "my-to-bucket" },
-                  "Compare items from my-mucket with my-to-bucket. Shows how many items exist in both, only one, or are difference sizes.",
-                ],
-              },
-              cp: {
-                run: require("./S3P").copy,
-                description:
-                  "Copy all files from one bucket to another bucket. Uses s3.listObjectsV2, s3.copyObject and shell-exec 'aws s3 cp'.\n\nNOTE: This overwrites existing files in the target bucket. Try the 'sync' command for smarter copies when some of the files have already been copied.",
-                options: merge(
-                  allCommandOptions,
-                  toBucketOptions,
-                  writeOptions,
-                  advancedOptionsForCopy,
-                  toFolderOptions
-                ),
-                examples: [
-                  { bucket: "my-bucket", "to-bucket": "my-to-bucket" },
-                  "Copy everything from my-mucket to my-to-bucket",
-                  {
-                    bucket: "my-bucket",
-                    "to-bucket": "my-to-bucket",
-                    prefix: "2020-04-14/",
-                  },
-                  'Copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/". The copied items will have the same keys as source items.',
-                  {
-                    bucket: "my-bucket",
-                    "to-bucket": "my-to-bucket",
-                    prefix: "2020-04-14/",
-                    "to-prefix": "2020-04-14-backup/",
-                  },
-                  'Copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/" and REPLACES prefixes. Example: "2020-04-14/foo.jpg" is copied to "2020-04-14-backup/foo.jpg"',
-                  {
-                    bucket: "my-bucket",
-                    "to-bucket": "my-to-bucket",
-                    prefix: "2020-04-14/",
-                    "add-prefix": "backup/",
-                  },
-                  'Copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/" and ADDS prefixes. Example: "2020-04-14/foo.jpg" is copied to "backup/2020-04-14/foo.jpg"',
-                  {
-                    bucket: "my-bucket",
-                    "to-bucket": "my-to-bucket",
-                    prefix: "2020-04-14/",
-                    "to-key": "\"js:(key) => key + 'old'\"",
-                  },
-                  'Copy everything from my-mucket to my-to-bucket with CUSTOM function that adds suffixes. Example: "2020-04-14/foo.jpg" is copied to "2020-04-14/foo.jpg-old"',
-                ],
-              },
-              sync: {
-                run: require("./S3P").sync,
-                description:
-                  "Only copy files which do not exist in the target bucket. Uses s3.listObjectsV2, s3.copyObject and shell-exec 'aws s3 cp'.",
-                options: merge(
-                  allCommandOptions,
-                  toBucketOptions,
-                  writeOptions,
-                  advancedOptionsForCopy,
-                  {
-                    overwrite:
-                      "If set, sync will overwrite existing files with different file sizes.",
-                  }
-                ),
-                examples: [
-                  { bucket: "my-bucket", "to-bucket": "my-to-bucket" },
-                  "Copy everything from my-mucket to my-to-bucket",
-                ],
-              },
-            },
-          });
+            })
+          );
         },
       };
     }

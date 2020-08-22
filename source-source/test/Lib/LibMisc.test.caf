@@ -1,0 +1,40 @@
+import &StandardImport
+
+each [input, output] in []
+    0     0_B
+    10    10_B
+    1023  1023_B
+    10240   10.00kB
+    1024**1 1.00kB
+    1024**2 1.00mB
+    1024**3 1.00gB
+    1024**4 1.00tB
+    1024**5 1.00pB
+    1024**6 1.00eB
+
+    1024**1 - 1   1023_B
+    1024**2 - 1   1024.00kB
+    1024**3 - 1   1024.00mB
+    1024**4 - 1   1024.00gB
+    1024**5 - 1   1024.00tB
+    1024**6 - 100 1024.00pB
+
+  test "humanByteSize #{input} >> #{output}" ->
+    assert.eq
+      humanByteSize input
+      output
+
+each [output, args...] in []
+    [] :s3://my-bucket/my-key :my-bucket null :my-key
+    [] :my-folder/my-key :my-bucket :my-folder :my-key
+    [] :my-folder/my-key null :my-folder :my-key
+
+  test "createS3Url #{args.join ', '} >> #{output}" ->
+    assert.eq
+      createS3Url args...
+      output
+
+test "shellExec pwd" ->
+  shellExec "pwd"
+  .then (out) ->
+    assert.match out, "\/s3p"
