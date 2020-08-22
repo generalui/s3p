@@ -20,7 +20,6 @@
     "neptune-namespaces": "^4.0.0",
     "caffeine-script": "^0.72.1",
     "jest": "^26.4.2",
-    "mocha": "^7.1.1",
     "mock-fs": "^4.10.0",
     "npm-watch": "^0.7.0"
   },
