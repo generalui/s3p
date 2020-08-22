@@ -1,4 +1,0 @@
-&ArtTestbench/testing
-.init
-  synchronous: true
-  defineTests: -> &tests

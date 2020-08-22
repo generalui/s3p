@@ -1,7 +1,7 @@
 {
   "author": "GenUI LLC",
   "bin": {
-    "s3p": "./s3p"
+    "s3p": "./bin/s3p"
   },
   "bugs": "https:/github.com/generalui/s3p/issues",
   "dependencies": {
@@ -10,13 +10,14 @@
     "art-standard-lib": "^1.69.4",
     "aws-sdk": "^2.643.0",
     "caffeine-script-runtime": "^1.13.3",
-    "neptune-namespaces": "^4.0.0",
+    "neptune-namespaces-runtime": "^3.2.3",
     "shell-escape": "^0.2.0"
   },
   "description": "S3P is a CLI and library that is 5x to 50x faster than aws-cli for bulk S3 operations including: summarize, compare, copy and sync.",
   "devDependencies": {
     "art-build-configurator": "^1.26.9",
     "art-testbench": "^2.0.0",
+    "neptune-namespaces": "^4.0.0",
     "caffeine-script": "^0.72.1",
     "jest": "^26.4.2",
     "mocha": "^7.1.1",
@@ -36,9 +37,7 @@
   "scripts": {
     "build": "caf -p -c source-source -o source\nnn -sq",
     "build-clean": "rm -rf source/*; npm run build",
-    "start": "webpack-dev-server --hot --inline --progress --env.devServer",
-    "test": "nn -s;mocha -u tdd",
-    "testInBrowser": "webpack-dev-server --progress --env.devServer",
+    "test": "jest",
     "watch": "npm-watch"
   },
   "version": "2.7.0",

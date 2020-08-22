@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">20% </span>
+                <span class="strong">18.18% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>4/20</span>
+                <span class='fraction'>4/22</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/14</span>
+                <span class='fraction'>0/16</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">33.33% </span>
+                <span class="strong">28.57% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>2/6</span>
+                <span class='fraction'>2/7</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">20% </span>
+                <span class="strong">18.18% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>4/20</span>
+                <span class='fraction'>4/22</span>
             </div>
         
             
@@ -124,7 +124,13 @@
 <a name='L65'></a><a href='#L65'>65</a>
 <a name='L66'></a><a href='#L66'>66</a>
 <a name='L67'></a><a href='#L67'>67</a>
-<a name='L68'></a><a href='#L68'>68</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L68'></a><a href='#L68'>68</a>
+<a name='L69'></a><a href='#L69'>69</a>
+<a name='L70'></a><a href='#L70'>70</a>
+<a name='L71'></a><a href='#L71'>71</a>
+<a name='L72'></a><a href='#L72'>72</a>
+<a name='L73'></a><a href='#L73'>73</a>
+<a name='L74'></a><a href='#L74'>74</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">7x</span>
 <span class="cline-any cline-yes">7x</span>
 <span class="cline-any cline-yes">7x</span>
@@ -141,20 +147,15 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">7x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -165,6 +166,17 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -207,11 +219,16 @@ Caf.defMod(module, () =&gt; {
     [global, require("./StandardImport"), require("./Lib")],
     (merge, console, formatDate, pad, humanByteSize, Error, isFunction) =&gt; {
       return {
-        ls: <span class="fstat-no" title="function not covered" >(o</span>ptions) =&gt;
-<span class="cstat-no" title="statement not covered" >          require("./S3Comprehensions").each(</span>
+        ls: <span class="fstat-no" title="function not covered" >fu</span>nction (options) {
+          let output, temp;
+<span class="cstat-no" title="statement not covered" >          output =</span>
+            (temp = options.output) != null
+              ? temp
+              : <span class="fstat-no" title="function not covered" >(.</span>..args) =&gt; <span class="cstat-no" title="statement not covered" >console.log(args);</span>
+<span class="cstat-no" title="statement not covered" >          return require("./S3Comprehensions").each(</span>
             merge({ quiet: true }, options, {
               mapList: <span class="fstat-no" title="function not covered" >(l</span>) =&gt; {
-                let from, into, to, i, temp;
+                let from, into, to, i, temp1;
 <span class="cstat-no" title="statement not covered" >                return (</span>
                   (from = l),
                   (into = from),
@@ -222,24 +239,25 @@ Caf.defMod(module, () =&gt; {
 <span class="cstat-no" title="statement not covered" >                        while (i &lt; to) {</span>
                           let LastModified, Size, Key;
 <span class="cstat-no" title="statement not covered" >                          ({ LastModified, Size, Key } = from[i]);</span>
-<span class="cstat-no" title="statement not covered" >                          console.log(</span>
+<span class="cstat-no" title="statement not covered" >                          output(</span>
                             `${Caf.toString(
                               formatDate(LastModified, "yyyy-mm-dd HH:MM:ss")
                             )} ${Caf.toString(
                               pad(humanByteSize(Size), 10, " ", true)
                             )} ${Caf.toString(Key)}`
                           );
-<span class="cstat-no" title="statement not covered" >                          temp = i++;</span>
+<span class="cstat-no" title="statement not covered" >                          temp1 = i++;</span>
                         }
-<span class="cstat-no" title="statement not covered" >                        return temp;</span>
+<span class="cstat-no" title="statement not covered" >                        return temp1;</span>
                       })())
                     : undefined,
                   into
                 );
               },
             })
-          ),
-        each: <span class="fstat-no" title="function not covered" >(o</span>ptions) =&gt; {
+          );
+        },
+        each: <span class="fstat-no" title="function not covered" >fu</span>nction (options) {
           let map, mapList;
 <span class="cstat-no" title="statement not covered" >          map = options.map;</span>
 <span class="cstat-no" title="statement not covered" >          mapList = options.mapList;</span>
@@ -265,7 +283,7 @@ Caf.defMod(module, () =&gt; {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank">istanbul</a>
-                at Sat Aug 22 2020 12:47:54 GMT-0700 (Pacific Daylight Time)
+                at Sat Aug 22 2020 13:18:40 GMT-0700 (Pacific Daylight Time)
             </div>
         </div>
         <script src="../prettify.js"></script>

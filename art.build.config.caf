@@ -3,7 +3,8 @@ import &ArtStandardLib
 package: (abcPackage) ->
   sourceDir = :source-source
   merge &package,
-    scripts: merge &package.scripts,
+    scripts:
+      test: :jest
       build:
         """
           caf -p -c #{sourceDir} -o source
