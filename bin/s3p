@@ -1,2 +1,2 @@
 #!/usr/bin/env node
-require('./source').S3PCli.main();
+require('../source').S3PCli.main();
