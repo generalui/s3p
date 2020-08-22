@@ -884,12 +884,16 @@ Caf.defMod(module, () => {
                       ? returnValue
                       : merge(stats, info, {
                           pretend: options.pretend,
-                          options: Caf.object(
-                            options.originalOptions,
-                            null,
-                            (v, k) =>
-                              !isFunction(v) || k === "filter" || k === "toKey"
-                          ),
+                          options: options.verbose
+                            ? Caf.object(
+                                options.originalOptions,
+                                null,
+                                (v, k) =>
+                                  !isFunction(v) ||
+                                  k === "filter" ||
+                                  k === "toKey"
+                              )
+                            : undefined,
                         }));
               });
           };

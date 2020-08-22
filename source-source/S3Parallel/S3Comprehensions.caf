@@ -492,7 +492,7 @@ class S3Comprehensions
         returnValue
         ? merge stats, info, {}
           options.pretend
-          options: object v, k in options.originalOptions when
+          options: if options.verbose then object v, k in options.originalOptions when
             !isFunction v
             or k == :filter
             or k == :toKey
