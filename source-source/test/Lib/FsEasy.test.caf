@@ -40,7 +40,6 @@ describe
 
         Promise.all Object.values scratchState
 
-  createWriteStreamSafe: ->
     test "createWriteStreamSafe :food/baz" ->
       createWriteStreamSafe :food/baz
       .then (writeStream) ->

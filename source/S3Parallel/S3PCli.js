@@ -33,11 +33,11 @@ Caf.defMod(module, () => {
         ],
         pattern: [
           "string OR js:/^any-javascript-regexp/i",
-          "Source keys must contain the string, OR source keys must match the JavaScript regexp.",
+          "Source keys must contain the string, OR source keys must match the JavaScript regexp. Note: This won't speed up listing. Every key matching the specified prefifx, start-after and stop-at clause will ready from S3 and be tested with the provided pattern. It may, however, speed up copying by reducing the total number of files copied.",
         ],
         filter: [
           '"js:({Key, Size, LastModified, ETag, StorageClass, Owner}) => true"',
-          "Filter results of listObjects.",
+          "Filter which items will be processed. Note: This won't speed up listing. Every key matching the specified prefifx, start-after and stop-at clause will ready from S3 and be tested with the provided filter. It may, however, speed up copying by reducing the total number of files copied.",
         ],
       };
       writeOptions = {
@@ -110,7 +110,7 @@ Caf.defMod(module, () => {
           advanced: true,
           argument: "104857600",
           description:
-            "Files larger than this byte-size will use the large-copy strategy, which is currently a shell-exec of 'aws s3 cp'. Currently this must be set <= 5368709120 (5 gigabytes). This is s3.copyObject's max supported size, so S3P must shell-exec aws-cli for larger files.",
+            "Files larger than this byte-size will use the large-copy strategy, which is currently a shell-exec of 'aws s3 cp'. Currently this must be set <= 5368709120 (5 gigabytes). This is s3.copyObject's max supported size, so S3P must shell-exec aws-cli for larger files. 100 megabytes, the default, has been tested to be a good selection for maximum performance.",
         },
       });
       return {
@@ -202,6 +202,8 @@ Caf.defMod(module, () => {
                   examples: [
                     { bucket: "my-bucket", "to-bucket": "my-to-bucket" },
                     "Copy everything from my-mucket to my-to-bucket",
+                    { bucket: "my-bucket", "to-folder": "my/local/folder" },
+                    "Copy everything from my-mucket to ./my/local/folder/*",
                     {
                       bucket: "my-bucket",
                       "to-bucket": "my-to-bucket",
@@ -226,7 +228,7 @@ Caf.defMod(module, () => {
                       bucket: "my-bucket",
                       "to-bucket": "my-to-bucket",
                       prefix: "2020-04-14/",
-                      "to-key": "\"js:(key) => key + 'old'\"",
+                      "to-key": "\"js:(key) => key + '-old'\"",
                     },
                     'Copy everything from my-mucket to my-to-bucket with CUSTOM function that adds suffixes. Example: "2020-04-14/foo.jpg" is copied to "2020-04-14/foo.jpg-old"',
                   ],

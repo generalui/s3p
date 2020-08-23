@@ -58,7 +58,7 @@ Caf.defMod(module, () => {
               assert.eq(a + b, 1);
               return assert.ok(a === 0 || b === 0);
             }));
-          return test("scratchState", () => {
+          test("scratchState", () => {
             let scratchState;
             return createParentDirs(
               "withss/bar.text",
@@ -69,8 +69,6 @@ Caf.defMod(module, () => {
               return Promise.all(Object.values(scratchState));
             });
           });
-        },
-        createWriteStreamSafe: function () {
           return test("createWriteStreamSafe :food/baz", () =>
             createWriteStreamSafe("food/baz").then((writeStream) =>
               writeStream.close()

@@ -13,11 +13,19 @@ allCommandOptions =
 
   pattern:
     "" string OR js:/^any-javascript-regexp/i
-    "" Source keys must contain the string, OR source keys must match the JavaScript regexp.
+    ""
+      Source keys must contain the string, OR source keys must match the JavaScript regexp.
+      Note: This won't speed up listing.
+      Every key matching the specified prefifx, start-after and stop-at clause will ready from S3 and be tested with the provided pattern.
+      It may, however, speed up copying by reducing the total number of files copied.
 
   filter:
     "" "js:({Key, Size, LastModified, ETag, StorageClass, Owner}) => true"
-    "" Filter results of listObjects.
+    ""
+      Filter which items will be processed.
+      Note: This won't speed up listing.
+      Every key matching the specified prefifx, start-after and stop-at clause will ready from S3 and be tested with the provided filter.
+      It may, however, speed up copying by reducing the total number of files copied.
 
 writeOptions =
   dryrun:
@@ -42,7 +50,13 @@ advancedOptionsForCopy = merge advancedOptionsForAll,
   copy-concurrency:        advanced: true argument: :500       description: "" Maximum number of simultaneous small-copies
   large-copy-concurrency:  advanced: true argument: :75        description: "" Maximum number of simultaneous large-copies
   max-queue-size:          advanced: true argument: :50000     description: "" Maximum number of files that can be queued for copying before list-reading is throttled.
-  large-copy-threshold:    advanced: true argument: :104857600 description: "" Files larger than this byte-size will use the large-copy strategy, which is currently a shell-exec of 'aws s3 cp'. Currently this must be set <= 5368709120 (5 gigabytes). This is s3.copyObject's max supported size, so S3P must shell-exec aws-cli for larger files.
+  large-copy-threshold:    advanced: true argument: :104857600 description:
+    ""
+      Files larger than this byte-size will use the large-copy strategy, which is currently a
+      shell-exec of 'aws s3 cp'. Currently this must be set <= 5368709120 (5 gigabytes).
+      This is s3.copyObject's max supported size, so S3P must shell-exec aws-cli for larger files.
+      100 megabytes, the default, has been tested to be a good selection for maximum performance.
+
 
 main: (options) ->
   require :@art-suite/cli
@@ -115,6 +129,9 @@ main: (options) ->
           bucket: :my-bucket to-bucket: :my-to-bucket
           "" Copy everything from my-mucket to my-to-bucket
 
+          bucket: :my-bucket to-folder: :my/local/folder
+          "" Copy everything from my-mucket to ./my/local/folder/*
+
           bucket: :my-bucket to-bucket: :my-to-bucket prefix: :2020-04-14/
           "" Copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/". The copied items will have the same keys as source items.
 
@@ -124,7 +141,7 @@ main: (options) ->
           bucket: :my-bucket to-bucket: :my-to-bucket prefix: :2020-04-14/ add-prefix: :backup/
           "" Copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/" and ADDS prefixes. Example: "2020-04-14/foo.jpg" is copied to "backup/2020-04-14/foo.jpg"
 
-          bucket: :my-bucket to-bucket: :my-to-bucket prefix: :2020-04-14/ to-key: "" "js:(key) => key + 'old'"
+          bucket: :my-bucket to-bucket: :my-to-bucket prefix: :2020-04-14/ to-key: "" "js:(key) => key + '-old'"
           "" Copy everything from my-mucket to my-to-bucket with CUSTOM function that adds suffixes. Example: "2020-04-14/foo.jpg" is copied to "2020-04-14/foo.jpg-old"
 
       sync:
