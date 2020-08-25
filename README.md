@@ -77,7 +77,7 @@ The average file-size has a big impact on s3p's overall bytes-per-second:
 |local     | cp      | 30 mB/s       | 150 mB/s    | 5x    | 512 kB |
 |ec2      | cp      | 150 mB/s      | 8 gB/s    | 54x    | 100 mB |
 
-> S3P was developed to operate on buckets with millions of items and 100s of terabytes. Currently, S3P is still only a single-core NODE application. There are opportunities for even more massively parallel S3 operations by forking workers or even distributing the work across instances with something like Elastic-Queue. If someone needs solutions that are 100-1000x faster than aws-cli, let me know. We'd love to work with you.<br>-
+> S3P was developed to operate on buckets with millions of items and 100s of terabytes. Currently, S3P is still only a single-core NODE application. There are opportunities for even more massively parallel S3 operations by forking workers or even distributing the work across instances with something like Elastic-Queue. If someone needs solutions that are 100-1000x faster than aws-cli, let us know. We'd love to work with you.<br>-
 shane@genui.com
 
 # TODO
