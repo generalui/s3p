@@ -1,14 +1,16 @@
 # S3P - 5x to 50x faster than aws-cli
 
-S3P provides a radically faster way to copy, list sync and do other bulk operations over large AWS S3 buckets.
+S3P provides a radically faster way to copy, list, sync and do other bulk operations over large AWS S3 buckets.
 
 You can use it as a command-line tool for common operations, or you can use it as a library for nearly anything you can imagine.
 
-S3P's key innovation is the ability to list the items in an S3 bucket in a massively parallel way. Instead of doing one list after another sequentially, as the aws-cli does, S3P divides the key-space and can have 100(*) or more simultaneous list operations running in parallel.
+# Why is S3P so fast?
 
-S3P is really just a fancy, really fast, s3 listing tool.
+S3's API is structured around listing items in serial - request 1000 items, wait, then request the next 1000. This is how nearly all S3 tools work. S3P, however, can list items in parallel. It leverages S3's ability to request the first 1000 items equal-to or after a given key. Then, with the help of algorithmic bisection and some intelligent heuristics, S3P can scan the contents of a bucket with an arbitrary degree of parallism. In practice, S3P can list buckets up to **15x faster** than conventional methods.
 
-> (*) The default list-concurrency is 100, but you can set it higher.
+S3P is really just a fancy, really fast, S3 listing tool. Summarizing, copying and synching are all boosted by S3P's core ability to list objects radically faster.
+
+> We've sustained copy speeds up to **8gigabytes/second** between two buckets in the same region using a single EC2 instance to run S3P.
 
 # S3P Blog Post
 
@@ -65,13 +67,13 @@ S3-bucket-listing performance can hit almost 20,000 items per second.
 
 S3-bucket-copying performance can exceed 8 gigabytes per second.
 
-> Yes, I've seen 8 gigabytes per second sustained! This was on a bucket with an average file size slightly larger than 100 megabytes. S3P was running on a single c5.2xlarge instance. By comparison, I've never seen aws-s3-cp get more than 150mB/s. That's over 53x faster.
+> Yes, I've seen 9 gigabytes per second sustained! This was on a bucket with an average file size slightly larger than 100 megabytes. S3P was running on a single c5.2xlarge instance. By comparison, I've never seen aws-s3-cp get more than 150mB/s. That's over 53x faster.
 
 The average file-size has a big impact on s3p's overall bytes-per-second:
 
 |location | command | aws-cli | s3p              | speedup | average size |
 |   -     |-        |-        |-                 |-        | - |
-|local     | ls      | 2000 items/s  | 18000 items/s       | 9x    | n/a|
+|local     | ls      | 2000 items/s  | 21000 items/s       | 9x    | n/a|
 |local     | cp      | 30 mB/s       | 150 mB/s    | 5x    | 512 kB |
 |ec2      | cp      | 150 mB/s      | 8 gB/s    | 54x    | 100 mB |
 
@@ -80,10 +82,17 @@ shane@genui.com
 
 # TODO
 
-- support copying to/from the local file system
+- local file system support
+  - S3P was built to accelerate copying between two S3 buckets, but there's no reason it can't also accelerate copying to and from a local file system on an EC2 instance, an on-premises machine or your own dev machine.
+  - currently supported:
+    - copy to local file system
+  - not supported yet:
+    - copy from local file system
+    - sync/compare to or from local file system
 - eliminate the dependency on aws-cli
+  - aws-cli is currently used to copy "large" files. Files larger than 5gigabytes can't be copied with the standard copyObject API call, so aws-cli is used as a sub-processes.
 - document the API
-- better CLI argument checking
+  - Interested in using the API? Let us know! Email: shane@genui.com
 
 # Developed
 
