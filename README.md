@@ -73,7 +73,7 @@ The average file-size has a big impact on s3p's overall bytes-per-second:
 
 |location | command | aws-cli | s3p              | speedup | average size |
 |   -     |-        |-        |-                 |-        | - |
-|local     | ls      | 2000 items/s  | 21000 items/s       | 9x    | n/a|
+|local     | ls      | 2000 items/s  | 20000 items/s       | 10x    | n/a|
 |local     | cp      | 30 mB/s       | 150 mB/s    | 5x    | 512 kB |
 |ec2      | cp      | 150 mB/s      | 8 gB/s    | 54x    | 100 mB |
 
