@@ -44,3 +44,24 @@ describe
       createWriteStreamSafe :food/baz
       .then (writeStream) ->
         writeStream.close()
+
+  # findAllFiles: ->
+  #   mockedFs =
+  #     folderA: object i til 10 with-key "" file#{i}.txt
+  #       "" contents
+  #     folderB: folderC: object i til 3 with-key "" image0#{i}.png
+  #       "" contents
+  #     README.md: "" Read it!
+
+  #   beforeAll ->
+  #     mockFs mockedFs
+
+  #   afterAll ->
+  #     mockFs.restore()
+
+  #   each expected, path in
+  #       folderA: mockedFs.folderA
+  #     test "findAllFiles '#{path}'" ->
+  #       findAllFiles path
+  #       .then (result) ->
+  #         assert.eq result, expected

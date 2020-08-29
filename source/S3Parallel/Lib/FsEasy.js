@@ -26,6 +26,7 @@ Caf.defMod(module, () => {
                 : (scratchState[p] = this._createParentDirs(dir)))
             : this._createParentDirs(dir);
         };
+        this.findAllFiles = (path, filter) => {};
         this.createWriteStreamSafe = (filename, scratchState) =>
           this.createParentDirs(filename, scratchState).then(() =>
             createWriteStream(filename)

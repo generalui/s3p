@@ -23,6 +23,17 @@ class FsEasy
     else
       @_createParentDirs dir
 
+  ## findAllFiles
+    IN:
+      path <string, required> existing file path
+      filter: <(filePathName <string>) => boolean> optional
+        If provided, only files for which the filter returns true will be included
+        in the result.
+
+    find all files in a given path and optional filter
+  @findAllFiles: (path, filter) =>
+
+
   ## createWriteStreamSafe
     EFFECT: create all filename's parent directories
     OUT: Promise.then -> valid WriteStream ready to write to filename
@@ -33,7 +44,6 @@ class FsEasy
         This is used to ensure  we only attempt to create each
         folder exactly once. If we have already attempted it, use
         the Promise for the previous attempt instead.
-
   @createWriteStreamSafe: (filename, scratchState) =>
     @createParentDirs filename, scratchState
     .then -> createWriteStream filename
