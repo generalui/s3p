@@ -1,15 +1,103 @@
 import &StandardImport, &TestLib
 
+smallMockFs = mockS3
+  :alpha
+  :beta
+  :gamma
+
 describe
+  map: ->
+    test "no map or reduce" ->
+      S3Comprehensions.map
+        quiet: true
+        limit: 2
+        s3: smallMockFs
+
+      .then (result) ->
+        assert.eq
+          result.length
+          3
+
+    test "custom map" ->
+      S3Comprehensions.map
+        quiet: true
+        limit: 2
+        s3: smallMockFs
+        map: ({Size}) -> Size
+
+      .then (result) ->
+        assert.eq
+          result
+          5 4 5
+
+    test "example: total-size" ->
+      S3Comprehensions.map
+        quiet: true
+        s3: smallMockFs
+        map: ({Size}) -> Size
+        reduce: (a, b) -> a + b
+
+      .then (result) ->
+        assert.eq
+          result
+          14
+
+    test "example: smallest" ->
+      S3Comprehensions.map
+        quiet: true
+        s3: smallMockFs
+        reduce: (a, b) -> if a.Size < b.Size then a else b
+
+      .then (result) ->
+        assert.eq
+          result.Key
+          :beta
+
+    test "example: newest" ->
+      S3Comprehensions.map
+        quiet: true
+        s3: smallMockFs
+        reduce: (a, b) ->
+          if a?
+            if a.LastModified < b.LastModified then b else a
+          else b
+        finally: ({Key}) => "" KEY: #{Key}
+
+      .then (result) ->
+        assert.isString result
+        assert.match result, /^KEY/
+        assert.isPresent result
+
+  each: ->
+    test :3-items ->
+      S3Comprehensions.each
+        quiet: true
+        limit: 2
+        s3: smallMockFs
+
+      .then (result) ->
+        assert.eq
+          result.items
+          3
+
+    test :10-items ->
+      items10 = array i til 10 with "a#{i}"
+      S3Comprehensions.each
+        quiet: true
+        limit: 2
+        s3: mockS3 items10...
+
+      .then (result) ->
+        assert.eq
+          result.items
+          10
+
   summarize: ->
     test :3-items ->
       S3P.summarize
         quiet: true
         limit: 2
-        s3: mockS3
-          :alpha
-          :beta
-          :gamma
+        s3: smallMockFs
       .then (result) ->
         assert.selectedEq
           items: 3

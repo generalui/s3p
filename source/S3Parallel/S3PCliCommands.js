@@ -63,6 +63,11 @@ Caf.defMod(module, () => {
           }
           return require("./S3Comprehensions").each(options);
         },
+        map: function (options) {
+          return require("./S3Comprehensions").map(
+            merge(options, { quiet: true })
+          );
+        },
       };
     }
   );

@@ -16,3 +16,6 @@ each: (options) ->
   throw new Error "--map must be a function" if map && !isFunction map
   throw new Error "--map-list must be a function" if mapList && !isFunction mapList
   &S3Comprehensions.each options
+
+map: (options) -> &S3Comprehensions.map merge options, quiet: true
+

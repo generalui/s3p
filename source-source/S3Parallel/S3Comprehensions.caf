@@ -6,6 +6,7 @@ class S3Comprehensions
     options extract
       # aliases
       dryrun
+      quiet
       toPrefix
       addPrefix
       prefix = ''
@@ -67,6 +68,7 @@ class S3Comprehensions
       {}
         originalOptions: options.originalOptions ? options
         scratchState: {}
+        quiet
         pretend
         toKey
         filter
@@ -97,6 +99,32 @@ class S3Comprehensions
     .then (result) ->
       if failed?
         merge result, {} failed
+      else result
+
+  @map: (options) =>
+    map ?= options.map ? (a) -> a
+    _reduce = options.reduce ? (a, b) ->
+      compactFlatten [] a, b
+
+    result = undefined
+
+    @each merge
+      objectWithout options, :map
+      mapList: (items) ->
+        Promise.all array item in-array items
+          Promise.then -> map item
+          .then (m) ->
+            result = if result == undefined
+              m
+            else
+              _reduce result, m
+
+    .catch (error) -> error.found || throw error
+    .then ->
+      if result == undefined
+        options.default
+      else if options.finally
+        options.finally result
       else result
 
   ##
@@ -460,7 +488,7 @@ class S3Comprehensions
 
     .finally -> progressReporter?.stop()
     .then (count) ->
-      report? :DONE
+      report? :DONE unless quiet
       duration                = currentSecond() - startTime
       itemsPerSecond          = itemsFound / duration
       itemsPerSecond          = itemsPerSecond | 0 if itemsPerSecond > 10

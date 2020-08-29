@@ -2,9 +2,9 @@
 let Caf = require("caffeine-script-runtime");
 Caf.defMod(module, () => {
   return Caf.importInvoke(
-    ["compactFlatten", "Promise", "randomString"],
+    ["compactFlatten", "Promise", "Date", "randomString"],
     [global, require("./StandardImport")],
-    (compactFlatten, Promise, randomString) => {
+    (compactFlatten, Promise, Date, randomString) => {
       let _largeListP, mockS3, generateLargeFileList, getLargeFileList;
       _largeListP = null;
       return {
@@ -19,7 +19,14 @@ Caf.defMod(module, () => {
                   keys,
                   (file) => {
                     count++;
-                    return { Key: file, Size: file.length };
+                    return {
+                      Key: file,
+                      Size: file.length,
+                      LastModified: new Date(),
+                      ETag: "abc123",
+                      StorageClass: "STANDARD",
+                      Owner: { DisplayName: "john", ID: "abc123" },
+                    };
                   },
                   (file) => file > startAfter && count < limit
                 )

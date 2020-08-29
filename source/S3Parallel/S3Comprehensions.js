@@ -61,6 +61,7 @@ Caf.defMod(module, () => {
           let filterNone;
           this.normalizeOptions = (options) => {
             let dryrun,
+              quiet,
               toPrefix,
               addPrefix,
               prefix,
@@ -85,6 +86,7 @@ Caf.defMod(module, () => {
               temp3,
               temp4;
             dryrun = options.dryrun;
+            quiet = options.quiet;
             toPrefix = options.toPrefix;
             addPrefix = options.addPrefix;
             prefix = undefined !== (temp = options.prefix) ? temp : "";
@@ -184,6 +186,7 @@ Caf.defMod(module, () => {
                 originalOptions:
                   (temp4 = options.originalOptions) != null ? temp4 : options,
                 scratchState: {},
+                quiet,
                 pretend,
                 toKey,
                 filter,
@@ -244,6 +247,64 @@ Caf.defMod(module, () => {
             ).then((result) =>
               failed != null ? merge(result, { failed }) : result
             );
+          };
+          this.map = (options) => {
+            let map, _reduce, result, temp, temp1;
+            map != null
+              ? map
+              : (map = (temp = options.map) != null ? temp : (a) => a);
+            _reduce =
+              (temp1 = options.reduce) != null
+                ? temp1
+                : (a, b) => compactFlatten([a, b]);
+            result = undefined;
+            return this.each(
+              merge(objectWithout(options, "map"), {
+                mapList: (items) => {
+                  let from, into, to, i, temp2;
+                  return Promise.all(
+                    ((from = items),
+                    (into = []),
+                    from != null
+                      ? ((to = from.length),
+                        (i = 0),
+                        (() => {
+                          while (i < to) {
+                            let item;
+                            item = from[i];
+                            into.push(
+                              Promise.then(() => map(item)).then(
+                                (m) =>
+                                  (result =
+                                    result === undefined
+                                      ? m
+                                      : _reduce(result, m))
+                              )
+                            );
+                            temp2 = i++;
+                          }
+                          return temp2;
+                        })())
+                      : undefined,
+                    into)
+                  );
+                },
+              })
+            )
+              .catch(
+                (error) =>
+                  error.found ||
+                  (() => {
+                    throw error;
+                  })()
+              )
+              .then(() =>
+                result === undefined
+                  ? options.default
+                  : options.finally
+                  ? options.finally(result)
+                  : result
+              );
           };
           this.find = (options) => {
             let withFn, temp;
@@ -834,7 +895,9 @@ Caf.defMod(module, () => {
                   averageItemsPerRequest,
                   info,
                   e;
-                Caf.isF(report) && report("DONE");
+                if (!quiet) {
+                  Caf.isF(report) && report("DONE");
+                }
                 duration = currentSecond() - startTime;
                 itemsPerSecond = itemsFound / duration;
                 if (itemsPerSecond > 10) {

@@ -168,6 +168,56 @@ Caf.defMod(module, () => {
                     "summarize all files larger than 1 Megabyte",
                   ],
                 },
+                map: {
+                  run: require("./S3PCliCommands").map,
+                  description:
+                    "Map and reduce over the results of listBucket. Though 'map' and 'reduce' have default values, you'll likely want to override at least one of them. Further, you may wish to add a 'finally' function.",
+                  options: merge(allCommandOptions, advancedOptionsForAll, {
+                    map: [
+                      "function",
+                      "This gets called for each item found.\nForm: ({Key, Size, LastModified, ETag, StorageClass, Owner}) => ...\nDefault: (a) => a",
+                    ],
+                    reduce: [
+                      "function",
+                      "Merge the two results of previous `map` or `reduce` calls into one.\nForm: (previousA, previousB) -> ...\nDefault: (a, b) => require('art-standard-lib').compactFlatten([a, b])",
+                    ],
+                    default: [
+                      "any",
+                      "The default value to return if no items were found.",
+                    ],
+                    finally: [
+                      "function",
+                      "If present, this function will be applied to produce the final result after the last call to reduce. Form: (finalReduceResult) -> ...",
+                    ],
+                  }),
+                  examples: [
+                    {
+                      bucket: "my-bucket",
+                      map: '"js:({Size}) => 1"',
+                      reduce: '"js:(a, b) => a + b"',
+                    },
+                    "total count",
+                    {
+                      bucket: "my-bucket",
+                      map: '"js:({Size}) => Size"',
+                      reduce: '"js:(a, b) => a + b"',
+                    },
+                    "total file size",
+                    {
+                      bucket: "my-bucket",
+                      reduce:
+                        '"js:(a, b) => a.LastModified > b.lastModified ? a : b"',
+                    },
+                    "newest item detauls",
+                    {
+                      bucket: "my-bucket",
+                      reduce:
+                        '"js:(a, b) => a.LastModified > b.lastModified ? a : b"',
+                      finally: '"js:({Key}) => Key"',
+                    },
+                    "key of the newest item",
+                  ],
+                },
                 ls: {
                   run: require("./S3PCliCommands").ls,
                   description:

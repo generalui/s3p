@@ -18,6 +18,8 @@ _largeListP = null
                 for easy testing, the size of simulated keys are the length of their keys
         list: ({limit, startAfter}) ->
 
+
+    https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html#listObjectsV2-property
   mockS3 = (keys...) ->
     keys =
       compactFlatten keys
@@ -28,8 +30,15 @@ _largeListP = null
       Promise.then ->
         array file in keys when file > startAfter && count < limit
           count++
-          Key: file
-          Size: file.length
+          Key:            file
+          Size:           file.length
+          LastModified:   new Date
+          ETag:           :abc123
+          StorageClass:   :STANDARD
+          Owner:
+            DisplayName:  :john
+            ID:           :abc123
+
 
   generateLargeFileList = ->
     paths =
