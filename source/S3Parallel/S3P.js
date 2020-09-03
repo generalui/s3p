@@ -707,6 +707,7 @@ Caf.defMod(module, () => {
                     toBucket: options.toBucket,
                     toFolder: options.toFolder,
                     key,
+                    toKey,
                     size: Size,
                   };
                   return (Size < largeCopyThreshold
