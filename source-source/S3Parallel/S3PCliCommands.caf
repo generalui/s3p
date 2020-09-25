@@ -7,8 +7,13 @@ ls: (options) ->
     options
     mapList: (l) ->
       each {LastModified, Size, Key} from-array l
-        output "" #{formatDate LastModified, "yyyy-mm-dd HH:MM:ss"} #{pad humanByteSize(Size), 10, ' ', true} #{Key}
+        output
+          if options.long
+            "" #{formatDate LastModified, "yyyy-mm-dd HH:MM:ss"} #{pad humanByteSize(Size), 10, ' ', true} #{Key}
+          else Key
       null
+  .then (info) ->
+    if options.verbose then info
 
 each: (options) ->
   options extract map, mapList

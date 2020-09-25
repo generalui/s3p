@@ -222,7 +222,9 @@ Caf.defMod(module, () => {
                   run: require("./S3PCliCommands").ls,
                   description:
                     "List all matching files. Uses s3.listObjectsV2.",
-                  options: merge(allCommandOptions, advancedOptionsForAll),
+                  options: merge(allCommandOptions, advancedOptionsForAll, {
+                    long: "output item size and date as well as key",
+                  }),
                 },
                 compare: {
                   run: require("./S3P").compare,
