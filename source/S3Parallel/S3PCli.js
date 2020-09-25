@@ -208,7 +208,7 @@ Caf.defMod(module, () => {
                       reduce:
                         '"js:(a, b) => a.LastModified > b.lastModified ? a : b"',
                     },
-                    "newest item detauls",
+                    "newest item details",
                     {
                       bucket: "my-bucket",
                       reduce:
