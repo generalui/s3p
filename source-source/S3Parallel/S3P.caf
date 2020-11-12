@@ -349,7 +349,7 @@ class S3P
             options.bucket
             options.toBucket
             options.toFolder
-            key:  key
+            key
             toKey
             size: Size
 
