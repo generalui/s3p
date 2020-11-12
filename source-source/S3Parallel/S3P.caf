@@ -349,7 +349,8 @@ class S3P
             options.bucket
             options.toBucket
             options.toFolder
-            key:  toKey key
+            key:  key
+            toKey
             size: Size
 
           if Size < largeCopyThreshold then s3.copy options else s3.largeCopy options
