@@ -19,6 +19,8 @@ Caf.defMod(module, () => {
       "Promise",
       "PromiseWorkerPool",
       "present",
+      "abs",
+      "round",
     ],
     [
       global,
@@ -44,7 +46,9 @@ Caf.defMod(module, () => {
       objectWithout,
       Promise,
       PromiseWorkerPool,
-      present
+      present,
+      abs,
+      round
     ) => {
       let S3C,
         itemsByKey,
@@ -706,7 +710,7 @@ Caf.defMod(module, () => {
                     bucket: options.bucket,
                     toBucket: options.toBucket,
                     toFolder: options.toFolder,
-                    key,
+                    key: toKey(key),
                     size: Size,
                   };
                   return (Size < largeCopyThreshold
@@ -725,17 +729,22 @@ Caf.defMod(module, () => {
             delete stats.copyingFilesStarted;
             delete stats.copyingBytesStarted;
             stats.copiedBytesPerSecond = stats.copiedBytes / stats.duration;
-            return this.getStatsWithHumanByteSizes(stats);
+            return { "final-stats": this.getStatsWithHumanByteSizes(stats) };
           });
         };
         this.getStatsWithHumanByteSizes = function (stats) {
-          return merge(stats, {
-            human: Caf.object(
-              stats,
-              (stat, key) => humanByteSize(stat),
-              (stat, key) => /byte|size/i.test(key)
+          return merge(
+            Caf.object(stats, (v) =>
+              Caf.is(v, Number) ? (abs(v) < 100 ? round(v, 0.01) : round(v)) : v
             ),
-          });
+            {
+              human: Caf.object(
+                stats,
+                (stat, key) => humanByteSize(stat),
+                (stat, key) => /byte|size/i.test(key)
+              ),
+            }
+          );
         };
       }));
     }

@@ -47,20 +47,21 @@ class S3Comprehensions
         throw new Error "only use one: with, map, pattern or mapList" if compactFlatten([withFn, map, pattern, mapList]).length > 1
         map = withFn ? ({Key}) -> Key.match pattern
 
-      if toPrefix or addPrefix
-        throw new Error "only use one: addPrefix, toPrefix, toKey" if compactFlatten([toPrefix, addPrefix, toKey]).length > 1
-        toKey = switch
-        when toPrefix
-          if prefix
-            r = /// ^#{prefix}
-            (key) -> key.replace r, toPrefix
+      toKey ?=
+        if toPrefix or addPrefix
+          throw new Error "only use one: addPrefix, toPrefix, toKey" if compactFlatten([toPrefix, addPrefix, toKey]).length > 1
+          if toPrefix
+            if prefix
+              r = /// ^#{prefix}
+              (key) -> key.replace r, toPrefix
+            else
+              (key) -> toPrefix + key
           else
-            (key) -> toPrefix + key
-        when addPrefix
-          (key) -> addPrefix + key
+            (key) -> addPrefix + key
+        else (key) -> key
 
     catch e
-      log {} options
+      log.unquoted {} options
       throw e
 
     merge
@@ -224,7 +225,7 @@ class S3Comprehensions
       # compare-to options
       compare
       toBucket
-      toKey = (a) -> a
+      toKey
 
       # limits
       limit = 1000
@@ -513,17 +514,13 @@ class S3Comprehensions
 
       else
         if returnValue? && showProgress
-          log final:
-            options: object v in options.originalOptions when !isFunction v
-            stats: info
+          log.unquoted final-stats: info
 
         returnValue
-        ? merge stats, info, {}
-          options.pretend
-          options: if options.verbose then object v, k in options.originalOptions when
-            !isFunction v
-            or k == :filter
-            or k == :toKey
+        ? merge
+          dryrun: options.pretend
+          stats
+          info
 
   @_compareList: (options) =>
     @each merge options,

@@ -55,7 +55,7 @@ Caf.defMod(module, () => {
         },
         "to-prefix": [
           "key-prefix",
-          "If 'prefix' is specified, the target key will REPLACE it's source prefix with toPrefix Otherwise, this is the same as add-prefix.",
+          "If 'prefix' is specified, the target key will REPLACE its source prefix with toPrefix Otherwise, this is the same as add-prefix.",
         ],
         "add-prefix": [
           "key-prefix",

@@ -85,7 +85,7 @@ class S3 extends BaseClass
         Key:        toKey
 
       if verbose
-        log copyObject: copyOptions
+        log.unquoted copyObject: copyOptions
 
       if pretend
         timeout 1 -> pretend: true
@@ -119,7 +119,7 @@ class S3 extends BaseClass
         #{} escape createS3Url fromBucket, fromFolder, fromKey
         #{} escape createS3Url toBucket, toFolder, toKey
     if verbose
-      log command
+      log.unquoted command
 
     if pretend
       timeout 1 -> pretend: true

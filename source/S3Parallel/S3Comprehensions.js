@@ -22,7 +22,6 @@ Caf.defMod(module, () => {
       "Math",
       "peek",
       "formattedInspect",
-      "isFunction",
     ],
     [
       global,
@@ -51,8 +50,7 @@ Caf.defMod(module, () => {
       debugKey,
       Math,
       peek,
-      formattedInspect,
-      isFunction
+      formattedInspect
     ) => {
       let S3Comprehensions;
       return (S3Comprehensions = Caf.defClass(
@@ -148,25 +146,27 @@ Caf.defMod(module, () => {
                 }
                 map = withFn != null ? withFn : ({ Key }) => Key.match(pattern);
               }
-              if (toPrefix || addPrefix) {
-                if (compactFlatten([toPrefix, addPrefix, toKey]).length > 1) {
-                  throw new Error("only use one: addPrefix, toPrefix, toKey");
-                }
-                toKey = (() => {
-                  switch (false) {
-                    case !toPrefix:
-                      return prefix
-                        ? ((r = RegExp(`^${Caf.toString(prefix)}`)),
-                          (key) => key.replace(r, toPrefix))
-                        : (key) => toPrefix + key;
-                    case !addPrefix:
-                      return (key) => addPrefix + key;
-                  }
-                })();
-              }
+              toKey != null
+                ? toKey
+                : (toKey =
+                    toPrefix || addPrefix
+                      ? (compactFlatten([toPrefix, addPrefix, toKey]).length > 1
+                          ? (() => {
+                              throw new Error(
+                                "only use one: addPrefix, toPrefix, toKey"
+                              );
+                            })()
+                          : undefined,
+                        toPrefix
+                          ? prefix
+                            ? ((r = RegExp(`^${Caf.toString(prefix)}`)),
+                              (key) => key.replace(r, toPrefix))
+                            : (key) => toPrefix + key
+                          : (key) => addPrefix + key)
+                      : (key) => key);
             } catch (error) {
               e = error;
-              log({ options });
+              log.unquoted({ options });
               throw e;
             }
             return merge(
@@ -403,8 +403,7 @@ Caf.defMod(module, () => {
               temp1,
               temp2,
               temp3,
-              temp4,
-              temp5;
+              temp4;
             options = this.normalizeOptions(options);
             quiet = options.quiet;
             showProgress =
@@ -416,11 +415,11 @@ Caf.defMod(module, () => {
             filter = options.filter;
             compare = options.compare;
             toBucket = options.toBucket;
-            toKey = undefined !== (temp1 = options.toKey) ? temp1 : (a) => a;
-            limit = undefined !== (temp2 = options.limit) ? temp2 : 1000;
+            toKey = options.toKey;
+            limit = undefined !== (temp1 = options.limit) ? temp1 : 1000;
             maxListRequests = options.maxListRequests;
             listConcurrency =
-              undefined !== (temp3 = options.listConcurrency) ? temp3 : 100;
+              undefined !== (temp2 = options.listConcurrency) ? temp2 : 100;
             returnValue = options.returnValue;
             map = options.map;
             mapList = options.mapList;
@@ -430,10 +429,10 @@ Caf.defMod(module, () => {
             throttle = options.throttle;
             stats = options.stats;
             s3 =
-              undefined !== (temp4 = options.s3) ? temp4 : require("./Lib/S3");
+              undefined !== (temp3 = options.s3) ? temp3 : require("./Lib/S3");
             pwp =
-              undefined !== (temp5 = options.pwp)
-                ? temp5
+              undefined !== (temp4 = options.pwp)
+                ? temp4
                 : new PromiseWorkerPool(listConcurrency);
             if (compare && map && toBucket) {
               throw new Error(
@@ -506,10 +505,10 @@ Caf.defMod(module, () => {
                   into3,
                   to3,
                   i3,
+                  temp5,
                   temp6,
                   temp7,
-                  temp8,
-                  temp9;
+                  temp8;
                 return (() => {
                   switch (false) {
                     case !mapList:
@@ -527,9 +526,9 @@ Caf.defMod(module, () => {
                                     if (filter(item)) {
                                       into.push(item);
                                     }
-                                    temp6 = i++;
+                                    temp5 = i++;
                                   }
-                                  return temp6;
+                                  return temp5;
                                 })())
                               : undefined,
                             into)),
@@ -548,9 +547,9 @@ Caf.defMod(module, () => {
                                     if (filter(item)) {
                                       into1.push(item);
                                     }
-                                    temp7 = i1++;
+                                    temp6 = i1++;
                                   }
-                                  return temp7;
+                                  return temp6;
                                 })())
                               : undefined,
                             into1),
@@ -578,9 +577,9 @@ Caf.defMod(module, () => {
                                   matchingItems++;
                                   map(item);
                                 }
-                                temp8 = i2++;
+                                temp7 = i2++;
                               }
-                              return temp8;
+                              return temp7;
                             })())
                           : undefined,
                         into2
@@ -597,9 +596,9 @@ Caf.defMod(module, () => {
                                 let item;
                                 item = from3[i3];
                                 map(item);
-                                temp9 = i3++;
+                                temp8 = i3++;
                               }
-                              return temp9;
+                              return temp8;
                             })())
                           : undefined,
                         into3
@@ -657,7 +656,7 @@ Caf.defMod(module, () => {
                       s3.list({ bucket, limit, startAfter: middleKey })
                     ),
                   ]).then(([rawLeftItems, rawRightItems]) => {
-                    let from, into, to, i, from1, into1, to1, i1, temp6, temp7;
+                    let from, into, to, i, from1, into1, to1, i1, temp5, temp6;
                     rawLeftCount =
                       Caf.exists(rawLeftItems) && rawLeftItems.length;
                     rawRightCount =
@@ -675,9 +674,9 @@ Caf.defMod(module, () => {
                               if (item.Key <= middleKey) {
                                 into.push(item);
                               }
-                              temp6 = i++;
+                              temp5 = i++;
                             }
-                            return temp6;
+                            return temp5;
                           })())
                         : undefined,
                       into),
@@ -693,9 +692,9 @@ Caf.defMod(module, () => {
                               if (item.Key <= stopAt) {
                                 into1.push(item);
                               }
-                              temp7 = i1++;
+                              temp6 = i1++;
                             }
-                            return temp7;
+                            return temp6;
                           })())
                         : undefined,
                       into1),
@@ -932,32 +931,11 @@ Caf.defMod(module, () => {
                       throw e;
                     })())
                   : (returnValue != null && showProgress
-                      ? log({
-                          final: {
-                            options: Caf.object(
-                              options.originalOptions,
-                              null,
-                              (v) => !isFunction(v)
-                            ),
-                            stats: info,
-                          },
-                        })
+                      ? log.unquoted({ "final-stats": info })
                       : undefined,
                     returnValue != null
                       ? returnValue
-                      : merge(stats, info, {
-                          pretend: options.pretend,
-                          options: options.verbose
-                            ? Caf.object(
-                                options.originalOptions,
-                                null,
-                                (v, k) =>
-                                  !isFunction(v) ||
-                                  k === "filter" ||
-                                  k === "toKey"
-                              )
-                            : undefined,
-                        }));
+                      : merge({ dryrun: options.pretend }, stats, info));
               });
           };
           this._compareList = (options) => {

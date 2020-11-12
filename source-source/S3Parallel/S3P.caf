@@ -349,7 +349,7 @@ class S3P
             options.bucket
             options.toBucket
             options.toFolder
-            key
+            key:  toKey key
             size: Size
 
           if Size < largeCopyThreshold then s3.copy options else s3.largeCopy options
@@ -363,10 +363,17 @@ class S3P
       delete stats.copyingFilesStarted
       delete stats.copyingBytesStarted
       stats.copiedBytesPerSecond = stats.copiedBytes / stats.duration
-      @getStatsWithHumanByteSizes stats
+      final-stats: @getStatsWithHumanByteSizes stats
 
   @getStatsWithHumanByteSizes: (stats) ->
     merge
-      stats
+      object v in stats
+        if v is Number
+          if abs(v) < 100
+            round v, .01
+          else
+            round v
+
+        else v
       human: object stat, key in stats when /byte|size/i.test key
         humanByteSize stat

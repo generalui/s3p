@@ -34,7 +34,7 @@ writeOptions =
 
 toBucketOptions =
   to-bucket:    argument: :bucket-name  required: true description:     "" The target bucket. It can be the same bucket.
-  to-prefix:    :key-prefix         "" If 'prefix' is specified, the target key will REPLACE it's source prefix with toPrefix Otherwise, this is the same as add-prefix.
+  to-prefix:    :key-prefix         "" If 'prefix' is specified, the target key will REPLACE its source prefix with toPrefix Otherwise, this is the same as add-prefix.
   add-prefix:   :key-prefix         "" The source key is prepended with this string for the target bucket.
   to-key:       '"js:(key) => key"' "" Provide an arbitrary JavaScript function for re-keying keys.
 
@@ -252,7 +252,7 @@ main: (options) ->
               The target bucket. Can be the same bucket.
 
             --to-prefix key-prefix
-              if prefix is specified, the target key will REPLACE it's source prefix with toPrefix
+              if prefix is specified, the target key will REPLACE its source prefix with toPrefix
               Otherwise, this is the same as addPrefix.
 
             --add-prefix key-prefix

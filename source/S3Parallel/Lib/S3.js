@@ -177,7 +177,7 @@ Caf.defMod(module, () => {
                     Bucket: toBucket,
                     Key: toKey,
                   }),
-              verbose ? log({ copyObject: copyOptions }) : undefined,
+              verbose ? log.unquoted({ copyObject: copyOptions }) : undefined,
               pretend
                 ? timeout(1, () => {
                     return { pretend: true };
@@ -225,7 +225,7 @@ Caf.defMod(module, () => {
             escape(createS3Url(fromBucket, fromFolder, fromKey))
           )} ${Caf.toString(escape(createS3Url(toBucket, toFolder, toKey)))}`;
           if (verbose) {
-            log(command);
+            log.unquoted(command);
           }
           return pretend
             ? timeout(1, () => {
