@@ -1,5 +1,7 @@
 # S3P - 5x to 50x faster than aws-cli
 
+[![Actions Status](https://github.com/generalui/s3p/workflows/test/badge.svg)](https://github.com/generalui/s3p/actions)
+
 S3P provides a radically faster way to copy, list, sync and do other bulk operations over large AWS S3 buckets.
 
 You can use it as a command-line tool for common operations, or you can use it as a library for nearly anything you can imagine.
