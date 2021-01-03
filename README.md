@@ -23,7 +23,9 @@ Read more about [S3P on Medium](https://medium.com/@shanebdavis/s3p-massively-pa
 1. [NodeJS](https://nodejs.org/en/download/)
 2. [AWS-CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html)
 
-    The aws-cli is required for copying large files. Large files are defined as >= 100 megabytes by default for performance reasons. However, you can up that threshold to 5 gigabytes with the large-copy-threshold option. **Files larger than 5 gigabytes can only be copied with the help of the aws-cli.** (Why? the aws-sdk does not support coping larger files without a much more complicated solution. TODO!)
+    The `aws-cli` is required for copying large files. By default, files larger than 100 megabytes are copied with `aws-cli`. This is a good compromise for performance. However, you can change that threshold to 5 gigabytes with the `--large-copy-threshold` option.
+    > Why? The `aws-sdk` does not support coping files larger than 5 gigabytes without a much more complicated solution.
+
 3. Key names must use a limited character set:
     ```
     <space>
@@ -42,15 +44,29 @@ s3p uses the same credentials aws-cli uses, so see their documentation: https://
 
 There is no need to install s3p directly. As long as you have NodeJS installed, you can run s3p directly using `npx`.
 
+The built in help details all the commands, options, and provides many examples:
+
 ```shell
+# list commands and get overall help
 npx s3p help
+```
+
+Use the `--help` option for detailed help and examples for each command:
+
+```shell
+# get specific command help and example uses
+npx s3p cp --help
 ```
 
 # Install NPM Package
 
-
+You can also install s3p locally which will allow it to run faster.
 ```shell
-npm install s3p
+# install s3p on your current machine
+npm install s3p -g
+
+# now it runs from the local install:
+npx s3p help
 ```
 
 # Features
@@ -81,20 +97,6 @@ The average file-size has a big impact on s3p's overall bytes-per-second:
 
 > S3P was developed to operate on buckets with millions of items and 100s of terabytes. Currently, S3P is still only a single-core NODE application. There are opportunities for even more massively parallel S3 operations by forking workers or even distributing the work across instances with something like Elastic-Queue. If someone needs solutions that are 100-1000x faster than aws-cli, let us know. We'd love to work with you.<br>-
 shane@genui.com
-
-# TODO
-
-- local file system support
-  - S3P was built to accelerate copying between two S3 buckets, but there's no reason it can't also accelerate copying to and from a local file system on an EC2 instance, an on-premises machine or your own dev machine.
-  - currently supported:
-    - copy to local file system
-  - not supported yet:
-    - copy from local file system
-    - sync/compare to or from local file system
-- eliminate the dependency on aws-cli
-  - aws-cli is currently used to copy "large" files. Files larger than 5gigabytes can't be copied with the standard copyObject API call, so aws-cli is used as a sub-processes.
-- document the API
-  - Interested in using the API? Let us know! Email: shane@genui.com
 
 # Developed
 
