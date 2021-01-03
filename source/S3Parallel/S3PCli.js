@@ -237,7 +237,7 @@ Caf.defMod(module, () => {
                   ),
                   examples: [
                     { bucket: "my-bucket", "to-bucket": "my-to-bucket" },
-                    "Compare items from my-mucket with my-to-bucket. Shows how many items exist in both, only one, or are difference sizes.",
+                    "Compare items from my-bucket with my-to-bucket. Shows how many items exist in both, only one, or are difference sizes.",
                   ],
                 },
                 cp: {
@@ -253,36 +253,36 @@ Caf.defMod(module, () => {
                   ),
                   examples: [
                     { bucket: "my-bucket", "to-bucket": "my-to-bucket" },
-                    "Copy everything from my-mucket to my-to-bucket",
+                    "Copy everything from my-bucket to my-to-bucket",
                     { bucket: "my-bucket", "to-folder": "my/local/folder" },
-                    "Copy everything from my-mucket to ./my/local/folder/*",
+                    "Copy everything from my-bucket to ./my/local/folder/*",
                     {
                       bucket: "my-bucket",
                       "to-bucket": "my-to-bucket",
                       prefix: "2020-04-14/",
                     },
-                    'Copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/". The copied items will have the same keys as source items.',
+                    'Copy everything from my-bucket to my-to-bucket with the prefix "2020-04-14/". The copied items will have the same keys as source items.',
                     {
                       bucket: "my-bucket",
                       "to-bucket": "my-to-bucket",
                       prefix: "2020-04-14/",
                       "to-prefix": "2020-04-14-backup/",
                     },
-                    'Copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/" and REPLACES prefixes. Example: "2020-04-14/foo.jpg" is copied to "2020-04-14-backup/foo.jpg"',
+                    'Copy everything from my-bucket to my-to-bucket with the prefix "2020-04-14/" and REPLACES prefixes. Example: "2020-04-14/foo.jpg" is copied to "2020-04-14-backup/foo.jpg"',
                     {
                       bucket: "my-bucket",
                       "to-bucket": "my-to-bucket",
                       prefix: "2020-04-14/",
                       "add-prefix": "backup/",
                     },
-                    'Copy everything from my-mucket to my-to-bucket with the prefix "2020-04-14/" and ADDS prefixes. Example: "2020-04-14/foo.jpg" is copied to "backup/2020-04-14/foo.jpg"',
+                    'Copy everything from my-bucket to my-to-bucket with the prefix "2020-04-14/" and ADDS prefixes. Example: "2020-04-14/foo.jpg" is copied to "backup/2020-04-14/foo.jpg"',
                     {
                       bucket: "my-bucket",
                       "to-bucket": "my-to-bucket",
                       prefix: "2020-04-14/",
                       "to-key": "\"js:(key) => key + '-old'\"",
                     },
-                    'Copy everything from my-mucket to my-to-bucket with CUSTOM function that adds suffixes. Example: "2020-04-14/foo.jpg" is copied to "2020-04-14/foo.jpg-old"',
+                    'Copy everything from my-bucket to my-to-bucket with CUSTOM function that adds suffixes. Example: "2020-04-14/foo.jpg" is copied to "2020-04-14/foo.jpg-old"',
                   ],
                 },
                 sync: {
@@ -301,7 +301,7 @@ Caf.defMod(module, () => {
                   ),
                   examples: [
                     { bucket: "my-bucket", "to-bucket": "my-to-bucket" },
-                    "Copy everything from my-mucket to my-to-bucket",
+                    "Copy everything from my-bucket to my-to-bucket",
                   ],
                 },
               },
