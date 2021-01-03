@@ -61,7 +61,7 @@ Caf.defMod(module, () => {
             }).then((result) => {
               assert.isString(result);
               assert.match(result, /^KEY/);
-              return assert.isPresent(result);
+              return assert.present(result);
             }));
         },
         each: function () {

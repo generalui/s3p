@@ -416,8 +416,6 @@
 <span class="cline-any cline-yes">7x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">7x</span>
 <span class="cline-any cline-yes">7x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -612,6 +610,7 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -652,6 +651,7 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -714,249 +714,249 @@ Caf.defMod(module, () =&gt; {
 <span class="cstat-no" title="statement not covered" >        return shellEscape([single]);</span>
       };
       require("aws-sdk").config.setPromisesDependency(require("bluebird"));
-      return (S3 = Caf.defClass(class S3 extends BaseClass {}, function (
-        S3,
-        classSuper,
-        instanceSuper
-      ) {
-        this.awsSdkS3 = new (require("aws-sdk").S3)({});
-        this.classGetter({
-          s3: <span class="fstat-no" title="function not covered" >fu</span>nction () {
-<span class="cstat-no" title="statement not covered" >            return this.awsSdkS3;</span>
-          },
-        });
-        this.listBuckets = <span class="fstat-no" title="function not covered" >()</span> =&gt;
-<span class="cstat-no" title="statement not covered" >          this.s3</span>
-            .listBuckets()
-            .promise()
-            .then(<span class="fstat-no" title="function not covered" >({</span> Buckets }) =&gt;
-<span class="cstat-no" title="statement not covered" >              Caf.object(</span>
-                Buckets,
-<span class="fstat-no" title="function not covered" >                ({</span> Name, CreationDate }) =&gt; <span class="cstat-no" title="statement not covered" >CreationDate,</span>
-                null,
-                null,
-<span class="fstat-no" title="function not covered" >                ({</span> Name, CreationDate }) =&gt; <span class="cstat-no" title="statement not covered" >Name</span>
-              )
-            );
-        this.list = <span class="fstat-no" title="function not covered" >({</span> bucket, prefix, limit = <span class="branch-0 cbranch-no" title="branch not covered" >1000,</span> startAfter }) =&gt; {
-          let startTime;
-<span class="cstat-no" title="statement not covered" >          startTime = currentSecond();</span>
-<span class="cstat-no" title="statement not covered" >          return this.s3</span>
-            .listObjectsV2({
-              Bucket: bucket,
-              Prefix: prefix,
-              MaxKeys: limit,
-              StartAfter: startAfter,
-            })
-            .promise()
-            .tapCatch(<span class="fstat-no" title="function not covered" >(e</span>rror) =&gt;
-<span class="cstat-no" title="statement not covered" >              log.error({</span>
-                "S3.list-error": { bucket, prefix, startAfter, limit, error },
+      return (S3 = Caf.defClass(
+        class S3 extends BaseClass {},
+        function (S3, classSuper, instanceSuper) {
+          this.awsSdkS3 = new (require("aws-sdk").S3)({});
+          this.classGetter({
+            s3: <span class="fstat-no" title="function not covered" >fu</span>nction () {
+<span class="cstat-no" title="statement not covered" >              return this.awsSdkS3;</span>
+            },
+          });
+          this.listBuckets = <span class="fstat-no" title="function not covered" >()</span> =&gt;
+<span class="cstat-no" title="statement not covered" >            this.s3</span>
+              .listBuckets()
+              .promise()
+              .then(<span class="fstat-no" title="function not covered" >({</span> Buckets }) =&gt;
+<span class="cstat-no" title="statement not covered" >                Caf.object(</span>
+                  Buckets,
+<span class="fstat-no" title="function not covered" >                  ({</span> Name, CreationDate }) =&gt; <span class="cstat-no" title="statement not covered" >CreationDate,</span>
+                  null,
+                  null,
+<span class="fstat-no" title="function not covered" >                  ({</span> Name, CreationDate }) =&gt; <span class="cstat-no" title="statement not covered" >Name</span>
+                )
+              );
+          this.list = <span class="fstat-no" title="function not covered" >({</span> bucket, prefix, limit = <span class="branch-0 cbranch-no" title="branch not covered" >1000,</span> startAfter }) =&gt; {
+            let startTime;
+<span class="cstat-no" title="statement not covered" >            startTime = currentSecond();</span>
+<span class="cstat-no" title="statement not covered" >            return this.s3</span>
+              .listObjectsV2({
+                Bucket: bucket,
+                Prefix: prefix,
+                MaxKeys: limit,
+                StartAfter: startAfter,
               })
-            )
-            .then(<span class="fstat-no" title="function not covered" >(r</span>esults) =&gt; {
-              let duration;
-<span class="cstat-no" title="statement not covered" >              duration = currentSecond() - startTime;</span>
-<span class="cstat-no" title="statement not covered" >              if (!Caf.is(results.Contents, Array)) {</span>
-<span class="cstat-no" title="statement not covered" >                log.warn({</span>
-                  "S3.list-no-Contents": {
-                    bucket,
-                    prefix,
-                    startAfter,
-                    limit,
-                    duration,
-                    results,
-                  },
-                });
-<span class="cstat-no" title="statement not covered" >                throw new Error("S3.list: Contents is not an array");</span>
-              } else {
-<span class="cstat-no" title="statement not covered" >                if (duration &gt; 60) {</span>
+              .promise()
+              .tapCatch(<span class="fstat-no" title="function not covered" >(e</span>rror) =&gt;
+<span class="cstat-no" title="statement not covered" >                log.error({</span>
+                  "S3.list-error": { bucket, prefix, startAfter, limit, error },
+                })
+              )
+              .then(<span class="fstat-no" title="function not covered" >(r</span>esults) =&gt; {
+                let duration;
+<span class="cstat-no" title="statement not covered" >                duration = currentSecond() - startTime;</span>
+<span class="cstat-no" title="statement not covered" >                if (!Caf.is(results.Contents, Array)) {</span>
 <span class="cstat-no" title="statement not covered" >                  log.warn({</span>
-                    "S3.list-slow": {
+                    "S3.list-no-Contents": {
                       bucket,
                       prefix,
                       startAfter,
                       limit,
                       duration,
-                      results: merge(results, {
-                        Contents: `Array ${Caf.toString(
-                          results.Contents.length
-                        )}`,
-                      }),
+                      results,
                     },
                   });
+<span class="cstat-no" title="statement not covered" >                  throw new Error("S3.list: Contents is not an array");</span>
+                } else {
+<span class="cstat-no" title="statement not covered" >                  if (duration &gt; 60) {</span>
+<span class="cstat-no" title="statement not covered" >                    log.warn({</span>
+                      "S3.list-slow": {
+                        bucket,
+                        prefix,
+                        startAfter,
+                        limit,
+                        duration,
+                        results: merge(results, {
+                          Contents: `Array ${Caf.toString(
+                            results.Contents.length
+                          )}`,
+                        }),
+                      },
+                    });
+                  }
                 }
-              }
-<span class="cstat-no" title="statement not covered" >              return results.Contents;</span>
-            });
-        };
-        this.copy = <span class="fstat-no" title="function not covered" >(o</span>ptions) =&gt; {
-          let scratchState,
-            copyScratchState,
-            fromBucket,
-            toBucket,
-            fromKey,
-            toKey,
-            size,
-            toFolder,
-            pretend,
-            verbose,
-            copyOptions,
-            temp,
-            temp1;
-<span class="cstat-no" title="statement not covered" >          if ((scratchState = options.scratchState)) {</span>
-<span class="cstat-no" title="statement not covered" >            copyScratchState =</span>
-              (temp = scratchState.copyScratchState) != null
-                ? temp
-                : (scratchState.copyScratchState = {});
-          }
-<span class="cstat-no" title="statement not covered" >          temp1 = this._normalizeCopyOptions(options);</span>
-<span class="cstat-no" title="statement not covered" >          fromBucket = temp1.fromBucket;</span>
-<span class="cstat-no" title="statement not covered" >          toBucket = temp1.toBucket;</span>
-<span class="cstat-no" title="statement not covered" >          fromKey = temp1.fromKey;</span>
-<span class="cstat-no" title="statement not covered" >          toKey = temp1.toKey;</span>
-<span class="cstat-no" title="statement not covered" >          size = temp1.size;</span>
-<span class="cstat-no" title="statement not covered" >          toFolder = temp1.toFolder;</span>
-<span class="cstat-no" title="statement not covered" >          pretend = temp1.pretend;</span>
-<span class="cstat-no" title="statement not covered" >          verbose = temp1.verbose;</span>
-<span class="cstat-no" title="statement not covered" >          return size &gt;= Caf.pow(1024, 3) || /\s/.test(toKey)</span>
-            ? this.largeCopy({
-                fromBucket,
-                toBucket,
-                toFolder,
-                fromKey,
-                toKey,
-                pretend,
-                verbose,
-              })
-            : ((copyOptions = toFolder
-                ? { Bucket: fromBucket, Key: fromKey }
-                : {
-                    CopySource: `${Caf.toString(fromBucket)}/${Caf.toString(
-                      fromKey
-                    )}`,
-                    Bucket: toBucket,
-                    Key: toKey,
-                  }),
-              verbose ? log({ copyObject: copyOptions }) : undefined,
-              pretend
-                ? timeout(1, <span class="fstat-no" title="function not covered" >()</span> =&gt; {
-<span class="cstat-no" title="statement not covered" >                    return { pretend: true };</span>
-                  })
-                : toFolder
-                ? createWriteStreamSafe(
-                    path.join(toFolder, fromKey),
-                    copyScratchState
-                  ).then(
-<span class="fstat-no" title="function not covered" >                    (w</span>riteStream) =&gt;
-<span class="cstat-no" title="statement not covered" >                      new Promise(<span class="fstat-no" title="function not covered" >(r</span>esolve, reject) =&gt;</span>
-<span class="cstat-no" title="statement not covered" >                        this.s3</span>
-                          .getObject(copyOptions)
-                          .createReadStream()
-                          .pipe(writeStream)
-                          .on("finish", resolve)
-                          .on("error", reject)
-                      )
+<span class="cstat-no" title="statement not covered" >                return results.Contents;</span>
+              });
+          };
+          this.copy = <span class="fstat-no" title="function not covered" >(o</span>ptions) =&gt; {
+            let scratchState,
+              copyScratchState,
+              fromBucket,
+              toBucket,
+              fromKey,
+              toKey,
+              size,
+              toFolder,
+              pretend,
+              verbose,
+              copyOptions,
+              temp,
+              temp1;
+<span class="cstat-no" title="statement not covered" >            if ((scratchState = options.scratchState)) {</span>
+<span class="cstat-no" title="statement not covered" >              copyScratchState =</span>
+                (temp = scratchState.copyScratchState) != null
+                  ? temp
+                  : (scratchState.copyScratchState = {});
+            }
+<span class="cstat-no" title="statement not covered" >            temp1 = this._normalizeCopyOptions(options);</span>
+<span class="cstat-no" title="statement not covered" >            fromBucket = temp1.fromBucket;</span>
+<span class="cstat-no" title="statement not covered" >            toBucket = temp1.toBucket;</span>
+<span class="cstat-no" title="statement not covered" >            fromKey = temp1.fromKey;</span>
+<span class="cstat-no" title="statement not covered" >            toKey = temp1.toKey;</span>
+<span class="cstat-no" title="statement not covered" >            size = temp1.size;</span>
+<span class="cstat-no" title="statement not covered" >            toFolder = temp1.toFolder;</span>
+<span class="cstat-no" title="statement not covered" >            pretend = temp1.pretend;</span>
+<span class="cstat-no" title="statement not covered" >            verbose = temp1.verbose;</span>
+<span class="cstat-no" title="statement not covered" >            return size &gt;= Caf.pow(1024, 3) || /\s/.test(toKey)</span>
+              ? this.largeCopy({
+                  fromBucket,
+                  toBucket,
+                  toFolder,
+                  fromKey,
+                  toKey,
+                  pretend,
+                  verbose,
+                })
+              : ((copyOptions = toFolder
+                  ? { Bucket: fromBucket, Key: fromKey }
+                  : {
+                      CopySource: `${Caf.toString(fromBucket)}/${Caf.toString(
+                        fromKey
+                      )}`,
+                      Bucket: toBucket,
+                      Key: toKey,
+                    }),
+                verbose ? log.unquoted({ copyObject: copyOptions }) : undefined,
+                pretend
+                  ? timeout(1, <span class="fstat-no" title="function not covered" >()</span> =&gt; {
+<span class="cstat-no" title="statement not covered" >                      return { pretend: true };</span>
+                    })
+                  : toFolder
+                  ? createWriteStreamSafe(
+                      path.join(toFolder, fromKey),
+                      copyScratchState
+                    ).then(
+<span class="fstat-no" title="function not covered" >                      (w</span>riteStream) =&gt;
+<span class="cstat-no" title="statement not covered" >                        new Promise(<span class="fstat-no" title="function not covered" >(r</span>esolve, reject) =&gt;</span>
+<span class="cstat-no" title="statement not covered" >                          this.s3</span>
+                            .getObject(copyOptions)
+                            .createReadStream()
+                            .pipe(writeStream)
+                            .on("finish", resolve)
+                            .on("error", reject)
+                        )
+                    )
+                  : this.s3.copyObject(copyOptions).promise());
+          };
+          this.delete = <span class="fstat-no" title="function not covered" >(o</span>ptions) =&gt;
+<span class="cstat-no" title="statement not covered" >            this.s3.deleteObject({ Bucket: options.bucket, Key: options.key });</span>
+          this.largeCopy = <span class="fstat-no" title="function not covered" >(o</span>ptions) =&gt; {
+            let fromBucket,
+              fromFolder,
+              toBucket,
+              toFolder,
+              fromKey,
+              toKey,
+              pretend,
+              verbose,
+              command,
+              temp;
+<span class="cstat-no" title="statement not covered" >            temp = this._normalizeCopyOptions(options);</span>
+<span class="cstat-no" title="statement not covered" >            fromBucket = temp.fromBucket;</span>
+<span class="cstat-no" title="statement not covered" >            fromFolder = temp.fromFolder;</span>
+<span class="cstat-no" title="statement not covered" >            toBucket = temp.toBucket;</span>
+<span class="cstat-no" title="statement not covered" >            toFolder = temp.toFolder;</span>
+<span class="cstat-no" title="statement not covered" >            fromKey = temp.fromKey;</span>
+<span class="cstat-no" title="statement not covered" >            toKey = temp.toKey;</span>
+<span class="cstat-no" title="statement not covered" >            pretend = temp.pretend;</span>
+<span class="cstat-no" title="statement not covered" >            verbose = temp.verbose;</span>
+<span class="cstat-no" title="statement not covered" >            command = `aws s3 cp ${Caf.toString(</span>
+              escape(createS3Url(fromBucket, fromFolder, fromKey))
+            )} ${Caf.toString(escape(createS3Url(toBucket, toFolder, toKey)))}`;
+<span class="cstat-no" title="statement not covered" >            if (verbose) {</span>
+<span class="cstat-no" title="statement not covered" >              log.unquoted(command);</span>
+            }
+<span class="cstat-no" title="statement not covered" >            return pretend</span>
+              ? timeout(1, <span class="fstat-no" title="function not covered" >()</span> =&gt; {
+<span class="cstat-no" title="statement not covered" >                  return { pretend: true };</span>
+                })
+              : shellExec(command);
+          };
+          this.headObject = <span class="fstat-no" title="function not covered" >({</span> bucket, key }) =&gt;
+<span class="cstat-no" title="statement not covered" >            this.s3.headObject({ Bucket: bucket, Key: key }).promise();</span>
+          this._normalizeCopyOptions = <span class="fstat-no" title="function not covered" >fu</span>nction (options) {
+            let bucket,
+              key,
+              fromBucket,
+              toBucket,
+              fromKey,
+              toKey,
+              size,
+              temp,
+              temp1,
+              temp2,
+              temp3;
+<span class="cstat-no" title="statement not covered" >            bucket = options.bucket;</span>
+<span class="cstat-no" title="statement not covered" >            key = options.key;</span>
+<span class="cstat-no" title="statement not covered" >            fromBucket =</span>
+              undefined !== (temp = options.fromBucket) ? temp : bucket;
+<span class="cstat-no" title="statement not covered" >            toBucket =</span>
+              undefined !== (temp1 = options.toBucket) ? temp1 : bucket;
+<span class="cstat-no" title="statement not covered" >            fromKey = undefined !== (temp2 = options.fromKey) ? temp2 : key;</span>
+<span class="cstat-no" title="statement not covered" >            toKey = undefined !== (temp3 = options.toKey) ? temp3 : key;</span>
+<span class="cstat-no" title="statement not covered" >            size = options.size;</span>
+<span class="cstat-no" title="statement not covered" >            if (isFunction(toKey)) {</span>
+<span class="cstat-no" title="statement not covered" >              toKey = toKey(fromKey, fromBucket, toBucket, options.size);</span>
+            }
+<span class="cstat-no" title="statement not covered" >            if (</span>
+              !(
+                present(fromBucket) &amp;&amp;
+                present(toBucket) &amp;&amp;
+                present(fromKey) &amp;&amp;
+                present(toKey)
+              )
+            ) {
+<span class="cstat-no" title="statement not covered" >              throw new Error(</span>
+                "Missing one of: fromBucket, toBucket, fromKey, toKey or bucket or key as a default"
+              );
+            }
+<span class="cstat-no" title="statement not covered" >            return merge(options, { fromBucket, fromKey, toBucket, toKey });</span>
+          };
+          this.shouldSyncObjects = <span class="fstat-no" title="function not covered" >fu</span>nction (options) {
+            let fromBucket, toBucket, fromKey, toKey, temp;
+<span class="cstat-no" title="statement not covered" >            temp = this._normalizeCopyOptions(options);</span>
+<span class="cstat-no" title="statement not covered" >            fromBucket = temp.fromBucket;</span>
+<span class="cstat-no" title="statement not covered" >            toBucket = temp.toBucket;</span>
+<span class="cstat-no" title="statement not covered" >            fromKey = temp.fromKey;</span>
+<span class="cstat-no" title="statement not covered" >            toKey = temp.toKey;</span>
+<span class="cstat-no" title="statement not covered" >            return Promise.then(<span class="fstat-no" title="function not covered" >()</span> =&gt;</span>
+<span class="cstat-no" title="statement not covered" >              options.size &lt; Caf.pow(1024, 2) || !options.size</span>
+                ? true
+                : this.headObject(options).then(
+<span class="fstat-no" title="function not covered" >                    ({</span> ContentLength }) =&gt; <span class="cstat-no" title="statement not covered" >ContentLength !== options.size</span>
                   )
-                : this.s3.copyObject(copyOptions).promise());
-        };
-        this.delete = <span class="fstat-no" title="function not covered" >(o</span>ptions) =&gt;
-<span class="cstat-no" title="statement not covered" >          this.s3.deleteObject({ Bucket: options.bucket, Key: options.key });</span>
-        this.largeCopy = <span class="fstat-no" title="function not covered" >(o</span>ptions) =&gt; {
-          let fromBucket,
-            fromFolder,
-            toBucket,
-            toFolder,
-            fromKey,
-            toKey,
-            pretend,
-            verbose,
-            command,
-            temp;
-<span class="cstat-no" title="statement not covered" >          temp = this._normalizeCopyOptions(options);</span>
-<span class="cstat-no" title="statement not covered" >          fromBucket = temp.fromBucket;</span>
-<span class="cstat-no" title="statement not covered" >          fromFolder = temp.fromFolder;</span>
-<span class="cstat-no" title="statement not covered" >          toBucket = temp.toBucket;</span>
-<span class="cstat-no" title="statement not covered" >          toFolder = temp.toFolder;</span>
-<span class="cstat-no" title="statement not covered" >          fromKey = temp.fromKey;</span>
-<span class="cstat-no" title="statement not covered" >          toKey = temp.toKey;</span>
-<span class="cstat-no" title="statement not covered" >          pretend = temp.pretend;</span>
-<span class="cstat-no" title="statement not covered" >          verbose = temp.verbose;</span>
-<span class="cstat-no" title="statement not covered" >          command = `aws s3 cp ${Caf.toString(</span>
-            escape(createS3Url(fromBucket, fromFolder, fromKey))
-          )} ${Caf.toString(escape(createS3Url(toBucket, toFolder, toKey)))}`;
-<span class="cstat-no" title="statement not covered" >          if (verbose) {</span>
-<span class="cstat-no" title="statement not covered" >            log(command);</span>
-          }
-<span class="cstat-no" title="statement not covered" >          return pretend</span>
-            ? timeout(1, <span class="fstat-no" title="function not covered" >()</span> =&gt; {
-<span class="cstat-no" title="statement not covered" >                return { pretend: true };</span>
-              })
-            : shellExec(command);
-        };
-        this.headObject = <span class="fstat-no" title="function not covered" >({</span> bucket, key }) =&gt;
-<span class="cstat-no" title="statement not covered" >          this.s3.headObject({ Bucket: bucket, Key: key }).promise();</span>
-        this._normalizeCopyOptions = <span class="fstat-no" title="function not covered" >fu</span>nction (options) {
-          let bucket,
-            key,
-            fromBucket,
-            toBucket,
-            fromKey,
-            toKey,
-            size,
-            temp,
-            temp1,
-            temp2,
-            temp3;
-<span class="cstat-no" title="statement not covered" >          bucket = options.bucket;</span>
-<span class="cstat-no" title="statement not covered" >          key = options.key;</span>
-<span class="cstat-no" title="statement not covered" >          fromBucket =</span>
-            undefined !== (temp = options.fromBucket) ? temp : bucket;
-<span class="cstat-no" title="statement not covered" >          toBucket = undefined !== (temp1 = options.toBucket) ? temp1 : bucket;</span>
-<span class="cstat-no" title="statement not covered" >          fromKey = undefined !== (temp2 = options.fromKey) ? temp2 : key;</span>
-<span class="cstat-no" title="statement not covered" >          toKey = undefined !== (temp3 = options.toKey) ? temp3 : key;</span>
-<span class="cstat-no" title="statement not covered" >          size = options.size;</span>
-<span class="cstat-no" title="statement not covered" >          if (isFunction(toKey)) {</span>
-<span class="cstat-no" title="statement not covered" >            toKey = toKey(fromKey, fromBucket, toBucket, options.size);</span>
-          }
-<span class="cstat-no" title="statement not covered" >          if (</span>
-            !(
-              present(fromBucket) &amp;&amp;
-              present(toBucket) &amp;&amp;
-              present(fromKey) &amp;&amp;
-              present(toKey)
-            )
-          ) {
-<span class="cstat-no" title="statement not covered" >            throw new Error(</span>
-              "Missing one of: fromBucket, toBucket, fromKey, toKey or bucket or key as a default"
             );
-          }
-<span class="cstat-no" title="statement not covered" >          return merge(options, { fromBucket, fromKey, toBucket, toKey });</span>
-        };
-        this.shouldSyncObjects = <span class="fstat-no" title="function not covered" >fu</span>nction (options) {
-          let fromBucket, toBucket, fromKey, toKey, temp;
-<span class="cstat-no" title="statement not covered" >          temp = this._normalizeCopyOptions(options);</span>
-<span class="cstat-no" title="statement not covered" >          fromBucket = temp.fromBucket;</span>
-<span class="cstat-no" title="statement not covered" >          toBucket = temp.toBucket;</span>
-<span class="cstat-no" title="statement not covered" >          fromKey = temp.fromKey;</span>
-<span class="cstat-no" title="statement not covered" >          toKey = temp.toKey;</span>
-<span class="cstat-no" title="statement not covered" >          return Promise.then(<span class="fstat-no" title="function not covered" >()</span> =&gt;</span>
-<span class="cstat-no" title="statement not covered" >            options.size &lt; Caf.pow(1024, 2) || !options.size</span>
-              ? true
-              : this.headObject(options).then(
-<span class="fstat-no" title="function not covered" >                  ({</span> ContentLength }) =&gt; <span class="cstat-no" title="statement not covered" >ContentLength !== options.size</span>
-                )
-          );
-        };
-        this.syncObject = <span class="fstat-no" title="function not covered" >(o</span>ptions) =&gt;
-<span class="cstat-no" title="statement not covered" >          this.shouldSyncObjects(options).then(<span class="fstat-no" title="function not covered" >(s</span>houldSync) =&gt;</span>
-<span class="cstat-no" title="statement not covered" >            shouldSync</span>
-              ? this.copyObject(options).then(<span class="fstat-no" title="function not covered" >(r</span>esult) =&gt;
-<span class="cstat-no" title="statement not covered" >                  merge(result, { copied: true })</span>
-                )
-              : { copied: false }
-          );
-      }));
+          };
+          this.syncObject = <span class="fstat-no" title="function not covered" >(o</span>ptions) =&gt;
+<span class="cstat-no" title="statement not covered" >            this.shouldSyncObjects(options).then(<span class="fstat-no" title="function not covered" >(s</span>houldSync) =&gt;</span>
+<span class="cstat-no" title="statement not covered" >              shouldSync</span>
+                ? this.copyObject(options).then(<span class="fstat-no" title="function not covered" >(r</span>esult) =&gt;
+<span class="cstat-no" title="statement not covered" >                    merge(result, { copied: true })</span>
+                  )
+                : { copied: false }
+            );
+        }
+      ));
     }
   );
 });
@@ -967,7 +967,7 @@ Caf.defMod(module, () =&gt; {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank">istanbul</a>
-                at Sat Aug 22 2020 13:18:40 GMT-0700 (Pacific Daylight Time)
+                at Sun Jan 03 2021 11:00:48 GMT-0800 (Pacific Standard Time)
             </div>
         </div>
         <script src="../../prettify.js"></script>

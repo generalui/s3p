@@ -23,9 +23,9 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">90.91% </span>
+                <span class="strong">91.3% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>20/22</span>
+                <span class='fraction'>21/23</span>
             </div>
         
             
@@ -37,16 +37,16 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">87.5% </span>
+                <span class="strong">82.35% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>14/16</span>
+                <span class='fraction'>14/17</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">90.48% </span>
+                <span class="strong">90.91% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>19/21</span>
+                <span class='fraction'>20/22</span>
             </div>
         
             
@@ -130,30 +130,29 @@
 <span class="cline-any cline-yes">7x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">15x</span>
+<span class="cline-any cline-yes">15x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">7x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">14x</span>
-<span class="cline-any cline-yes">14x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">7x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">7x</span>
-<span class="cline-any cline-yes">14x</span>
+<span class="cline-any cline-yes">15x</span>
 <span class="cline-any cline-yes">7x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">7x</span>
-<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">8x</span>
+<span class="cline-any cline-yes">8x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-yes">7x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -161,6 +160,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -184,47 +184,47 @@ Caf.defMod(module, () =&gt; {
     (path, Promise, fs) =&gt; {
       let createWriteStream, FsEasy;
       createWriteStream = require("fs").createWriteStream;
-      return (FsEasy = Caf.defClass(class FsEasy extends Object {}, function (
-        FsEasy,
-        classSuper,
-        instanceSuper
-      ) {
-        this.createParentDirs = (filename, scratchState) =&gt; {
-          let dir, p, temp;
-          dir = path.dirname(filename);
-          return scratchState != null
-            ? ((p = path.resolve(dir)),
-              (temp = scratchState[p]) != null
-                ? <span class="branch-0 cbranch-no" title="branch not covered" >temp</span>
-                : (scratchState[p] = this._createParentDirs(dir)))
-            : this._createParentDirs(dir);
-        };
-        this.createWriteStreamSafe = (filename, scratchState) =&gt;
-          this.createParentDirs(filename, scratchState).then(() =&gt;
-            createWriteStream(filename)
-          );
-        this._createParentDirs = function (dir) {
-          return Promise.then(() =&gt; fs.stat(dir)).then(
-            () =&gt; 0,
-            () =&gt;
-              this.createParentDirs(dir).then((numMade) =&gt;
-                fs
-                  .mkdir(dir)
-                  .then(() =&gt; numMade + 1)
-                  .catch((error) =&gt;
-                    fs
-                      .stat(dir)
-                      .then(() =&gt; 0)
-                      .catch(<span class="fstat-no" title="function not covered" >()</span> =&gt;
-<span class="cstat-no" title="statement not covered" >                        (<span class="fstat-no" title="function not covered" >()</span> =&gt; {</span>
-<span class="cstat-no" title="statement not covered" >                          throw error;</span>
-                        })()
-                      )
-                  )
-              )
-          );
-        };
-      }));
+      return (FsEasy = Caf.defClass(
+        class FsEasy extends Object {},
+        function (FsEasy, classSuper, instanceSuper) {
+          this.createParentDirs = (filename, scratchState) =&gt; {
+            let dir, p, temp;
+            dir = path.dirname(filename);
+            return scratchState != null
+              ? ((p = path.resolve(dir)),
+                (temp = scratchState[p]) != null
+                  ? <span class="branch-0 cbranch-no" title="branch not covered" >temp</span>
+                  : (scratchState[p] = this._createParentDirs(dir)))
+              : this._createParentDirs(dir);
+          };
+          this.findAllFiles = <span class="fstat-no" title="function not covered" >(p</span>ath, filter) =&gt; {};
+          this.createWriteStreamSafe = (filename, scratchState) =&gt;
+            this.createParentDirs(filename, scratchState).then(() =&gt;
+              createWriteStream(filename)
+            );
+          this._createParentDirs = function (dir) {
+            return Promise.then(() =&gt; fs.stat(dir)).then(
+              () =&gt; 0,
+              () =&gt;
+                this.createParentDirs(dir).then((numMade) =&gt;
+                  fs
+                    .mkdir(dir)
+                    .then(() =&gt; numMade + 1)
+                    .catch((error) =&gt;
+                      fs
+                        .stat(dir)
+                        .then(() =&gt; 0)
+                        .catch(<span class="fstat-no" title="function not covered" >()</span> =&gt;
+<span class="cstat-no" title="statement not covered" >                          (<span class="fstat-no" title="function not covered" >()</span> =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >                            throw error;</span>
+                          })()
+                        )
+                    )
+                )
+            );
+          };
+        }
+      ));
     }
   );
 });
@@ -235,7 +235,7 @@ Caf.defMod(module, () =&gt; {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank">istanbul</a>
-                at Sat Aug 22 2020 13:18:40 GMT-0700 (Pacific Daylight Time)
+                at Sun Jan 03 2021 11:00:48 GMT-0800 (Pacific Standard Time)
             </div>
         </div>
         <script src="../../prettify.js"></script>
