@@ -59,7 +59,7 @@ advancedOptionsForCopy = merge advancedOptionsForAll,
 
 
 main: (options) ->
-  require :@art-suite/cli
+  &@art-suite/cli
   .start merge options,
     description:
       """
