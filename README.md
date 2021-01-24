@@ -42,7 +42,7 @@ s3p uses the same credentials aws-cli uses, so see their documentation: https://
 
 # CLI
 
-There is no need to install s3p directly. As long as you have NodeJS installed, you can run s3p directly using `npx`.
+There is no need to install s3p directly. In environments like [AWS Cloudshell](https://aws.amazon.com/cloudshell/) where you have NodeJS installed, you can run s3p directly using `npx`.
 
 The built in help details all the commands, options, and provides many examples:
 
