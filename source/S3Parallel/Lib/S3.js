@@ -156,7 +156,7 @@ Caf.defMod(module, () => {
             toFolder = temp1.toFolder;
             pretend = temp1.pretend;
             verbose = temp1.verbose;
-            return size >= Caf.pow(1024, 3) || /\s/.test(toKey)
+            return size >= Caf.pow(1024, 3)
               ? this.largeCopy({
                   fromBucket,
                   toBucket,
