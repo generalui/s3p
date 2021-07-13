@@ -1,22 +1,69 @@
 import &ArtStandardLib
 
-package: (abcPackage) ->
-  sourceDir = :source-source
-  merge &package,
-    scripts:
-      test: :jest
-      build:
-        """
-          caf -p -c #{sourceDir} -o source
-          nn -sq
+standardPackageBuilder =
+  (currentPackage, options = {}) -> (abcPackage) ->
+    options extract?
+      sourceDir = "source"
+      targetDir = "build"
+      mocha
+      mochaAndJest
+      coffeeScript
 
-      build-clean:  "" rm -rf source/*; npm run build
-      watch:        "" npm-watch
+    merge currentPackage,
+      scripts:
+        nn:
+          "" nn #{targetDir}/* #{if mocha then :test/tests}
+        test:
+          """
+            npm run nn
+            #{}
+              if mochaAndJest then
+                """
+                  jest
+                  if [[ $? -ne 0 ]]; then
+                    exit 1
+                  fi
+                  mocha -u tdd
+              else if mocha then "" mocha -u tdd
+              else          :jest
 
-    jest: testEnvironment: :node
+        build:
+          if coffeeScript
+            """
+              coffee -m --output #{targetDir} --compile #{sourceDir} &
+              COFFEE_PID=$!
+              caf -m -c #{sourceDir} -o #{targetDir} &
+              CAF_PID=$!
+              wait $COFFEE_PID || exit 1
+              wait $CAF_PID || exit 1
+              npm run nn
+          else
+            """
+              caf -m -c #{sourceDir} -o #{targetDir}
+              npm run nn
 
-    watch:
-      build:
-        extensions: :caf
-        patterns:   [] :source-source
-        quiet:      false
+        build-clean:  "" npm run clean; npm run build
+        clean:        "" rm -rf #{targetDir}/*
+        watch:        :npm-watch
+
+      jest:
+        testEnvironment: :node
+        verbose: true
+        collectCoverageFrom:
+          "#{targetDir}/**/*.js",
+          "!#{targetDir}/test/**/*.js"
+        testPathIgnorePatterns:
+          "/node_modules/"
+          "<rootDir>/test" # so it can ignore our mocha tests
+
+      watch:
+        build:
+          extensions: compactFlattenAll
+            :caf
+            coffeeScript && :coffee
+
+          patterns:   [] sourceDir
+          quiet:      false
+
+
+package: standardPackageBuilder &package

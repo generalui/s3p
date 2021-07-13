@@ -25,7 +25,16 @@
   },
   "homepage": "https://github.com/generalui/s3p",
   "jest": {
-    "testEnvironment": "node"
+    "collectCoverageFrom": [
+      "build/**/*.js",
+      "!build/test/**/*.js"
+    ],
+    "testEnvironment": "node",
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "<rootDir>/test"
+    ],
+    "verbose": true
   },
   "license": "ISC",
   "name": "s3p",
@@ -34,17 +43,21 @@
     "url": "https://github.com/generalui/s3p.git"
   },
   "scripts": {
-    "build": "caf -p -c source-source -o source\nnn -sq",
-    "build-clean": "rm -rf source/*; npm run build",
-    "test": "jest",
+    "build": "caf -m -c source -o build\nnpm run nn",
+    "build-clean": "npm run clean; npm run build",
+    "clean": "rm -rf build/*",
+    "nn": "nn build/* ",
+    "test": "npm run nn\njest",
     "watch": "npm-watch"
   },
   "version": "2.10.8",
   "watch": {
     "build": {
-      "extensions": "caf",
+      "extensions": [
+        "caf"
+      ],
       "patterns": [
-        "source-source"
+        "source"
       ],
       "quiet": false
     }
