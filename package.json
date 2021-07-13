@@ -1,7 +1,7 @@
 {
   "author": "GenUI LLC",
   "bin": {
-    "s3p": "./bin/s3p"
+    "s3p": "bin/s3p"
   },
   "bugs": "https:/github.com/generalui/s3p/issues",
   "dependencies": {
@@ -39,7 +39,7 @@
     "test": "jest",
     "watch": "npm-watch"
   },
-  "version": "2.10.7",
+  "version": "2.10.8",
   "watch": {
     "build": {
       "extensions": "caf",
