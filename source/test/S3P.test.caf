@@ -16,7 +16,7 @@ describe
           items: 3
           out
 
-    test "limit:3"->
+    test "limit:3" ->
       S3Comprehensions.each
         quiet: true
         limit: 3
@@ -31,7 +31,7 @@ describe
           out
 
 
-    test "limit:4"->
+    test "limit:4" ->
       S3Comprehensions.each
         quiet: true
         limit: 4
@@ -45,7 +45,7 @@ describe
           items: 3
           out
 
-    test "limit:2 large common prefix"->
+    test "limit:2 large common prefix" ->
       S3Comprehensions.each
         quiet: true
         limit: 2

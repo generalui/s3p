@@ -1,0 +1,10 @@
+{
+  "version": 3,
+  "file": "TestLib.js",
+  "sourceRoot": "../..",
+  "sources": [
+    "source/test/TestLib.caf"
+  ],
+  "names": [],
+  "mappings": "AAAA;;AAAA,kHAAO,kJAEP,cAAc,cAoBZ,iBAAM,QAAG,CAAC,UACR,OACE,eAAe,sBAGjB,MAAM,CAAC,CAAC,cAAY,4BAClB,QAAQ,UACR,aAAY,gBACI,iBACZ,iBACA,KAAgB,MAChB,MAAgB,aAChB,cAAgB,IAAI,MACpB,MAAgB,UAChB,cAAgB,YAChB,QACE,aAAc,QACd,IAAc,mEAGxB,+CAAqB,4BACnB,SACE,qBACA,oBACA,qBACA,gBACA,uBACA,wBAEF,UAAa,gCAAmB,eACP,kEAAG,gBACnB,qBAAO,oEAIlB,qCAAgB,YAAK,OACnB,oCAAW,cAAI,aAAa"
+}
