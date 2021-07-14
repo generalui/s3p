@@ -2,6 +2,8 @@
 
 [![Actions Status](https://github.com/generalui/s3p/workflows/test/badge.svg)](https://github.com/generalui/s3p/actions)
 
+> S3P 3.0 BETA: The current release is 2.x and can be found on NPM. We are currently trial-testing adding a basic API so you can use S3P directly from JavaScript. To try this beta in your project, run: `npm install https://github.com/generalui/s3p`
+
 S3P provides a radically faster way to copy, list, sync and do other bulk operations over large AWS S3 buckets.
 
 You can use it as a command-line tool for common operations, or you can use it as a library for nearly anything you can imagine.
