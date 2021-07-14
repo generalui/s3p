@@ -1,0 +1,10 @@
+{
+  "version": 3,
+  "file": "PromiseWorkerPool.test.js",
+  "sourceRoot": "../../..",
+  "sources": [
+    "source/test/Lib/PromiseWorkerPool.test.caf"
+  ],
+  "names": [],
+  "mappings": "AAAA;;AAAA,wIAAO,iGAEP,YAAK,iHACH,kBAAkB,GAClB,YAAY,GACZ,YAAY,GAEZ,SAAM,OACJ,mBAEA,YAAY,IAAI,iBAAiB,mBACjC,QAAQ,eAEN,oBAEA,wBAEJ,MAAM,IAAI,kBAAkB,WAAW,YAEvC,6BAAsB,YAAY,kHAChC,UAAU,sCAEP,OACH,KAAO,iBAAiB,WAAW,UAAU,aAC7C,UAAU,WAAW,kBACrB,UAAU,WAAW"
+}

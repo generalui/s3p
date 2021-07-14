@@ -1,0 +1,10 @@
+{
+  "version": 3,
+  "file": "Lib.js",
+  "sourceRoot": "../../..",
+  "sources": [
+    "source/S3Parallel/Lib/Lib.caf"
+  ],
+  "names": [],
+  "mappings": "AAAA;;AAAA,kCACE,qBACA,qBACA"
+}
