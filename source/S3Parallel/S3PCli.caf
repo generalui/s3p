@@ -26,6 +26,7 @@ allCommandOptions =
       Note: This won't speed up listing.
       Every key matching the specified prefifx, start-after and stop-at clause will ready from S3 and be tested with the provided filter.
       It may, however, speed up copying by reducing the total number of files copied.
+      Note: For details on the objects passed to filter, see the Contents property returned from the AWS S3 SDK's listObjectsV2 command: https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html#listObjectsV2-property
 
 writeOptions =
   dryrun:
