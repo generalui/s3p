@@ -98,6 +98,58 @@ The average file-size has a big impact on s3p's overall bytes-per-second:
 > S3P was developed to operate on buckets with millions of items and 100s of terabytes. Currently, S3P is still only a single-core NODE application. There are opportunities for even more massively parallel S3 operations by forking workers or even distributing the work across instances with something like Elastic-Queue. If someone needs solutions that are 100-1000x faster than aws-cli, let us know. We'd love to work with you.<br>-
 shane@genui.com
 
+
+# Documentation
+
+All the documentation is embedded in the CLI helps pages. Use:
+
+```shell
+# get a list of commands
+npx s3p help
+
+# get a list of options for a command
+# e.g.
+npx s3p cp --help
+```
+
+# API
+
+All the capabilities of the CLI are also available as an API. To learn the API, first learn the CLI options, and then, to learn the API call for a specific CLI command, run that command on the command-line with the `--api-example` option. This will output example JavaScript code for invoking that command programmatically.
+
+> NOTE: When you use `--api-example` the on the command-line, your command won't actually run. S3P will *only* output the JavaScript equivalent of the CLI command to the console and then quit.
+
+### Example
+Run:
+
+```shell
+> npx s3p ls --bucket --quiet --api-example
+```
+Output:
+```javascript
+require('s3p').listBuckets({
+   quiet: true
+})
+// > Promise
+```
+
+Test run:
+```shell
+> node
+```
+Paste:
+```javascript
+require('s3p').listBuckets({
+   quiet: true
+}).then((out) => console.log(out));
+```
+Output:
+```javascript
+{
+  "bucket-a-name": creationDateA,
+  "bucket-b-name": creationDateB
+}
+```
+
 # Developed
 
 S3P was originally developed by [GenUI.com](https://www.genui.com/) in conjunction with [Resolution Bioscience, Inc.](http://www.resolutionbio.com/)
