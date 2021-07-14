@@ -1,26 +1,35 @@
 import &StandardImport, &Lib
 
-ls: (options) ->
-  output = options.output ? (args...) -> console.log args...
-  &S3Comprehensions.each merge
-    quiet: true
-    options
-    mapList: (l) ->
-      each {LastModified, Size, Key} from-array l
-        output
-          if options.long
-            "" #{formatDate LastModified, "yyyy-mm-dd HH:MM:ss"} #{pad humanByteSize(Size), 10, ' ', true} #{Key}
-          else Key
-      null
-  .then (info) ->
-    if options.verbose then info
+{}
+  version: -> &package.version
+  &lib/S3.listBuckets
 
-each: (options) ->
-  options extract map, mapList
-  throw new Error "--map or --map-list option required" unless map? or mapList?
-  throw new Error "--map must be a function" if map && !isFunction map
-  throw new Error "--map-list must be a function" if mapList && !isFunction mapList
-  &S3Comprehensions.each options
+  ls: (options) ->
+    output = options.output ? (args...) -> console.log args...
+    &S3Comprehensions.each merge
+      quiet: true
+      options
+      mapList: (l) ->
+        each {LastModified, Size, Key} from-array l
+          output
+            if options.long
+              "" #{formatDate LastModified, "yyyy-mm-dd HH:MM:ss"} #{pad humanByteSize(Size), 10, ' ', true} #{Key}
+            else Key
+        null
+    .then (info) ->
+      if options.verbose then info
 
-map: (options) -> &S3Comprehensions.map merge options, quiet: true
+  &S3P.summarize
+  &S3P.compare
 
+  cp: &S3P.copy
+  &S3P.sync
+
+  each: (options) ->
+    options extract map, mapList
+    throw new Error "--map or --map-list option required" unless map? or mapList?
+    throw new Error "--map must be a function" if map && !isFunction map
+    throw new Error "--map-list must be a function" if mapList && !isFunction mapList
+    &S3Comprehensions.each options
+
+  map: (options) -> &S3Comprehensions.map merge options, quiet: true
