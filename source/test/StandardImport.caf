@@ -1,3 +1,6 @@
 &ArtStandardLib.mergeWithSelf
   &ArtTestbench
   &S3Parallel
+  &S3Parallel.Lib
+  &S3Parallel.S3P
+  &S3Parallel.S3Comprehensions
