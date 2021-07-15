@@ -3,7 +3,7 @@ import &StandardImport, &Lib
 allCommandOptions =
   quiet:                      "" no output
   verbose:                    "" extra output
-  api-example:                "" Output an example of how to invoke the S3P API. Start by constructing the S3P command you want to use with the appropriate command-line options. Then append this option and execute the command. Instead of doing the actual S3P command, the JavaScript for invoking this command using the S3P API will be output.
+  api-example:                advanced: true description: "" Output an example of how to invoke the S3P API. Start by constructing the S3P command you want to use with the appropriate command-line options. Then append this option and execute the command. Instead of doing the actual S3P command, S3P will output the JavaScript for invoking this command using the S3P API.
   bucket:
     argument:     :bucket-name
     description:  "" The source bucket
@@ -130,7 +130,8 @@ cliCommands =
                   map:        :function "" This gets called for each item found. A javascript function of the form (item) => ...
                   map-list:   :function "" This gets called with an array of items (length between 1 and 1000). A javascript function of the form (itemList) => ...
     examples: []
-      "" each --bucket my-bucket --map "js:(item) => console.log(item)"
+      bucket: :my-bucket
+      map:    "" "js:(item) => console.log(item)"
       "" Log every item found.
 
   map:
@@ -204,4 +205,4 @@ main: (options) ->
               })
               // > Promise
           else
-            &S3PCliCommands[commaneName] options
+            &S3PCliCommands[commaneName] merge options, fromCli: true
