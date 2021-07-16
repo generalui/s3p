@@ -21,7 +21,8 @@
     "jest": "^26.6.3",
     "mock-fs": "^5.0.0",
     "neptune-namespaces": "^4.2.9",
-    "npm-watch": "^0.10.0"
+    "npm-watch": "^0.10.0",
+    "s3p": "file:."
   },
   "homepage": "https://github.com/generalui/s3p",
   "jest": {

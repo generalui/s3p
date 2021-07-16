@@ -514,7 +514,7 @@ class S3Comprehensions
 
       else
         if returnValue? && showProgress
-          log.unquoted final-stats: info
+          log.unquoted finalStats: info
 
         returnValue
         ? merge
