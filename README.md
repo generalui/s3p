@@ -153,3 +153,5 @@ Output:
 # Developed
 
 S3P was originally developed by [GenUI.com](https://www.genui.com/) in conjunction with [Resolution Bioscience, Inc.](http://www.resolutionbio.com/)
+
+GenUI is a technology commercialization software consultancy based in Seattle. We accelerate software roadmaps. Please feel free to [contact GenUI](https://www.genui.com/contact) and tell us about your project. We'd love to hear from you.
