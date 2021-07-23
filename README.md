@@ -1,5 +1,3 @@
-
-> S3P 3.0 BETA: The current release is 2.x and can be found on NPM. We are currently trial-testing adding a basic API so you can use S3P directly from JavaScript. To try this beta in your project, run: `npm install https://github.com/generalui/s3p`
 # S3P - 5x to 50x faster than aws-cli
 
 [![Actions Status](https://github.com/generalui/s3p/workflows/test/badge.svg)](https://github.com/generalui/s3p/actions)
