@@ -68,7 +68,9 @@ cliCommands =
 
   ls:
     description:  "" List all matching files. Uses s3.listObjectsV2.
-    options:      merge allCommandOptions, advancedOptionsForAll, long: "" output item size and date as well as key
+    options:      merge allCommandOptions, advancedOptionsForAll,
+      long: "" output item size and date as well as key
+      raw:  "" output one S3 item per line as JSON with all properties return from listObjects
 
   summarize:
     description:  "" Scan all items in one bucket and produce a summary of all the items. Uses s3.listObjectsV2.
