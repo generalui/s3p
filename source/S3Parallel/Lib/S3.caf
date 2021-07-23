@@ -11,7 +11,7 @@ class S3 extends BaseClass
   @classGetter
     s3: -> @awsSdkS3
 
-  @commonCopyOptionsForSdk =
+  @commonCopyOptionsSdkKeys =
     :ACL
     :CacheControl
     :ContentDisposition
@@ -21,6 +21,8 @@ class S3 extends BaseClass
     :Expires
     :RequestPayer
     :StorageClass
+
+  @commonSdkCopyOptionsByLowerCamelCaseKeys = object k from @commonCopyOptionsSdkKeys with-key lowerCamelCase k
 
   @listBuckets: =>
     @s3.listBuckets()
@@ -71,7 +73,7 @@ class S3 extends BaseClass
       Promise.then -> see https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html#copyObject-property > Callback > Parameters
         {} CopyObjectResult, ...
   @copy: (options) =>
-    if options extract scratchState
+    if options extract largeCopyThreshold, scratchState
       copyScratchState = scratchState.copyScratchState ?= {}
 
     @_normalizeCopyOptions(options) extract
@@ -80,12 +82,11 @@ class S3 extends BaseClass
       pretend
       verbose
 
-    commonCopyOptions = @_getCommonCopyOptionsForSdk options
-
     # NOTE: there appears to be a bug in the AWS s3 sdk copyObject - it can't handle spaces in the toKey
-    if size >= 1024**3 || /\s/.test toKey
-      # log largeCopy: {} fromBucket, toBucket, fromKey, toKey, size
-      @largeCopy {} fromBucket, toBucket, toFolder, fromKey, toKey, pretend, verbose, commonCopyOptions
+    if size >= largeCopyThreshold || /\s/.test toKey
+      @largeCopy {}
+        commonCopyOptions: @extractCommonCopyOptions options
+        fromBucket, toBucket, toFolder, fromKey, toKey, pretend, verbose
 
     else
       copyOptions = merge
@@ -127,8 +128,9 @@ class S3 extends BaseClass
       Key:    options.key
 
   @largeCopy: (options) =>
+    options extract commonCopyOptions
     @_normalizeCopyOptions(options) extract
-      commonCopyOptions, fromBucket,
+      fromBucket,
       fromFolder, toBucket,
       toFolder, fromKey,
       toKey, pretend, verbose
@@ -139,7 +141,7 @@ class S3 extends BaseClass
           aws s3 cp
           #{} escape createS3Url fromBucket, fromFolder, fromKey
           #{} escape createS3Url toBucket, toFolder, toKey
-        array v, key from commonCopyOptions
+        array v, key from commonCopyOptions when v
           "" --#{dashCase key} #{}
             switch v
             when true then ''
@@ -148,7 +150,7 @@ class S3 extends BaseClass
       .join ' '
 
     if verbose
-      log.unquoted command
+      log.unquoted largeCopy: command
 
     if pretend
       timeout 1 -> pretend: true
@@ -179,8 +181,12 @@ class S3 extends BaseClass
     merge options, {} fromBucket, fromKey, toBucket, toKey
 
   @_getCommonCopyOptionsForSdk: (options) =>
-    object k from @commonCopyOptionsForSdk
-      options[lowerCamelCase k]
+    object sdkKey, lowerCamelCasedKey from @commonSdkCopyOptionsByLowerCamelCaseKeys with-key sdkKey
+      options[lowerCamelCasedKey]
+
+  @extractCommonCopyOptions: (options) =>
+    object v, k from @commonSdkCopyOptionsByLowerCamelCaseKeys
+      options[k]
 
   @shouldSyncObjects: (options) ->
     @_normalizeCopyOptions(options) extract fromBucket, toBucket, fromKey, toKey

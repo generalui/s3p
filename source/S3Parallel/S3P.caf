@@ -305,12 +305,12 @@ class S3P
       stats
       pretend
       verbose
-      copyConcurrency       = 500
-      largeCopyConcurrency  = 75
-      maxQueueSize          = copyConcurrency * 100
-      copyPwp               = new PromiseWorkerPool copyConcurrency
-      largeCopyPwp          = new PromiseWorkerPool largeCopyConcurrency
-      largeCopyThreshold    = 100 * 1024 ** 2
+      copyConcurrency
+      largeCopyConcurrency
+      maxQueueSize
+      copyPwp
+      largeCopyPwp
+      largeCopyThreshold
 
     stats ?= {}
     stats.copiedBytes = 0
@@ -343,17 +343,20 @@ class S3P
         if Size < largeCopyThreshold then copyPwp else largeCopyPwp
         .queue ->
           stats.copyingBytesInFlight += Size
-          options = {}
-            pretend
-            verbose
-            options.bucket
-            options.toBucket
-            options.toFolder
-            key
-            toKey
-            size: Size
+          options = merge
+            s3.extractCommonCopyOptions options
+            {}
+              pretend
+              verbose
+              options.bucket
+              options.toBucket
+              options.toFolder
+              key
+              toKey
+              largeCopyThreshold
+              size: Size
 
-          if Size < largeCopyThreshold then s3.copy options else s3.largeCopy options
+          s3.copy options
           .then ->
             stats.copyingBytesInFlight -= Size
             stats.copiedFiles++

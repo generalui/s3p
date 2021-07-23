@@ -21,6 +21,12 @@ class S3Comprehensions
       filter
       startAfter = ''
       stopAt
+      copyConcurrency       = 500
+      largeCopyConcurrency  = 75
+      maxQueueSize          = copyConcurrency * 100
+      copyPwp               = new PromiseWorkerPool copyConcurrency
+      largeCopyPwp          = new PromiseWorkerPool largeCopyConcurrency
+      largeCopyThreshold    = 100 * 1024 ** 2
 
     withFn = options.with
     whenFn = options.when
@@ -78,6 +84,12 @@ class S3Comprehensions
         returnValue
         startAfter
         stopAt
+        copyConcurrency
+        largeCopyConcurrency
+        maxQueueSize
+        copyPwp
+        largeCopyPwp
+        largeCopyThreshold
 
   filterNone = -> true
   ##
