@@ -11,6 +11,17 @@ class S3 extends BaseClass
   @classGetter
     s3: -> @awsSdkS3
 
+  @commonCopyOptionsForSdk =
+    :ACL
+    :CacheControl
+    :ContentDisposition
+    :ContentEncoding
+    :ContentLanguage
+    :ContentType
+    :Expires
+    :RequestPayer
+    :StorageClass
+
   @listBuckets: =>
     @s3.listBuckets()
     .promise()
@@ -69,20 +80,25 @@ class S3 extends BaseClass
       pretend
       verbose
 
+    commonCopyOptions = @_getCommonCopyOptionsForSdk options
+
     # NOTE: there appears to be a bug in the AWS s3 sdk copyObject - it can't handle spaces in the toKey
     if size >= 1024**3 || /\s/.test toKey
       # log largeCopy: {} fromBucket, toBucket, fromKey, toKey, size
-      @largeCopy {} fromBucket, toBucket, toFolder, fromKey, toKey, pretend, verbose
+      @largeCopy {} fromBucket, toBucket, toFolder, fromKey, toKey, pretend, verbose, commonCopyOptions
 
     else
-      copyOptions = if toFolder
-        Bucket:     fromBucket
-        Key:        fromKey
+      copyOptions = merge
+        if toFolder
+          Bucket:     fromBucket
+          Key:        fromKey
 
-      else
-        CopySource: "" #{fromBucket}/#{fromKey}
-        Bucket:     toBucket
-        Key:        toKey
+        else
+          CopySource: "" #{fromBucket}/#{fromKey}
+          Bucket:     toBucket
+          Key:        toKey
+
+        @_getCommonCopyOptionsForSdk options
 
       if verbose
         log.unquoted copyObject: copyOptions
@@ -111,13 +127,26 @@ class S3 extends BaseClass
       Key:    options.key
 
   @largeCopy: (options) =>
-    @_normalizeCopyOptions(options) extract fromBucket, fromFolder, toBucket, toFolder, fromKey, toKey, pretend, verbose
+    @_normalizeCopyOptions(options) extract
+      commonCopyOptions, fromBucket,
+      fromFolder, toBucket,
+      toFolder, fromKey,
+      toKey, pretend, verbose
 
     command =
-      ""
-        aws s3 cp
-        #{} escape createS3Url fromBucket, fromFolder, fromKey
-        #{} escape createS3Url toBucket, toFolder, toKey
+      compactFlatten []
+        ""
+          aws s3 cp
+          #{} escape createS3Url fromBucket, fromFolder, fromKey
+          #{} escape createS3Url toBucket, toFolder, toKey
+        array v, key from commonCopyOptions
+          "" --#{dashCase key} #{}
+            switch v
+            when true then ''
+            else escape v
+
+      .join ' '
+
     if verbose
       log.unquoted command
 
@@ -148,6 +177,10 @@ class S3 extends BaseClass
     unless present(fromBucket) && present(toBucket) && present(fromKey) && present toKey
       throw new Error "" Missing one of: fromBucket, toBucket, fromKey, toKey or bucket or key as a default
     merge options, {} fromBucket, fromKey, toBucket, toKey
+
+  @_getCommonCopyOptionsForSdk: (options) =>
+    object k from @commonCopyOptionsForSdk
+      options[lowerCamelCase k]
 
   @shouldSyncObjects: (options) ->
     @_normalizeCopyOptions(options) extract fromBucket, toBucket, fromKey, toKey

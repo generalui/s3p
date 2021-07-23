@@ -32,7 +32,6 @@
       --expires                             Expires
       --request-payer                       RequestPayer
       --storage-class                       StorageClass
-      --website-redirect                    WebsiteRedirectLocation
 
       # metadata
       --metadata (supports JSON)            Metadata
@@ -56,6 +55,9 @@
 
       # requires S3P logic
       --follow-symlinks | --no-follow-symlinks
+
+      # future
+      --website-redirect                    WebsiteRedirectLocation
 
     copyObject:
       ACL: private | public-read | public-read-write | authenticated-read | aws-exec-read | bucket-owner-read | bucket-owner-full-control,

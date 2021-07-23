@@ -33,6 +33,47 @@ writeOptions =
   dryrun:
     description: "" Will not modify anything. For sync/copy commands, do everything except actually copy files.
   pretend: description: "" alias for 'dryrun'
+  acl: description:
+    ""
+      The canned ACL to apply to the object.
+
+      Possible values include:
+      private,
+      public-read,
+      public-read-write,
+      authenticated-read,
+      aws-exec-read,
+      bucket-owner-read and
+      bucket-owner-full-control
+
+  cache-control:        description: "" Specifies caching behavior along the request/reply chain.
+  content-disposition:  description: "" Specifies presentational information for the object.
+  content-encoding:     description: "" Specifies what content encodings have been applied to the object and thus what decoding mechanisms must be applied to obtain the media-type referenced by the Content-Type header field.
+  content-language:     description: "" The language the content is in.
+  content-type:         description: "" A standard MIME type describing the format of the object data.
+  expires:              description: "" The date and time at which the object is no longer cacheable. e.g. new Date or 'Wed Dec 31 1969 16:00:00 GMT-0800 (PST)' or 123456789
+  request-payer:        description: "" Confirms that the requester knows that they will be charged for the request. Bucket owners need not specify this parameter in their requests.
+  storage-class:        description:
+    ""
+      By default, Amazon S3 uses the STANDARD Storage Class to store newly created objects. The STANDARD storage class provides high durability and high availability. Depending on performance needs, you can specify a different Storage Class. Amazon S3 on Outposts only uses the OUTPOSTS Storage Class.
+      Possible values include:
+      STANDARD,
+      REDUCED_REDUNDANCY,
+      STANDARD_IA,
+      ONEZONE_IA,
+      INTELLIGENT_TIERING,
+      GLACIER,
+      DEEP_ARCHIVE and
+      OUTPOSTS
+
+
+
+
+
+
+
+
+
 
 toBucketOptions =
   to-bucket:    argument: :bucket-name  required: true description:     "" The target bucket. It can be the same bucket.
