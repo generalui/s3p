@@ -18,10 +18,10 @@
     "art-build-configurator": "^1.29.3",
     "art-testbench": "^3.2.2",
     "caffeine-script": "^0.74.0",
-    "jest": "^26.6.3",
+    "jest": "^27.0.6",
     "mock-fs": "^5.0.0",
     "neptune-namespaces": "^4.2.9",
-    "npm-watch": "^0.10.0"
+    "npm-watch": "^0.11.0"
   },
   "homepage": "https://github.com/generalui/s3p",
   "jest": {
