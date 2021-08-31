@@ -33,7 +33,7 @@ writeOptions =
   dryrun:
     description: "" Will not modify anything. For sync/copy commands, do everything except actually copy files.
   pretend: description: "" alias for 'dryrun'
-  acl: description:
+  acl: argument: :string description:
     ""
       The canned ACL to apply to the object.
 
@@ -51,7 +51,7 @@ writeOptions =
   content-encoding:     argument: :string description: "" Specifies what content encodings have been applied to the object and thus what decoding mechanisms must be applied to obtain the media-type referenced by the Content-Type header field.
   content-language:     argument: :string description: "" The language the content is in.
   content-type:         argument: :string description: "" A standard MIME type describing the format of the object data.
-  expires:              argument: :date-time description: "" The date and time at which the object is no longer cacheable. e.g. new Date or 'Wed Dec 31 1969 16:00:00 GMT-0800 (PST)' or 123456789
+  expires:              argument: :date-time description: "" The date and time at which the object is no longer cacheable. e.g. 'js:new Date' or 'Wed Dec 31 1969 16:00:00 GMT-0800 (PST)' or 123456789
   request-payer:        argument: :string description: "" Confirms that the requester knows that they will be charged for the request. Bucket owners need not specify this parameter in their requests.
   storage-class:        argument: :string description:
     ""

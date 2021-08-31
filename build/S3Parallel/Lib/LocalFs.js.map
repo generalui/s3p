@@ -1,0 +1,10 @@
+{
+  "version": 3,
+  "file": "LocalFs.js",
+  "sourceRoot": "../../..",
+  "sources": [
+    "source/S3Parallel/Lib/LocalFs.caf"
+  ],
+  "names": [],
+  "mappings": "AAAA;;AAAA,uGAAO,qFAEP,oDAAsB,sBAEP,CAAC,8BACZ,+HAEF,QAAoB,CAAC,uBACnB,QAAQ,mBACL,CAAY,iBAAI,KAAK,MAAM,MAAM,MAClC,IACE,CACF,IAAI,GACJ,IAAI,cACJ,eAAO,IAAG,IAAI,WACZ,IAAW,UAAG,IAAI,GAClB,IAAG,MAAM,MAAM,KACb,IAAI,UAEJ,IAAI,YACR,kBAEG,CAAC,CAAC,QAAQ,QAAQ,cAAY,YAAY,cAC/C,MAAM,IAAI,MAAK,mGAAuF,kBAAkB,qBAExH,kCAAU,aAAI"
+}
