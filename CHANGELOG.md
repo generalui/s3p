@@ -12,8 +12,8 @@ Added common copy options:
     must be applied to obtain the media-type referenced by the Content-Type header field.
 - `--content-language string` The language the content is in.
 - `--content-type string` A standard MIME type describing the format of the object data.
-- `--expires date-time` The date and time at which the object is no longer cacheable. e.g. `js:new Date` or `Wed Dec 31 1969
-    16:00:00 GMT-0800 (PST)` or `123456789`
+- `--expires date-time` The date and time at which the object is no longer cacheable. e.g. `"js:new Date"` or `"Wed Dec 31 1969
+    16:00:00 GMT-0800 (PST)"` or `123456789`
 - `--request-payer string` Confirms that the requester knows that they will be charged for the request. Bucket owners need not
     specify this parameter in their requests.
 - `--storage-class string` By default, Amazon S3 uses the STANDARD Storage Class to store newly created objects. The STANDARD
