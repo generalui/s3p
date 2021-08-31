@@ -24,4 +24,4 @@ Added common copy options:
 
 # 3.1
 
-Added the programmatic API. See the [README](readme.md#API).
+Added the programmatic API. See the [README](README.md#API).
