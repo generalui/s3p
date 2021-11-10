@@ -101,14 +101,14 @@ shane@genui.com
 
 # Documentation
 
-All the documentation is embedded in the CLI helps pages. Use:
+All the documentation is embedded in the CLI help pages. Use:
 
 ```shell
 # get a list of commands
 npx s3p help
 
 # get a list of options for a command
-# e.g.
+# example:
 npx s3p cp --help
 ```
 
@@ -116,17 +116,18 @@ npx s3p cp --help
 
 All the capabilities of the CLI are also available as an API. To learn the API, first learn the CLI options, and then, to learn the API call for a specific CLI command, run that command on the command-line with the `--api-example` option. This will output example JavaScript code for invoking that command programmatically.
 
-> NOTE: When you use `--api-example` the on the command-line, your command won't actually run. S3P will *only* output the JavaScript equivalent of the CLI command to the console and then quit.
+> NOTE: When you use `--api-example` on the command-line, your command won't actually run. S3P will *only* output the JavaScript equivalent of the CLI command to the console and then quit.
 
 ### Example
 Run:
 
 ```shell
-> npx s3p ls --bucket --quiet --api-example
+> npx s3p ls --bucket foo --quiet --api-example
 ```
 Output:
 ```javascript
-require('s3p').listBuckets({
+require('s3p').ls({
+   bucket: "foo",
    quiet: true
 })
 // > Promise
@@ -139,6 +140,7 @@ Test run:
 Paste:
 ```javascript
 require('s3p').listBuckets({
+   bucket: "foo",
    quiet: true
 }).then((out) => console.log(out));
 ```
