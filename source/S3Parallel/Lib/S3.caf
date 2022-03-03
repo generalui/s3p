@@ -37,6 +37,7 @@ class S3 extends BaseClass
       Prefix:     prefix
       MaxKeys:    limit
       StartAfter: startAfter
+      FetchOwner: true
     .promise()
     .tapCatch (error) ->
       log.error S3.list-error: {} bucket, prefix, startAfter, limit, error
