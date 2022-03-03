@@ -152,6 +152,15 @@ cliCommands =
       bucket: :my-bucket to-bucket: :my-to-bucket prefix: :2020-04-14/ to-key: "" "js:(key) => key + '-old'"
       "" Copy everything from my-bucket to my-to-bucket with CUSTOM function that adds suffixes. Example: "2020-04-14/foo.jpg" is copied to "2020-04-14/foo.jpg-old"
 
+      bucket: :my-bucket to-bucket: :my-to-bucket prefix: :2020-04-14/ filter: "" "js:({Key}) => /foo/.test(Key)"
+      "" Copy everything from my-bucket to my-to-bucket with the prefix "2020-04-14/" that also contains the string 'foo'.
+
+      bucket: :my-bucket fetch-owner: true to-bucket: :my-to-bucket prefix: :2020-04-14/ filter: "" "js:({Owner}) => /john/i.test(Owner.DisplayName)"
+      "" Copy everything from my-bucket to my-to-bucket with the prefix "2020-04-14/" with an owner who's displayname contains 'john' (case ignored).
+
+      bucket: :my-bucket fetch-owner: true to-bucket: :my-to-bucket prefix: :2020-04-14/ filter: "" "js:({Owner}) => Owner.ID === 'abc123'"
+      "" Copy everything from my-bucket to my-to-bucket with the prefix "2020-04-14/" with an owner's ID is 'abc123'.
+
   sync:
     description:  "" Only copy files which do not exist in the target bucket. Uses s3.listObjectsV2, s3.copyObject and shell-exec 'aws s3 cp'.
     options:      merge allCommandOptions, toBucketOptions, writeOptions, advancedOptionsForCopy,
