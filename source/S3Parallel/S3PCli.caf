@@ -11,6 +11,7 @@ allCommandOptions =
   prefix:       :key          "" Only iterate over keys with this prefix. If 'startAfter' or 'stopAt' are also specified, the set-intersection of the two will be used.
   start-after:  :key          "" Start iteratating after this key. If 'prefix' is also specified, the set-intersection of the two will be used.
   stop-at:      :key          "" Iterate up to, and including, this key. If 'prefix' is also specified, the set-intersection of the two will be used.
+  fetch-owner:  "" If you want to filter on the Owner property of items, you'll need to add this option to fetch that property. Note: this adds about 10% overhead for listing items.
 
   pattern:
     "" string OR js:/^any-javascript-regexp/i
@@ -21,13 +22,15 @@ allCommandOptions =
       It may, however, speed up copying by reducing the total number of files copied.
 
   filter:
-    "" "js:({Key, Size, LastModified, ETag, StorageClass, Owner}) => true"
+    "" "js:({Key, Size, LastModified, ETag, StorageClass, Owner: {DisplayName, ID}}) => true"
     ""
       Filter which items will be processed.
-      Note: This won't speed up listing.
       Every key matching the specified prefifx, start-after and stop-at clause will ready from S3 and be tested with the provided filter.
       It may, however, speed up copying by reducing the total number of files copied.
-      Note: For details on the objects passed to filter, see the Contents property returned from the AWS S3 SDK's listObjectsV2 command: https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html#listObjectsV2-property
+      \n\nNotes:
+      \n- This won't speed up listing.
+      \n- If you want to access the Owner property, you need to add the --fetch-owner option.
+      \n- For details on the objects passed to filter, see the Contents property returned from the AWS S3 SDK's listObjectsV2 command: https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html#listObjectsV2-property
 
 writeOptions =
   dryrun:
@@ -175,14 +178,17 @@ cliCommands =
         :function
         """
           This gets called for each item found.
-          Form: ({Key, Size, LastModified, ETag, StorageClass, Owner}) => ...
+          Form: ({Key, Size, LastModified, ETag, StorageClass, Owner: {DisplayName, ID}}) => ...
           Default: (a) => a
+          Note: If you want to access the Owner property, you need to add the --fetch-owner option.
+
       reduce: []
         :function
         """
           Merge the two results of previous `map` or `reduce` calls into one.
           Form: (previousA, previousB) -> ...
           Default: (a, b) => require('art-standard-lib').compactFlatten([a, b])
+
       default: :any "" The default value to return if no items were found.
       finally: []
         :function

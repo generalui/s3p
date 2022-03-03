@@ -227,6 +227,7 @@ class S3Comprehensions
       quiet
       showProgress = !quiet
       debug
+      fetchOwner
 
       # source options
       bucket
@@ -372,8 +373,8 @@ class S3Comprehensions
         maxOutstanding = Math.max maxOutstanding, outstanding += 2
 
         Promise.all []
-          pwp.queue -> s3.list {} bucket, limit, startAfter
-          pwp.queue -> s3.list {} bucket, limit, startAfter: middleKey
+          pwp.queue -> s3.list {} bucket, limit, fetchOwner, startAfter
+          pwp.queue -> s3.list {} bucket, limit, fetchOwner, startAfter: middleKey
 
         .then ([rawLeftItems, rawRightItems]) ->
           rawLeftCount  = rawLeftItems?.length

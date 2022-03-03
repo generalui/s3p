@@ -30,14 +30,14 @@ class S3 extends BaseClass
     .then ({Buckets}) ->
       object {Name, CreationDate} from Buckets with-key Name with CreationDate
 
-  @list: ({bucket, prefix, limit=1000, startAfter}) =>
+  @list: ({bucket, prefix, limit=1000, fetchOwner, startAfter}) =>
     startTime = currentSecond()
     @s3.listObjectsV2
       Bucket:     bucket
       Prefix:     prefix
       MaxKeys:    limit
       StartAfter: startAfter
-      FetchOwner: true
+      FetchOwner: fetchOwner
     .promise()
     .tapCatch (error) ->
       log.error S3.list-error: {} bucket, prefix, startAfter, limit, error
