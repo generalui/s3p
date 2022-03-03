@@ -102,14 +102,19 @@ class S3 extends BaseClass
 
         @_getCommonCopyOptionsForSdk options
 
+      toLocalFile = if toFolder then path.join toFolder, toKey
+
       if verbose
-        log.unquoted copyObject: copyOptions
+        log.unquoted merge {}
+          copyObject: copyOptions
+          toLocalFile
 
       if pretend
         timeout 1 -> pretend: true
+
       else if toFolder
         createWriteStreamSafe
-          path.join toFolder, fromKey
+          toLocalFile
           copyScratchState
 
         .then (writeStream) -> new Promise (resolve, reject) ->
