@@ -90,30 +90,30 @@ describe
           test "#{a} #{b} -> #{out.slice(0, 25)}#{"..." if out.length > 25}" ->
             assert.eq out, getBisectKey a, b, true
 
-      # basic: ->
-      #   test
-      #     "" :a :c -> :b~...
-      #     -> assert.eq :b getBisectKey :a :c true
+      basic: ->
+        test
+          "" :a :c -> :b~...
+          -> assert.eq :b getBisectKey :a :c true
 
-      #   test
-      #     "" "alpha" "alpha me" -> "alpha "
-      #     -> assert.eq "alpha " getBisectKey :alpha "alpha me" true
+        test
+          "" "alpha" "alpha me" -> "alpha "
+          -> assert.eq "alpha " getBisectKey :alpha "alpha me" true
 
-      #   test
-      #     "" :alpha :alphadude -> :alphaB
-      #     -> assert.eq :alphaB getBisectKey :alpha :alphadude true
+        test
+          "" :alpha :alphadude -> :alphaB
+          -> assert.eq :alphaB getBisectKey :alpha :alphadude true
 
-      #   test
-      #     "" :alphabet :c -> :alph~...
-      #     -> assert.eq
-      #       getLastKeyWithPrefix :alph
-      #       getBisectKey :alphabet :c true
+        test
+          "" :alphabet :c -> :alph~...
+          -> assert.eq
+            getLastKeyWithPrefix :alph
+            getBisectKey :alphabet :c true
 
-      #   test
-      #     "" :alphabet :alpi -> :alpha~...
-      #     -> assert.eq
-      #       getLastKeyWithPrefix :alpha
-      #       getBisectKey :alphabet :alpi true
+        test
+          "" :alphabet :alpi -> :alpha~...
+          -> assert.eq
+            getLastKeyWithPrefix :alpha
+            getBisectKey :alphabet :alpi true
 
     regressions: ->
       test

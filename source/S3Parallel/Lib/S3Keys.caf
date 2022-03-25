@@ -16,17 +16,33 @@ import &StandardImport
       .match /(^[^\/]*)\//
     if found = m?[0] then key.slice 0, i + found.length
 
-  ##
+  ## getBisectKey
     IN:
-      startAfter: <String>
-      stopAt:     <String>
-    OUT:
+      startAfter:   <String>
+      stopAt:       <String>
+      bisectPrefix: boolean [default: false]
+        if false: find the key alphanumerically between startAfter and stopAT
+        if true:  chop off part of startKey and then increment it alpha numerically such that
+          the returned key is still > startKey
+          This can be an effective way to bisect directory structures:
+
+          startAfter:   /this/is/a/nice/directory/structure
+          bisectedKey:  /this/is/b
+
+          Note: This feature is not used by default; it was tested to see if it would enhance performance
+            on existing workloads. It did not. However, other directory structures may perform better
+            using bisectPrefix.
+
+          Note: it occurs to me that there might be a bug because bisectKey could be after stopAt.
+
+    OUT: bisectedKey:
       if stopAt <= startAfter,
         NULL
       else
-        <String> new Key
-          startAfter < Key
-          Key < stopAt
+        bisectedKey <String>
+        Guarantees:
+          startAfter < bisectedKey
+          bisectedKey < stopAt
   getBisectKey = (startAfter, stopAt, bisectPrefix) -> if startAfter < stopAt
     i = 0
     lastCommonSlash = null
@@ -69,11 +85,19 @@ import &StandardImport
   escapeKey = (key) ->
     if /[\s()]/.test key
       "" "#{key}"
+
     else key
 
   padKey = (key) ->
     pad key, 20 * Math.ceil key.length / 20
 
+  ## getLastKeyWithPrefix
+    IN: prefix: string
+    OUT:
+      returned-key: string
+      returned-key has the same prefix as the one passed in
+      any possible other-key > returned-key will not have the same prefix
+      as the one passed in
   getLastKeyWithPrefix = (prefix) ->
     if prefix.length < maxKeyLength
       prefix + lastKeyChar.repeat maxKeyLength - prefix.length
@@ -84,17 +108,21 @@ import &StandardImport
       i = lastIndex = key.length - 1
       while key[i] == lastKeyChar do i--
 
-      key = switch
+      key =
+        switch
         when key == ''
           "''"
+
         when i < lastIndex
           escapeKey key.slice 0, i + 1
           + "(#{lastKeyChar}*#{lastIndex - i})"
+
         else
           escapeKey key
 
       if shouldPad
         padKey key
+
       else key
 
     else "(#{'' + key})"
