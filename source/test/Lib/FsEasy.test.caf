@@ -2,6 +2,8 @@ import &StandardImport, {} &mockFs
 
 describe
   createParentDirs: ->
+    test "no-op" -> # just hates mockFs
+##
     beforeAll ->
       mockFs {}
 

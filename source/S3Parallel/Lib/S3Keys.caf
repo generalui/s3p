@@ -63,16 +63,13 @@ import &StandardImport
           i < prefixBisectI = (i + startAfter.length) / 2 | 0
           && key = getUpToNextSlash startAfter, if lastCommonSlash? then lastCommonSlash + 1 else 0
 
-        # log bisectPrefix: startAfter, stopAt, i, charIndex1, charIndex2, prefixBisectI, nextKeyChar
         getLastKeyWithPrefix key
 
       when charIndex1 + 1 == charIndex2
-        # log one-different: startAfter, stopAt, i, charIndex1, charIndex2
         startAfter.slice 0, i + 1
         + supportedKeyChars[(supportedKeyChars.length - 1 +  getKeyCharIndex startAfter[i + 1]) / 2 | 0]
 
       else
-        # log more-than-one-different: startAfter, stopAt, i, charIndex1, charIndex2
         startAfter.slice 0, i
         + supportedKeyChars[(charIndex1 + charIndex2) / 2 | 0]
 

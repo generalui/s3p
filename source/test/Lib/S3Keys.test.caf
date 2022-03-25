@@ -106,13 +106,13 @@ describe
         test
           "" :alphabet :c -> :alph~...
           -> assert.eq
-            getLastKeyWithPrefix :alph
+            :b
             getBisectKey :alphabet :c true
 
         test
           "" :alphabet :alpi -> :alpha~...
           -> assert.eq
-            getLastKeyWithPrefix :alpha
+            :alpho
             getBisectKey :alphabet :alpi true
 
     regressions: ->
