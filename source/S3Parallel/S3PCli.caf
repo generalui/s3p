@@ -18,14 +18,14 @@ allCommandOptions =
     ""
       Source keys must contain the string, OR source keys must match the JavaScript regexp.
       Note: This won't speed up listing.
-      Every key matching the specified prefifx, start-after and stop-at clause will ready from S3 and be tested with the provided pattern.
+      Every key matching the specified prefix, start-after and stop-at clause will ready from S3 and be tested with the provided pattern.
       It may, however, speed up copying by reducing the total number of files copied.
 
   filter:
     "" "js:({Key, Size, LastModified, ETag, StorageClass, Owner: {DisplayName, ID}}) => true"
     ""
       Filter which items will be processed.
-      Every key matching the specified prefifx, start-after and stop-at clause will ready from S3 and be tested with the provided filter.
+      Every key matching the specified prefix, start-after and stop-at clause will ready from S3 and be tested with the provided filter.
       It may, however, speed up copying by reducing the total number of files copied.
       \n\nNotes:
       \n- This won't speed up listing.
