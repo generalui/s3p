@@ -45,13 +45,13 @@ class S3Comprehensions
       if !stopAt || stopAt > prefixStopAt
         stopAt = prefixStopAt
 
-      if whenFn
-        throw new Error "only use one: when or filter" if filter
-        filter = whenFn
+      if whenFn or pattern
+        throw new Error "only use one: when, filter or pattern" if  compactFlatten([whenFn, filter, pattern]).length > 1
+        filter = whenFn ? ({Key}) -> Key.match pattern
 
-      if withFn or pattern
-        throw new Error "only use one: with, map, pattern or mapList" if compactFlatten([withFn, map, pattern, mapList]).length > 1
-        map = withFn ? ({Key}) -> Key.match pattern
+      if withFn
+        throw new Error "only use one: with, map or mapList" if compactFlatten([withFn, map, mapList]).length > 1
+        map = withFn
 
       toKey ?=
         if toPrefix? or addPrefix?
