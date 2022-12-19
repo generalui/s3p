@@ -54,9 +54,9 @@ class S3Comprehensions
         map = withFn ? ({Key}) -> Key.match pattern
 
       toKey ?=
-        if toPrefix or addPrefix
+        if toPrefix? or addPrefix?
           throw new Error "only use one: addPrefix, toPrefix, toKey" if compactFlatten([toPrefix, addPrefix, toKey]).length > 1
-          if toPrefix
+          if toPrefix?
             if prefix
               r = /// ^#{prefix}
               (key) -> key.replace r, toPrefix
