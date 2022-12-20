@@ -96,7 +96,7 @@ class S3 extends BaseClass
           Key:        fromKey
 
         else
-          CopySource: "" #{fromBucket}/#{fromKey}
+          CopySource: encodeURIComponent "" #{fromBucket}/#{fromKey}
           Bucket:     toBucket
           Key:        toKey
 
