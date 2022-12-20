@@ -23,18 +23,19 @@ Read more about [S3P on Medium](https://medium.com/@shanebdavis/s3p-massively-pa
 1. [NodeJS](https://nodejs.org/en/download/)
 2. [AWS-CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html)
 
-    The `aws-cli` is required for copying large files. By default, files larger than 100 megabytes are copied with `aws-cli`. This is a good compromise for performance. However, you can change that threshold to 5 gigabytes with the `--large-copy-threshold` option.
-    > Why? The `aws-sdk` does not support coping files larger than 5 gigabytes without a much more complicated solution.
+   The `aws-cli` is required for copying large files. By default, files larger than 100 megabytes are copied with `aws-cli`. This is a good compromise for performance. However, you can change that threshold to 5 gigabytes with the `--large-copy-threshold` option.
+
+   > Why? The `aws-sdk` does not support coping files larger than 5 gigabytes without a much more complicated solution.
 
 3. Key names must use a limited character set:
-    ```
-    <space>
-    !"#$%&'()*+,-./
-    0123456789:;<=>?@
-    ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`
-    abcdefghijklmnopqrstuvwxyz{|}~
-    ```
-    > Why? Since Aws-S3 doesn't support listing Keys in descending order, S3P uses a character-range-based divide-and-conquer algorithm.
+   ```
+   <space>
+   !"#$%&'()*+,-./
+   0123456789:;<=>?@
+   ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`
+   abcdefghijklmnopqrstuvwxyz{|}~
+   ```
+   > Why? Since Aws-S3 doesn't support listing Keys in descending order, S3P uses a character-range-based divide-and-conquer algorithm.
 
 # AWS Credentials
 
@@ -61,6 +62,7 @@ npx s3p cp --help
 # Install NPM Package
 
 You can also install s3p locally which will allow it to run faster.
+
 ```shell
 # install s3p on your current machine
 npm install s3p -g
@@ -89,15 +91,14 @@ S3-bucket-copying performance can exceed 8 gigabytes per second.
 
 The average file-size has a big impact on s3p's overall bytes-per-second:
 
-|location | command | aws-cli | s3p              | speedup | average size |
-|   -     |-        |-        |-                 |-        | - |
-|local     | ls      | 2000 items/s  | 20000 items/s       | 10x    | n/a|
-|local     | cp      | 30 mB/s       | 150 mB/s    | 5x    | 512 kB |
-|ec2      | cp      | 150 mB/s      | 8 gB/s    | 54x    | 100 mB |
+| location | command | aws-cli      | s3p           | speedup | average size |
+| -------- | ------- | ------------ | ------------- | ------- | ------------ |
+| local    | ls      | 2000 items/s | 20000 items/s | 10x     | n/a          |
+| local    | cp      | 30 mB/s      | 150 mB/s      | 5x      | 512 kB       |
+| ec2      | cp      | 150 mB/s     | 8 gB/s        | 54x     | 100 mB       |
 
 > S3P was developed to operate on buckets with millions of items and 100s of terabytes. Currently, S3P is still only a single-core NODE application. There are opportunities for even more massively parallel S3 operations by forking workers or even distributing the work across instances with something like Elastic-Queue. If someone needs solutions that are 100-1000x faster than aws-cli, let us know. We'd love to work with you.<br>-
-shane@genui.com
-
+> shane@genui.com
 
 # Documentation
 
@@ -116,39 +117,51 @@ npx s3p cp --help
 
 All the capabilities of the CLI are also available as an API. To learn the API, first learn the CLI options, and then, to learn the API call for a specific CLI command, run that command on the command-line with the `--api-example` option. This will output example JavaScript code for invoking that command programmatically.
 
-> NOTE: When you use `--api-example` on the command-line, your command won't actually run. S3P will *only* output the JavaScript equivalent of the CLI command to the console and then quit.
+> NOTE: When you use `--api-example` on the command-line, your command won't actually run. S3P will _only_ output the JavaScript equivalent of the CLI command to the console and then quit.
 
 ### Example
+
 Run:
 
 ```shell
 > npx s3p ls --bucket foo --quiet --api-example
 ```
+
 Output:
+
 ```javascript
-require('s3p').ls({
-   bucket: "foo",
-   quiet: true
-})
+require("s3p").ls({
+  bucket: "foo",
+  quiet: true,
+});
 // > Promise
 ```
 
 Test run:
+
 ```shell
 > node
 ```
+
 Paste:
+
 ```javascript
-require('s3p').listBuckets({
-   bucket: "foo",
-   quiet: true
-}).then((out) => console.log(out));
+require("s3p")
+  .ls({
+    bucket: "foo",
+    quiet: true,
+  })
+  .then(out => console.log(out));
 ```
+
 Output:
+
 ```javascript
-{
-  "bucket-a-name": creationDateA,
-  "bucket-b-name": creationDateB
+[
+  'item1',
+  'item2',
+  'item3',
+  ... 8463 more items
 }
 ```
 
