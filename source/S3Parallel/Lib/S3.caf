@@ -83,8 +83,7 @@ class S3 extends BaseClass
       pretend
       verbose
 
-    # NOTE: there appears to be a bug in the AWS s3 sdk copyObject - it can't handle spaces in the toKey
-    if size >= largeCopyThreshold || /\s/.test toKey
+    if size >= largeCopyThreshold
       @largeCopy {}
         commonCopyOptions: @extractCommonCopyOptions options
         fromBucket, toBucket, toFolder, fromKey, toKey, pretend, verbose
