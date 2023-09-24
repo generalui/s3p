@@ -4,3 +4,5 @@ source/test/
 build/test/
 *.tgz
 TODO.md
+.github/
+art.build.config.caf
