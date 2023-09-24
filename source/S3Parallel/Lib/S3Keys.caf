@@ -65,19 +65,46 @@ import &StandardImport
 
         getLastKeyWithPrefix key
 
+      # no gap between the first non-matching character
       when charIndex1 + 1 == charIndex2
-        startAfter.slice 0, i + 1
-        + supportedKeyChars[(supportedKeyChars.length - 1 +  getKeyCharIndex startAfter[i + 1]) / 2 | 0]
+        if startAfter[i + 1] == lastKeyChar
+          # just increment startAfter
+          # technically, a slightly better pick might be to find the first non lastKeyChar after (i + 1)
+          #   and then bisect between that character and lastKeyChar
+          getNextKey startAfter
+
+        else
+          # bisect between the lastKeyChar and startAfter[i + 1]
+          startAfter.slice 0, i + 1
+          + supportedKeyChars[(supportedKeyChars.length - 1 +  getKeyCharIndex startAfter[i + 1]) / 2 | 0]
 
       else
         startAfter.slice 0, i
         + supportedKeyChars[(charIndex1 + charIndex2) / 2 | 0]
 
+    unless bisectKey.length <= maxKeyLength
+      throw new Error "" Whoops! bisectKey too long #{} formattedInspect {} startAfter, stopAt, bisectPrefix, bisectKey, maxKeyLength, bisectKeyLength: bisectKey.length
     unless startAfter <= bisectKey && bisectKey <= stopAt
-      throw new Error "Whoops! #{startAfter} <= #{bisectKey} <= #{stopAt} -- something's not right"
+      throw new Error "Whoops! #{formattedInspect startAfter} <=(#{startAfter <= bisectKey}) #{formattedInspect bisectKey} <=(#{bisectKey <= stopAt}) #{formattedInspect stopAt} (bisectPrefix=#{formattedInspect bisectPrefix})-- something's not right"
 
     bisectKey
 
+  isLastKey = (key) ->
+    /// ^[#{lastKeyChar}]+$
+    .test key
+
+  getNextKey = (key) ->
+    if key.length < maxKeyLength
+      key + lastKeyChar
+    else
+      i = maxKeyLength - 1
+      if isLastKey key
+        throw new Error "getNextKey error: key is aleady the very last key possible: #{formattedInspect key}"
+
+      while i > -1
+        if key[i] != lastKeyChar
+          return key.slice(0, i) + supportedKeyChars[getKeyCharIndex(key[i]) + 1]
+        i--
 
   escapeKey = (key) ->
     if /[\s()]/.test key
