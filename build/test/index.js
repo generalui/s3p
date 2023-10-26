@@ -6,7 +6,6 @@
 .addModules({
   S3ComprehensionsTest: require('./S3Comprehensions.test'),
   S3PTest:              require('./S3P.test'),
-  S3PCli:               require('./S3PCli'),
   S3PCliTest:           require('./S3PCli.test'),
   StandardImport:       require('./StandardImport'),
   TestLib:              require('./TestLib')
