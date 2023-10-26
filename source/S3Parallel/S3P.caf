@@ -366,6 +366,17 @@ class S3P
             stats.copiedFiles++
             stats.copiedBytes += Size
 
+          .catch (error) ->
+            if /NoSuchKey: The specified key does not exist/.test error.stack
+              if verbose then log "" skipping because "NoSuchKey: The specified key does not exist": #{key} (#{Size} bytes)
+              stats.keyDoesNotExistFiles =
+                stats.keyDoesNotExistFiles ? 0
+                + 1
+              stats.keyDoesNotExistBytes =
+                stats.keyDoesNotExistBytes ? 0
+                + Size
+            else throw error
+
     .then (stats) ->
       delete stats.copyingBytesInFlight
       delete stats.copyingFilesStarted
