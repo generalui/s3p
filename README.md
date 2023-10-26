@@ -8,7 +8,7 @@ You can use it as a command-line tool for common operations, or you can use it a
 
 # Why is S3P so fast?
 
-S3's API is structured around listing items in serial - request 1000 items, wait, then request the next 1000. This is how nearly all S3 tools work. S3P, however, can list items in parallel. It leverages S3's ability to request the first 1000 items equal-to or after a given key. Then, with the help of algorithmic bisection and some intelligent heuristics, S3P can scan the contents of a bucket with an arbitrary degree of parallism. In practice, S3P can list buckets up to **15x faster** than conventional methods.
+S3's API is structured around listing items in serial - request 1000 items, wait, then request the next 1000. This is how nearly all S3 tools work. S3P, however, can list items in parallel. It leverages S3's ability to request the first 1000 items equal-to or after a given key. Then, with the help of algorithmic bisection and some intelligent heuristics, S3P can scan the contents of a bucket with an arbitrary degree of parallism. In practice, S3P can list buckets up to **20x faster** than conventional methods.
 
 S3P is really just a fancy, really fast, S3 listing tool. Summarizing, copying and synching are all boosted by S3P's core ability to list objects radically faster.
 
@@ -83,7 +83,7 @@ In addition to performance, S3P provides flexible options for custom list, copyi
 
 Surprisingly, you don't even need to run S3P in the cloud to see much of its benefits. You can run it on your local machine and, since S3 copying never goes directly through S3P, it doesn't use up any AWS bandwidth.
 
-S3-bucket-listing performance can hit almost 20,000 items per second.
+S3-bucket-listing performance can hit almost ~~20,000~~ 50,000 items per second (as-of S3Pv3.5).
 
 S3-bucket-copying performance can exceed 8 gigabytes per second.
 
@@ -93,11 +93,11 @@ The average file-size has a big impact on s3p's overall bytes-per-second:
 
 | location | command | aws-cli      | s3p           | speedup | average size |
 | -------- | ------- | ------------ | ------------- | ------- | ------------ |
-| local    | ls      | 2000 items/s | 20000 items/s | 10x     | n/a          |
+| local    | ls      | 2500 items/s | 50000 items/s | 20x     | n/a          |
 | local    | cp      | 30 mB/s      | 150 mB/s      | 5x      | 512 kB       |
 | ec2      | cp      | 150 mB/s     | 8 gB/s        | 54x     | 100 mB       |
 
-> S3P was developed to operate on buckets with millions of items and 100s of terabytes. Currently, S3P is still only a single-core NODE application. There are opportunities for even more massively parallel S3 operations by forking workers or even distributing the work across instances with something like Elastic-Queue. If someone needs solutions that are 100-1000x faster than aws-cli, let us know. We'd love to work with you.<br>-
+> S3P was developed to operate on buckets with millions of items and 100s of terabytes. Currently, S3P is still only a single-core NodeJS application. There are opportunities for even more massively parallel S3 operations by forking workers or even distributing the work across instances with something like Elastic-Queue. If someone needs solutions that are 100-1000x faster than aws-cli, let us know. We'd love to work with you.<br>-
 > shane@genui.com
 
 # Documentation
