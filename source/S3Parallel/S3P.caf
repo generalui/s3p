@@ -51,7 +51,7 @@ class S3P
 
     S3C.each merge options,
       getProgress: ->
-        compactFlatten []
+        []
           "" totalSize: #{} colors.green "" #{humanByteSize summary.size}
           "" minSize: #{} colors.green "" #{humanByteSize summary.minSize}
           "" maxSize: #{} colors.green "" #{humanByteSize summary.maxSize}
@@ -61,10 +61,10 @@ class S3P
         floorSize = humanByteSize
           Math.pow 2, 1 + logSize = (Math.log(Size) / Math.log(2)) | 0
           0
-        group = summarizeHistogramGroups[groupKey = ((logSize + 1)/10) | 0] ? "big"
-        groupUnit = summarizeHistogramGroupUnits[groupKey]
-        g = summary.sizeHistogram[group]?=
 
+        group = summarizeHistogramGroups[groupKey = ((logSize + 1)/10) | 0] ? :big
+        groupUnit = summarizeHistogramGroupUnits[groupKey]
+        g = summary.sizeHistogram[group] ?=
           each i til 10 into out = items: 0 size: 0
             out[(1 << i) + groupUnit] = 0
 
@@ -74,9 +74,10 @@ class S3P
 
         if summarizeFolders
           folder = summary.folders
-          each subFolder in
+          each subFolder in-array
               dirname Key
               .split '/'
+
             folder = folder[subFolder] ?= size: 0, files: 0
             folder.size += Size
             folder.files++
@@ -85,9 +86,11 @@ class S3P
         if Size >= summary.maxSize ? Size
           summary.maxSize = Size
           summary.maxSizeKey = Key
+
         if Size <= summary.minSize ? Size
           summary.minSize = Size
           summary.minSizeKey = Key
+
         summary.minSize = Math.min
           summary.minSize ? Size
           Size
@@ -97,15 +100,16 @@ class S3P
       if summarizeFolders
         humanize = (folder) ->
           folder.humanSize = humanByteSize folder.size if folder.size is Number
-          each subFolder in folder when subFolder is Object
+          each subFolder in-object folder when subFolder is Object
             humanize subFolder
+
         humanize summary.folders
 
       merge
         stats
         summary
         {}
-          human: object v, k in summary with humanByteSize v when /size$/i.test k
+          human: object v, k in-object summary with humanByteSize v when /size$/i.test k
 
   @compare: (options) =>
     options = S3C.normalizeOptions options

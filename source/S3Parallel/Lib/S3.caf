@@ -1,15 +1,21 @@
-import &StandardImport, &FsEasy, &LibMisc, {} &shellEscape, &util.promisify, &fs, &path
+import &StandardImport, &FsEasy, &LibMisc, &@aws-sdk/client-s3, {} &shellEscape, &util.promisify, &fs, &path
 escape = (single) -> shellEscape [] single
 
-&AwsSdk.config.setPromisesDependency &bluebird
+# &@aws-sdk/client-s3.config.setPromisesDependency &bluebird
 
 class S3 extends BaseClass
 
-  @awsSdkS3 = new &AwsSdk.S3 {} # useAccelerateEndpoint: true
+  @awsSdkS3 = new S3Client {} # useAccelerateEndpoint: true
   # https://docs.aws.amazon.com/AmazonS3/latest/dev/transfer-acceleration-examples.html
 
   @classGetter
-    s3: -> @awsSdkS3
+    s3: ->
+      listBuckets:    (options = {}) -> Promise.resolve @awsSdkS3.send new ListBucketsCommand options
+      listObjectsV2:  (options = {}) -> Promise.resolve @awsSdkS3.send new ListObjectsV2Command options
+      getObject:      (options = {}) -> Promise.resolve @awsSdkS3.send new GetObjectCommand options
+      copyObject:     (options = {}) -> Promise.resolve @awsSdkS3.send new CopyObjectCommand options
+      deleteObject:   (options = {}) -> Promise.resolve @awsSdkS3.send new DeleteObjectCommand options
+      headObject:     (options = {}) -> Promise.resolve @awsSdkS3.send new HeadObjectCommand options
 
   @commonCopyOptionsSdkKeys =
     :ACL
@@ -26,7 +32,6 @@ class S3 extends BaseClass
 
   @listBuckets: =>
     @s3.listBuckets()
-    .promise()
     .then ({Buckets}) ->
       object {Name, CreationDate} from Buckets with-key Name with CreationDate
 
@@ -38,12 +43,12 @@ class S3 extends BaseClass
       MaxKeys:    limit
       StartAfter: startAfter
       FetchOwner: fetchOwner
-    .promise()
     .tapCatch (error) ->
       log.error S3.list-error: {} bucket, prefix, startAfter, limit, error
 
     .then (results) ->
       duration = currentSecond() - startTime
+      if !results.Contents? then results.Contents = []
       unless results.Contents is Array
         log.warn S3.list-no-Contents: {} bucket, prefix, startAfter, limit, duration, results
         throw new Error "S3.list: Contents is not an array"
@@ -118,14 +123,14 @@ class S3 extends BaseClass
 
         .then (writeStream) -> new Promise (resolve, reject) ->
           @s3.getObject copyOptions
-          .createReadStream()
-          .pipe writeStream
-          .on :finish resolve
-          .on :error  reject
+          .then ({Body}) ->
+            Body
+            .pipe(writeStream);
+            .on :finish resolve
+            .on :error  reject
 
       else
         @s3.copyObject copyOptions
-        .promise()
 
   @delete: (options) =>
     @s3.deleteObject
@@ -167,7 +172,6 @@ class S3 extends BaseClass
     @s3.headObject
       Bucket: bucket
       Key: key
-    .promise()
 
   @_normalizeCopyOptions: (options) ->
     options extract
