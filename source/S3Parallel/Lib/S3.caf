@@ -5,7 +5,7 @@ escape = (single) -> shellEscape [] single
 
 class S3 extends BaseClass
 
-  @awsSdkS3 = new S3Client {} # useAccelerateEndpoint: true
+  @awsSdkS3 = new S3Client merge region: process.env.AWS_REGION # useAccelerateEndpoint: true
   # https://docs.aws.amazon.com/AmazonS3/latest/dev/transfer-acceleration-examples.html
 
   @classGetter
@@ -117,17 +117,20 @@ class S3 extends BaseClass
         timeout 1 -> pretend: true
 
       else if toFolder
-        createWriteStreamSafe
-          toLocalFile
-          copyScratchState
+        if /\/$/.test(toKey) && size == 0 # this is a folder
+          createParentDirs toLocalFile + "ignored-file-name"
+        else
+          createWriteStreamSafe
+            toLocalFile
+            copyScratchState
 
-        .then (writeStream) -> new Promise (resolve, reject) ->
-          @s3.getObject copyOptions
-          .then ({Body}) ->
-            Body
-            .pipe(writeStream);
-            .on :finish resolve
-            .on :error  reject
+          .then (writeStream) -> new Promise (resolve, reject) ->
+            @s3.getObject copyOptions
+            .then ({Body}) ->
+              Body
+              .pipe(writeStream);
+              .on :finish resolve
+              .on :error  reject
 
       else
         @s3.copyObject copyOptions
