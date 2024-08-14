@@ -1,3 +1,84 @@
+# 3.6.0 - 2024-08-14
+- NEW: can specify from and to without -- args; NEW: can specify --region
+
+# 3.5.4
+- patch/deps: deps version bump, in particular, AWS-SDKv3 version bump
+
+# 3.5.3
+- patch/fix: FIX: copying "directories" from S3 to-local-folder: they are just keys that in "/" and have size-0;
+
+# patch/tooling: fix CI
+- patch/doc: updated README
+- patch/refactor: no longer checkin in build files
+
+# 3.5.1
+- patch/improvement: now "NoSuchKey: The specified key does not exist" are logged but are not fatal
+
+# 3.5.0
+- patch/tooling: initial conversion to AWS SDK v3 - ListObjectsV2 is almost 2x faster!
+
+# 3.4.10
+- patch/tooling: updated external deps
+
+# 3.4.9
+- patch/tooling: a couple other files not needed in npm
+
+# 3.4.8
+- patch/tooling: don't build tests into npm
+
+# 3.4.7
+- patch/fix: fixed edge-case for getBisectKey
+
+# 3.4.6
+- no longer need to shell out for names with spaces - duh
+- added encodeURIComponent to CopySource as per the API doc
+
+# 3.4.5
+- corrected example in readme
+
+# 3.4.4
+- npm audit fix
+- update node to v16 for testing
+
+# 3.4.3
+- patch/fix: fix issue #67 - --pattern wasn't actually working
+
+# 3.4.2
+- patch/fix: fix issue #73 - --to-prefix "" was being ignored
+- patch/deps: updated deps
+- patch/deps: updated deps
+- patch/test: fixed tests
+- patch/doc: added a little dock around getBisectKey
+
+# 3.4.1
+- patch/doc: added filter by owner examples
+
+# 3.4.0
+- patch/improvement: made --fetch-owner optional as it incurrs at 10% overhead in bucket-listing
+
+# 3.3.4
+- patch/fix: fixed issue #54
+- set FetchOwner true in s3.listObjectsV2
+
+# 3.3.3
+- patch/deps: updated deps
+- patch/doc: readme
+- patch/doc: improved examples in changelog
+- patch/doc: fixed readme link
+- patch/tooling: build
+
+# 3.3.1
+- patch/doc: improved CLI doc
+
+# 3.3.0
+- minor/feature: updated deps - art-suite/cli now does exit(1) on errors
+
+# 3.2.2
+- patch/deps: updated deps
+
+# 3.2.1
+- patch/fix: tested (manually) and fixed the new common-copy-comands; should be working
+
 # 3.2
 
 Added common copy options:

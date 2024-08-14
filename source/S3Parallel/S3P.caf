@@ -304,7 +304,7 @@ class S3P
   @_copyWrapper: (options, eachFunction) =>
     options = S3C.normalizeOptions options
     options extract
-      s3 = &Lib/S3
+      s3
       toKey
       stats
       pretend
@@ -315,6 +315,11 @@ class S3P
       copyPwp
       largeCopyPwp
       largeCopyThreshold
+
+      # s3 options
+      region
+      useAccelerateEndpoint
+    s3 ?= new &Lib/S3 {} region, useAccelerateEndpoint
 
     stats ?= {}
     stats.copiedBytes = 0

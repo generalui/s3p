@@ -1,5 +1,15 @@
 import &StandardImport, &Lib
 
+standardFromArgs =
+  description:  "Specify the bucket and optionally a prefix. Supported forms: local/file/path, s3://bucket/prefix, https://s3.region.amazonaws.com/bucket/prefix and https://bucket.s3.amazonaws.com/prefix"
+  argument:     "[bucket/prefix]"
+  argsToOptions: processArgsIntoOptions
+
+standardFromToArgs =
+  description:  "Specify where 'from' and where 'to' do the operation. Supported forms: local/file/path, s3://bucket/prefix, https://s3.region.amazonaws.com/bucket/prefix and https://bucket.s3.amazonaws.com/prefix"
+  argument:     "[from [to]]"
+  argsToOptions: processArgsIntoOptions
+
 allCommandOptions =
   quiet:                      "" no output
   verbose:                    "" extra output
@@ -12,6 +22,7 @@ allCommandOptions =
   start-after:  :key          "" Start iteratating after this key. If 'prefix' is also specified, the set-intersection of the two will be used.
   stop-at:      :key          "" Iterate up to, and including, this key. If 'prefix' is also specified, the set-intersection of the two will be used.
   fetch-owner:  "" If you want to filter on the Owner property of items, you'll need to add this option to fetch that property. Note: this adds about 10% overhead for listing items.
+  region:       "" The AWS region of the bucket. Will use AWS_REGION environment variable if not specified.
 
   pattern:
     "" string OR js:/^any-javascript-regexp/i
@@ -70,7 +81,7 @@ writeOptions =
       OUTPOSTS
 
 toBucketOptions =
-  to-bucket:    argument: :bucket-name  required: true description:     "" The target bucket. It can be the same bucket.
+  to-bucket:    argument: :bucket-name description:     "" The target bucket. It can be the same bucket.
   to-prefix:    :key-prefix         "" If 'prefix' is specified, the target key will REPLACE its source prefix with toPrefix Otherwise, this is the same as add-prefix.
   add-prefix:   :key-prefix         "" The source key is prepended with this string for the target bucket.
   to-key:       '"js:(key) => key"' "" Provide an arbitrary JavaScript function for re-keying keys.
@@ -106,12 +117,14 @@ cliCommands =
     options:      merge allCommandOptions, advancedOptionsForAll,
       long: "" output item size and date as well as key
       raw:  "" output one S3 item per line as JSON with all properties return from listObjects
+    args: standardFromArgs
 
   summarize:
     description:  "" Scan all items in one bucket and produce a summary of all the items. Uses s3.listObjectsV2.
     options:      merge allCommandOptions,
                   summarize-folders: "" show count and size of each folder
                   advancedOptionsForAll
+    args: standardFromArgs
     examples:
       bucket: :my-bucket
       "" get a detailed summary of item counts and sizes in my-bucket
@@ -122,6 +135,7 @@ cliCommands =
   compare:
     description:  "" Compare two buckets and produce a summary of their differences. Uses s3.listObjectsV2.
     options:      merge allCommandOptions, toBucketOptions, advancedOptionsForAll
+    args:         standardFromToArgs
     examples:
       bucket: :my-bucket to-bucket: :my-to-bucket
       "" Compare items from my-bucket with my-to-bucket. Shows how many items exist in both, only one, or are difference sizes.
@@ -133,6 +147,7 @@ cliCommands =
 
         NOTE: This overwrites existing files in the target bucket. Try the 'sync' command for smarter copies when some of the files have already been copied.
     options:      merge allCommandOptions, toBucketOptions, writeOptions, advancedOptionsForCopy, toFolderOptions
+    args:         standardFromToArgs
     examples:
       bucket: :my-bucket to-bucket: :my-to-bucket
       "" Copy everything from my-bucket to my-to-bucket
@@ -165,6 +180,7 @@ cliCommands =
     description:  "" Only copy files which do not exist in the target bucket. Uses s3.listObjectsV2, s3.copyObject and shell-exec 'aws s3 cp'.
     options:      merge allCommandOptions, toBucketOptions, writeOptions, advancedOptionsForCopy,
                   overwrite: "" If set, sync will overwrite existing files with different file sizes.
+    args:         standardFromToArgs
 
     examples:
       bucket: :my-bucket to-bucket: :my-to-bucket
@@ -175,6 +191,7 @@ cliCommands =
     options:      merge allCommandOptions, advancedOptionsForAll,
                   map:        :function "" This gets called for each item found. A javascript function of the form (item) => ...
                   map-list:   :function "" This gets called with an array of items (length between 1 and 1000). A javascript function of the form (itemList) => ...
+    args: standardFromArgs
     examples: []
       bucket: :my-bucket
       map:    "" "js:(item) => console.log(item)"
@@ -204,6 +221,7 @@ cliCommands =
         ""
           If present, this function will be applied to produce the final result after the last call to reduce.
           Form: (finalReduceResult) -> ...
+    args: standardFromArgs
 
     examples:
       bucket: :my-bucket

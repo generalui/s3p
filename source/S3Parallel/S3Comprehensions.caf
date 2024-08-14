@@ -258,14 +258,15 @@ class S3Comprehensions
       throttle
       stats
 
-      # internal testing only
-      s3 = &Lib/S3
+      # s3 options
+      region
+      useAccelerateEndpoint
+
+      # internal use only
+      s3
       pwp = new PromiseWorkerPool listConcurrency # internal use only
 
-    listingTool = if fromFolder
-      new &Lib/LocalFileLister {} fromFolder
-    else
-      s3
+    s3 ?= new &Lib/S3 {} region, useAccelerateEndpoint: !!useAccelerateEndpoint
 
     if compare && map && toBucket
       throw new Error "cannot use both `compare` and `map` - use mapList instead"
