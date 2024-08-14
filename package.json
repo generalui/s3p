@@ -11,6 +11,7 @@
     "art-communication-status": "^1.6.0",
     "art-standard-lib": "^1.70.12",
     "caffeine-script-runtime": "^1.14.0",
+    "glob": "^10.3.12",
     "neptune-namespaces-runtime": "^3.2.9",
     "shell-escape": "^0.2.0"
   },
@@ -30,6 +31,10 @@
       "build/**/*.js",
       "!build/test/**/*.js"
     ],
+    "coveragePathIgnorePatterns": [
+      "/index.js$",
+      "/namespace.js$"
+    ],
     "testEnvironment": "node",
     "testPathIgnorePatterns": [
       "/node_modules/",
@@ -44,12 +49,13 @@
     "url": "https://github.com/generalui/s3p.git"
   },
   "scripts": {
-    "build": "caf -m -c source -o build\nnpm run nn",
-    "build-clean": "npm run clean; npm run build",
+    "build": "rsync -av --include='*.js' --include='*.css' --exclude='*' ./source/ ./build/\ncaf -m -c source -o build\nnpm run nn",
+    "build-clean": "# BUILD CLEAN START\n#   - building into: build-temp\n#\nrm -rf ./__build-old__\nrsync -av --include='*.js' --include='*.css' --exclude='*' ./source/ ./build/\ncaf -m -c source -o build-temp\nnpm run nn\n\nnn build-temp/*\n\n# BUILD CLEAN FINIALIZING\n#  - replace old build in:   build\n#  - with new build from:    build-temp\n#\nmv build __build-old__\nmv build-temp build\nrm -rf ./__build-old__",
+    "build-watch": "nodemon -e js,ts,jsx,tsx,caf,coffee,json -i \"build/**\" -x npm run build",
     "clean": "rm -rf build/*",
     "nn": "nn build/* ",
-    "test": "npm run nn\njest",
-    "watch": "npm-watch"
+    "test": "jest",
+    "test-watch": "jest --watch"
   },
   "version": "3.5.4",
   "watch": {

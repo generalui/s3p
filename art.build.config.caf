@@ -1,69 +1,71 @@
-import &ArtStandardLib
+package: &@ArtSuite/StandardPackageBuilder.configure {} &package
 
-standardPackageBuilder =
-  (currentPackage, options = {}) -> (abcPackage) ->
-    options extract?
-      sourceDir = "source"
-      targetDir = "build"
-      mocha
-      mochaAndJest
-      coffeeScript
+# import &ArtStandardLib
 
-    merge currentPackage,
-      scripts:
-        nn:
-          "" nn #{targetDir}/* #{if mocha then :test/tests}
-        test:
-          """
-            npm run nn
-            #{}
-              if mochaAndJest then
-                """
-                  jest
-                  if [[ $? -ne 0 ]]; then
-                    exit 1
-                  fi
-                  mocha -u tdd
-              else if mocha then "" mocha -u tdd
-              else          :jest
+# standardPackageBuilder =
+#   (currentPackage, options = {}) -> (abcPackage) ->
+#     options extract?
+#       sourceDir = "source"
+#       targetDir = "build"
+#       mocha
+#       mochaAndJest
+#       coffeeScript
 
-        build:
-          if coffeeScript
-            """
-              coffee -m --output #{targetDir} --compile #{sourceDir} &
-              COFFEE_PID=$!
-              caf -m -c #{sourceDir} -o #{targetDir} &
-              CAF_PID=$!
-              wait $COFFEE_PID || exit 1
-              wait $CAF_PID || exit 1
-              npm run nn
-          else
-            """
-              caf -m -c #{sourceDir} -o #{targetDir}
-              npm run nn
+#     merge currentPackage,
+#       scripts:
+#         nn:
+#           "" nn #{targetDir}/* #{if mocha then :test/tests}
+#         test:
+#           """
+#             npm run nn
+#             #{}
+#               if mochaAndJest then
+#                 """
+#                   jest
+#                   if [[ $? -ne 0 ]]; then
+#                     exit 1
+#                   fi
+#                   mocha -u tdd
+#               else if mocha then "" mocha -u tdd
+#               else          :jest
 
-        build-clean:  "" npm run clean; npm run build
-        clean:        "" rm -rf #{targetDir}/*
-        watch:        :npm-watch
+#         build:
+#           if coffeeScript
+#             """
+#               coffee -m --output #{targetDir} --compile #{sourceDir} &
+#               COFFEE_PID=$!
+#               caf -m -c #{sourceDir} -o #{targetDir} &
+#               CAF_PID=$!
+#               wait $COFFEE_PID || exit 1
+#               wait $CAF_PID || exit 1
+#               npm run nn
+#           else
+#             """
+#               caf -m -c #{sourceDir} -o #{targetDir}
+#               npm run nn
 
-      jest:
-        testEnvironment: :node
-        verbose: true
-        collectCoverageFrom:
-          "#{targetDir}/**/*.js",
-          "!#{targetDir}/test/**/*.js"
-        testPathIgnorePatterns:
-          "/node_modules/"
-          "<rootDir>/test" # so it can ignore our mocha tests
+#         build-clean:  "" npm run clean; npm run build
+#         clean:        "" rm -rf #{targetDir}/*
+#         watch:        :npm-watch
 
-      watch:
-        build:
-          extensions: compactFlattenAll
-            :caf
-            coffeeScript && :coffee
+#       jest:
+#         testEnvironment: :node
+#         verbose: true
+#         collectCoverageFrom:
+#           "#{targetDir}/**/*.js",
+#           "!#{targetDir}/test/**/*.js"
+#         testPathIgnorePatterns:
+#           "/node_modules/"
+#           "<rootDir>/test" # so it can ignore our mocha tests
 
-          patterns:   [] sourceDir
-          quiet:      false
+#       watch:
+#         build:
+#           extensions: compactFlattenAll
+#             :caf
+#             coffeeScript && :coffee
+
+#           patterns:   [] sourceDir
+#           quiet:      false
 
 
-package: standardPackageBuilder &package
+# package: standardPackageBuilder &package

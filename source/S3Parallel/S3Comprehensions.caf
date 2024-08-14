@@ -210,7 +210,7 @@ class S3Comprehensions
           While it returns true, it will be called once/second/parallel-branch until it returns false.
 
         COMPREHENSION
-        with: (Item) -> ignored - alais of `map`
+        with: (Item) -> ignored - alias of `map`
         when: (Item) -> T/F - if true, pass it on to `map`, else skip
         returning:    if present, return this value instead of stats
         into:         <ALIAS: returning>
@@ -234,6 +234,7 @@ class S3Comprehensions
       startAfter
       stopAt
       filter
+      fromFolder
 
       # compare-to options
       compare
@@ -243,7 +244,7 @@ class S3Comprehensions
       # limits
       limit = 1000
       maxListRequests
-      listConcurrency = 100 # max open reqeusts
+      listConcurrency = 100 # max open requests
 
       # actions
       returnValue
@@ -257,9 +258,14 @@ class S3Comprehensions
       throttle
       stats
 
-      # internal use only
+      # internal testing only
       s3 = &Lib/S3
       pwp = new PromiseWorkerPool listConcurrency # internal use only
+
+    listingTool = if fromFolder
+      new &Lib/LocalFileLister {} fromFolder
+    else
+      s3
 
     if compare && map && toBucket
       throw new Error "cannot use both `compare` and `map` - use mapList instead"
@@ -303,7 +309,7 @@ class S3Comprehensions
     ## applyF
       Apply the custom map or mapList functions
       IN:
-        items:        list of S3 items in the source bucekt as returned by the AwsSdk s3 list call
+        items:        list of S3 items in the source bucket as returned by the AwsSdk s3 list call
         compareItems: (optional, if compare is set), list of items in the toBucket
         compareStartAfter
         compareStopAt
@@ -373,8 +379,8 @@ class S3Comprehensions
         maxOutstanding = Math.max maxOutstanding, outstanding += 2
 
         Promise.all []
-          pwp.queue -> s3.list {} bucket, limit, fetchOwner, startAfter
-          pwp.queue -> s3.list {} bucket, limit, fetchOwner, startAfter: middleKey
+          pwp.queue -> listingTool.list {} bucket, limit, fetchOwner, startAfter, stopAt: middleKey
+          pwp.queue -> listingTool.list {} bucket, limit, fetchOwner, stopAt, startAfter: middleKey
 
         .then ([rawLeftItems, rawRightItems]) ->
           rawLeftCount  = rawLeftItems?.length
