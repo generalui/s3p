@@ -56,7 +56,7 @@
     "test": "jest",
     "test-watch": "jest --watch"
   },
-  "version": "3.5.4",
+  "version": "3.6.0",
   "watch": {
     "build": {
       "extensions": [
