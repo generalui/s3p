@@ -5,18 +5,6 @@ escape = (single) -> shellEscape [] single
 
 class S3 extends BaseClass
 
-  @awsSdkS3 = new S3Client merge region: process.env.AWS_REGION # useAccelerateEndpoint: true
-  # https://docs.aws.amazon.com/AmazonS3/latest/dev/transfer-acceleration-examples.html
-
-  @classGetter
-    s3: ->
-      listBuckets:    (options = {}) -> Promise.resolve @awsSdkS3.send new ListBucketsCommand options
-      listObjectsV2:  (options = {}) -> Promise.resolve @awsSdkS3.send new ListObjectsV2Command options
-      getObject:      (options = {}) -> Promise.resolve @awsSdkS3.send new GetObjectCommand options
-      copyObject:     (options = {}) -> Promise.resolve @awsSdkS3.send new CopyObjectCommand options
-      deleteObject:   (options = {}) -> Promise.resolve @awsSdkS3.send new DeleteObjectCommand options
-      headObject:     (options = {}) -> Promise.resolve @awsSdkS3.send new HeadObjectCommand options
-
   @commonCopyOptionsSdkKeys =
     :ACL
     :CacheControl
@@ -30,12 +18,32 @@ class S3 extends BaseClass
 
   @commonSdkCopyOptionsByLowerCamelCaseKeys = object k from @commonCopyOptionsSdkKeys with-key lowerCamelCase k
 
-  @listBuckets: =>
+  ## constructor
+    IN: options:
+      region: string, default: process.env.AWS_REGION
+      useAccelerateEndpoint: boolean, default: false
+
+  constructor: (options = []) ->
+    @awsSdkS3 = new S3Client merge
+      region: process.env.AWS_REGION
+      {region, useAccelerateEndpoint} = options
+
+  @getter
+    s3: ->
+      listBuckets:    (options = {}) -> Promise.resolve @awsSdkS3.send new ListBucketsCommand options
+      listObjectsV2:  (options = {}) -> Promise.resolve @awsSdkS3.send new ListObjectsV2Command options
+      getObject:      (options = {}) -> Promise.resolve @awsSdkS3.send new GetObjectCommand options
+      copyObject:     (options = {}) -> Promise.resolve @awsSdkS3.send new CopyObjectCommand options
+      deleteObject:   (options = {}) -> Promise.resolve @awsSdkS3.send new DeleteObjectCommand options
+      headObject:     (options = {}) -> Promise.resolve @awsSdkS3.send new HeadObjectCommand options
+
+
+  listBuckets: ->
     @s3.listBuckets()
     .then ({Buckets}) ->
       object {Name, CreationDate} from Buckets with-key Name with CreationDate
 
-  @list: ({bucket, prefix, limit=1000, fetchOwner, startAfter}) =>
+  list: ({bucket, prefix, limit=1000, fetchOwner, startAfter}) ->
     startTime = currentSecond()
     @s3.listObjectsV2
       Bucket:     bucket
@@ -43,6 +51,7 @@ class S3 extends BaseClass
       MaxKeys:    limit
       StartAfter: startAfter
       FetchOwner: fetchOwner
+
     .tapCatch (error) ->
       log.error S3.list-error: {} bucket, prefix, startAfter, limit, error
 
@@ -78,7 +87,7 @@ class S3 extends BaseClass
     OUT:
       Promise.then -> see https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html#copyObject-property > Callback > Parameters
         {} CopyObjectResult, ...
-  @copy: (options) =>
+  copy: (options) ->
     if options extract largeCopyThreshold, scratchState
       copyScratchState = scratchState.copyScratchState ?= {}
 
@@ -135,12 +144,12 @@ class S3 extends BaseClass
       else
         @s3.copyObject copyOptions
 
-  @delete: (options) =>
+  delete: (options) ->
     @s3.deleteObject
       Bucket: options.bucket
       Key:    options.key
 
-  @largeCopy: (options) =>
+  largeCopy: (options) ->
     options extract commonCopyOptions
     @_normalizeCopyOptions(options) extract
       fromBucket,
@@ -171,12 +180,12 @@ class S3 extends BaseClass
       shellExec command
 
   # get object's metdata
-  @headObject: ({bucket, key}) =>
+  headObject: ({bucket, key}) ->
     @s3.headObject
       Bucket: bucket
       Key: key
 
-  @_normalizeCopyOptions: (options) ->
+  _normalizeCopyOptions: (options) ->
     options extract
       bucket, key
       fromBucket = bucket
@@ -192,15 +201,15 @@ class S3 extends BaseClass
       throw new Error "" Missing one of: fromBucket, toBucket, fromKey, toKey or bucket or key as a default
     merge options, {} fromBucket, fromKey, toBucket, toKey
 
-  @_getCommonCopyOptionsForSdk: (options) =>
-    object sdkKey, lowerCamelCasedKey from @commonSdkCopyOptionsByLowerCamelCaseKeys with-key sdkKey
+  _getCommonCopyOptionsForSdk: (options) ->
+    object sdkKey, lowerCamelCasedKey from S3.commonSdkCopyOptionsByLowerCamelCaseKeys with-key sdkKey
       options[lowerCamelCasedKey]
 
-  @extractCommonCopyOptions: (options) =>
-    object v, k from @commonSdkCopyOptionsByLowerCamelCaseKeys
+  extractCommonCopyOptions: (options) ->
+    object v, k from S3.commonSdkCopyOptionsByLowerCamelCaseKeys
       options[k]
 
-  @shouldSyncObjects: (options) ->
+  shouldSyncObjects: (options) ->
     @_normalizeCopyOptions(options) extract fromBucket, toBucket, fromKey, toKey
     Promise.then ->
       if options.size < 1024**2 || !options.size
@@ -216,7 +225,7 @@ class S3 extends BaseClass
     OUT:
       copied: Bool
       status: if not copied, explains why
-  @syncObject: (options) =>
+  syncObject: (options) ->
     @shouldSyncObjects options
     .then (shouldSync) ->
       if shouldSync

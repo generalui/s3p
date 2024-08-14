@@ -5,8 +5,7 @@
   },
   "bugs": "https:/github.com/generalui/s3p/issues",
   "dependencies": {
-    "@art-suite/cli": "^2.0.2",
-    "@art-suite/standard-package-builder": "^1.2.6",
+    "@art-suite/cli": "2.2",
     "@aws-sdk/client-s3": "^3.436.0",
     "art-class-system": "^1.11.13",
     "art-communication-status": "^1.6.0",
@@ -17,6 +16,7 @@
   },
   "description": "S3P is a CLI and library that is 5x to 50x faster than aws-cli for bulk S3 operations including: summarize, compare, copy and sync.",
   "devDependencies": {
+    "@art-suite/standard-package-builder": "^1.2.6",
     "art-build-configurator": "^1.29.3",
     "art-testbench": "^3.2.2",
     "caffeine-script": "^0.74.0",

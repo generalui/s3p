@@ -1,22 +1,89 @@
 import &StandardImport, {} &path
 exec = &util.promisify &child_process.exec
 
-createS3Url: (bucket, folder, key) ->
-    if folder
-      path.join folder, key
-    else
-      "" s3://#{bucket}/#{key}
+{}
+  createS3Url: (bucket, folder, key) ->
+      if folder
+        path.join folder, key
+      else
+        "" s3://#{bucket}/#{key}
 
-shellExec: (command) ->
-  exec command
-  .then ({stdout}) -> stdout
+  shellExec: (command) ->
+    exec command
+    .then ({stdout}) -> stdout
 
-humanByteSize: (bytes, decimals = 2) ->
-  switch
-  when bytes < 1024     then "" #{bytes/1024**0 | 0}_B
-  when bytes < 1024**2  then "" #{(bytes/1024**1).toFixed decimals}kB
-  when bytes < 1024**3  then "" #{(bytes/1024**2).toFixed decimals}mB
-  when bytes < 1024**4  then "" #{(bytes/1024**3).toFixed decimals}gB
-  when bytes < 1024**5  then "" #{(bytes/1024**4).toFixed decimals}tB
-  when bytes < 1024**6  then "" #{(bytes/1024**5).toFixed decimals}pB
-  else                       "" #{(bytes/1024**6).toFixed decimals}eB
+  humanByteSize: (bytes, decimals = 2) ->
+    switch
+    when bytes < 1024     then "" #{bytes/1024**0 | 0}_B
+    when bytes < 1024**2  then "" #{(bytes/1024**1).toFixed decimals}kB
+    when bytes < 1024**3  then "" #{(bytes/1024**2).toFixed decimals}mB
+    when bytes < 1024**4  then "" #{(bytes/1024**3).toFixed decimals}gB
+    when bytes < 1024**5  then "" #{(bytes/1024**4).toFixed decimals}tB
+    when bytes < 1024**6  then "" #{(bytes/1024**5).toFixed decimals}pB
+    else                       "" #{(bytes/1024**6).toFixed decimals}eB
+
+  s3UrlPattern = ///i ^s3://([^\/]+)\/?(.*)$
+
+  # https://mybucket.s3.amazonaws.com/prefix
+  # https://mybucket.s3-us-west-2.amazonaws.com/prefix
+  httpUrlPattern =
+    ///i
+      ^
+      https?://
+
+      ([^.]+) # bucket
+
+      \.s3
+
+      ([-.]([-a-z0-9]+))? # region
+
+      \.amazonaws\.com
+
+      (\/(.+))? # prefix
+      $
+
+  # https://s3-us-west-2.amazonaws.com/mybucket/prefix
+  regionFirstHttpUrlPattern  =
+    ///i
+      ^
+      https?://s3[-.]
+
+      ([-a-z0-9]+) # region
+
+      \.amazonaws\.com
+
+      \/([^/]+) # bucket
+
+      (\/(.+))? # prefix
+      $
+
+  parseS3Url = (input) ->
+    if isString input
+      input = input.trim()
+
+      log parseS3Url: {} input
+
+      switch
+      when match = input.match s3UrlPattern
+        [_, bucket, prefix] = match
+
+      when match = input.match httpUrlPattern
+        [_, bucket, _, region, _, prefix] = match
+
+      when match = input.match regionFirstHttpUrlPattern
+        [_, region, bucket, _, prefix] = match
+
+      else
+        folder = input
+
+      {} bucket, prefix, region, folder
+    else {}
+
+  processArgsIntoOptions = (args = []) ->
+    [fromStr, toStr] = args
+    if fromStr
+      {bucket, prefix, region, folder} = parseS3Url fromStr
+    if toStr
+      {bucket: toBucket, prefix: toPrefix, region: toRegion, folder: tofolder} = parseS3Url toStr
+
+    merge {} bucket, prefix, region, folder, toBucket, toPrefix, toRegion, tofolder

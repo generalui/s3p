@@ -1,9 +1,14 @@
 import &StandardImport, &Lib
 
+wrapCommandWithArgsProcessing = (command) ->
+  (options, args) ->
+    mergeInto options, processArgsIntoOptions args
+    command options
+
 {}
   version: -> &package.version
 
-  ls: (options) ->
+  ls: wrapCommandWithArgsProcessing (options, args) ->
     items = []
     options extract onItem, output, fromCli, verbose, raw, long as longForm
     output ?= (v) -> console.log v
@@ -30,10 +35,10 @@ import &StandardImport, &Lib
       if fromCli then if verbose then info else null
       else if verbose then merge info, {} items else items
 
-  listBuckets:  &lib/S3.listBuckets
-  summarize:    &S3P.summarize
-  compare:      &S3P.compare
-  cp:           &S3P.copy
-  sync:         &S3P.sync
-  each:         &S3Comprehensions.each
-  map:          &S3Comprehensions.map
+  listBuckets:  wrapCommandWithArgsProcessing -> new &lib/S3().listBuckets()
+  summarize:    wrapCommandWithArgsProcessing &S3P.summarize
+  compare:      wrapCommandWithArgsProcessing &S3P.compare
+  cp:           wrapCommandWithArgsProcessing &S3P.copy
+  sync:         wrapCommandWithArgsProcessing &S3P.sync
+  each:         wrapCommandWithArgsProcessing &S3Comprehensions.each
+  map:          wrapCommandWithArgsProcessing &S3Comprehensions.map
