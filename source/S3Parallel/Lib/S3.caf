@@ -56,7 +56,7 @@ class S3 extends BaseClass
         ETag
         StorageClass
         Owner
-  list: ({bucket, prefix, limit=1000, fetchOwner, startAfter, stopAt}) =>
+  list: ({bucket, prefix, limit=1000, fetchOwner, startAfter, stopAt}) ->
     startTime = currentSecond()
     @s3.listObjectsV2
       Bucket:     bucket
@@ -143,7 +143,7 @@ class S3 extends BaseClass
         fromFilePath = path.join fromFolder, fromKey
         if toBucket
           new Upload
-            client: @awsSdkS3
+            client: @s3
             params:
               Bucket: toBucket
               Key:    toKey
@@ -210,7 +210,7 @@ class S3 extends BaseClass
       shellExec command
 
   # get object's metadata
-  @headObject: ({bucket, key}) =>
+  headObject: ({bucket, key}) ->
     @s3.headObject
       Bucket: bucket
       Key: key

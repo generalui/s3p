@@ -1,4 +1,4 @@
-import &path, &ArtStandardLib, &ArtClassSystem, &Lib, {} &colors
+import &path, &ArtStandardLib, &ArtClassSystem, &Lib
 
 class S3Comprehensions
 
@@ -380,8 +380,8 @@ class S3Comprehensions
         maxOutstanding = Math.max maxOutstanding, outstanding += 2
 
         Promise.all []
-          pwp.queue -> listingTool.list {} bucket, limit, fetchOwner, startAfter, stopAt: middleKey
-          pwp.queue -> listingTool.list {} bucket, limit, fetchOwner, stopAt, startAfter: middleKey
+          pwp.queue -> s3.list {} bucket, limit, fetchOwner, startAfter, stopAt: middleKey
+          pwp.queue -> s3.list {} bucket, limit, fetchOwner, stopAt, startAfter: middleKey
 
         .then ([rawLeftItems, rawRightItems]) ->
           rawLeftCount  = rawLeftItems?.length
