@@ -1,5 +1,9 @@
-import &StandardImport, &FsEasy, &LibMisc, &@aws-sdk/client-s3, {} &shellEscape, &util.promisify, &fs, &path
+import &StandardImport, &FsEasy, &LibMisc, &@aws-sdk/client-s3, &@aws-sdk/lib-storage, {} &shellEscape, &util.promisify, &path
 escape = (single) -> shellEscape [] single
+
+fs = merge
+  {createReadStream} = &fs
+  {copyFile} = &fs.promises
 
 # &@aws-sdk/client-s3.config.setPromisesDependency &bluebird
 
@@ -43,7 +47,16 @@ class S3 extends BaseClass
     .then ({Buckets}) ->
       object {Name, CreationDate} from Buckets with-key Name with CreationDate
 
-  list: ({bucket, prefix, limit=1000, fetchOwner, startAfter}) ->
+  ## list
+    OUT:
+      []
+        Key:
+        LastModified:
+        Size
+        ETag
+        StorageClass
+        Owner
+  list: ({bucket, prefix, limit=1000, fetchOwner, startAfter, stopAt}) ->
     startTime = currentSecond()
     @s3.listObjectsV2
       Bucket:     bucket
@@ -65,14 +78,12 @@ class S3 extends BaseClass
       else if duration > 60
         log.warn S3.list-slow: {} bucket, prefix, startAfter, limit, duration, results: merge results, Contents: "Array #{results.Contents.length}"
 
-      results.Contents
+      if present stopAt
+        array item in-array results.Contents when item.Key <= stopAt
+      else
+        results.Contents
 
-  ##
-    TODO:
-      For large files (>5GB), we need to just use the CLI:
-        aws s3 cp s3://resbio-fastq-drop-internal/180316_NB501104_0354_AHM2L2BGX5/Undetermined/Undetermined_S0_L001_R1_001.fastq.gz s3://genui-dynamodb-migration-scratch/large-test.gz
-        We can add --quiet (probably)
-      Further, that should use acceleration, if enabled - still need to test that.
+  ## copy
     IN:
       options:
         size:       Bytes (optional) if provided and if bigger than the max size allowed by copyObject, largeCopy is used
@@ -82,6 +93,7 @@ class S3 extends BaseClass
         key:      <String>
         fromKey:  from-key (default: key)
         toKey:    to-key (default: key)
+        fromFolder: string
 
         toFolder:   local folder
     OUT:
@@ -92,15 +104,17 @@ class S3 extends BaseClass
       copyScratchState = scratchState.copyScratchState ?= {}
 
     @_normalizeCopyOptions(options) extract
-      fromBucket, toBucket, fromKey, toKey, size
-      toFolder
-      pretend
-      verbose
+      fromBucket, fromFolder, fromKey
+      toBucket, toFolder, toKey
+      pretend, verbose
+      size
 
     if size >= largeCopyThreshold
       @largeCopy {}
         commonCopyOptions: @extractCommonCopyOptions options
-        fromBucket, toBucket, toFolder, fromKey, toKey, pretend, verbose
+        fromBucket, fromFolder, fromKey
+        toBucket, toFolder, toKey
+        pretend, verbose
 
     else
       copyOptions = merge
@@ -125,14 +139,30 @@ class S3 extends BaseClass
       if pretend
         timeout 1 -> pretend: true
 
+      else if fromFolder
+        fromFilePath = path.join fromFolder, fromKey
+        if toBucket
+          new Upload
+            client: @s3
+            params:
+              Bucket: toBucket
+              Key:    toKey
+              Body:   fs.createReadStream fromFilePath
+
+          .done()
+
+        else
+          createParentDirs toLocalFile, copyScratchState
+          .then -> fs.copyFile fromFilePath, toLocalFile
+
       else if toFolder
         if /\/$/.test(toKey) && size == 0 # this is a folder
-          createParentDirs toLocalFile + "ignored-file-name"
-        else
-          createWriteStreamSafe
-            toLocalFile
+          createParentDirs
+            path.join toLocalFile, "ignored-file-name"
             copyScratchState
 
+        else
+          createWriteStreamSafe toLocalFile, copyScratchState
           .then (writeStream) -> new Promise (resolve, reject) ->
             @s3.getObject copyOptions
             .then ({Body}) ->
@@ -179,7 +209,7 @@ class S3 extends BaseClass
     else
       shellExec command
 
-  # get object's metdata
+  # get object's metadata
   headObject: ({bucket, key}) ->
     @s3.headObject
       Bucket: bucket

@@ -1,0 +1,99 @@
+import &StandardImport, &glob, {} &path, fs: &fs.promises
+
+class LocalFileLister extends BaseClass
+
+  constructor: ({fromFolder, _allFiles, _getFileStat}) ->
+    @_fromFolder =
+      # ensure has trailing slash
+      path.join fromFolder, "aaa"
+      .replace /aaa$/, ''
+
+    @_custom_getFileStat = _getFileStat
+
+    @_fileStats = {}
+
+    @_allFilesPromise =
+      if _allFiles
+        Promise.resolve _allFiles
+      else
+        glob
+          path.join fromFolder, "**"
+          nodir: true
+
+        .then ({found}) -> found
+
+      .then (files) ->
+        array file in files.sort()
+          file = file.slice fromFolder.length + 1, file.length
+
+  @getter files: -> @_allFilesPromise
+  @getter :fromFolder
+
+  ## list
+    IN:
+      limit: maximum number of files to return
+      startAfter: if present, returns files strictly greater than startAfter
+      stopAt: if present, returns files up to and including stopAt
+
+    OUT:
+      []
+        Key:
+        LastModified:
+        Size
+        Owner
+  list: ({limit=1000, startAfter, stopAt}) ->
+    if present startAfter then @_findStartIndex startAfter
+    else Promise.deepAll {} @files, startIndex: 0
+    .then ({files, startIndex}) ->
+      out = []
+      i = startIndex
+      tilIndex = min files.length, startIndex + limit
+      stopAt ?= peek files
+      while i < tilIndex && files[i] <= stopAt
+        out.push @_getFileStat files[i]
+        i++
+
+      Promise.all out
+
+  #################################################
+  # PRIVATE
+  #################################################
+  ##
+    IN: file name
+    OUT: []
+      Key: file
+      LastModified: stats.mtime
+      Size: stats.size
+      Owner:
+        DisplayName: stats.uid.toString()
+        ID: stats.uid.toString()
+  _getFileStat: (file) ->
+    if @_custom_getFileStat
+      @_custom_getFileStat file
+    else
+      if f = @_fileStats[file]
+        Promise.resolve f
+      else
+        filePath = path.join @fromFolder, file
+        fs.stat path.join @fromFolder, file
+        .then (stats) -> @_fileStats[file] =
+          Key: file
+          LastModified: stats.mtime
+          Size: stats.size
+          Owner:
+            DisplayName: stats.uid.toString()
+            ID: stats.uid.toString()
+
+  _findStartIndex: (startAfter) ->
+    @files
+    .then (files) ->
+      j = 0
+      k = files.length
+      while j < k
+        m = (j + k) / 2 | 0
+        pivot = files[m]
+        switch
+        when startAfter == pivot then k = j = m
+        when startAfter <  pivot then k = m
+        else                          j = m + 1
+      {} files, startIndex: j

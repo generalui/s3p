@@ -1,0 +1,67 @@
+import &StandardImport
+
+chainedTest "LocalFileLister" ->
+  new LocalFileLister {}
+    fromFolder = "./faked/"
+    _allFiles: array i til 1000
+      "#{fromFolder}/#{i}.txt"
+    _getFileStat: (file) -> {}
+      Key: file
+      LastModified: toDate()
+      Size: 123 + (file.match(/\d+/)[0] | 0)
+      Owner:
+        DisplayName: :me
+        ID: :abc123
+
+.tapTest
+  "list from start index", (lister) ->
+    lister.list
+      limit: 10
+    .then (result) ->
+      assert.eq result.length, 10
+      assert.eq result[0].Key, "0.txt"
+
+  "list from start index", (lister) ->
+    lister.list
+      limit: 5
+      startAfter: "100.txt"
+    .then (result) ->
+      assert.eq result.length, 5
+      assert.eq
+        array {Key} from result with Key
+        []
+          :100.txt
+          :101.txt
+          :102.txt
+          :103.txt
+          :104.txt
+
+  "list from start index near the end", (lister) ->
+    lister.list
+      limit: 5
+      startAfter: "998.txt"
+    .then (result) ->
+      assert.eq result.length, 2
+      assert.eq
+        array {Key} from result with Key
+        []
+          :998.txt
+          :999.txt
+
+
+  "list from start middle with stopAt", (lister) ->
+    lister.list
+      limit: 5
+      startAfter: :500.txt
+      stopAt: :505.txt
+    .then (result) ->
+      assert.eq result.length, 5
+      assert.eq
+        array {Key} from result with Key
+        []
+          :500.txt
+          :501.txt
+          :502.txt
+          :503.txt
+          :504.txt
+
