@@ -1,40 +1,33 @@
-import &StandardImport, &@aws-sdk/client-s3
+import &StandardImport, &MinioTestHelper
 
-endpoint    = process.env.S3_ENDPOINT
-testBucket  = :s3p-test
+testKeys =
+  :test-folder/hello.txt
+  :test-folder/world.txt
+  :other/file.txt
 
-if endpoint
-  s3Client = new S3Client {}
-    region:         :us-east-1
-    endpoint
-    forcePathStyle: true
-    credentials:
-      accessKeyId:      process.env.AWS_ACCESS_KEY_ID     ? :testAccessKey
-      secretAccessKey:  process.env.AWS_SECRET_ACCESS_KEY  ? :testSecretKey
+setupTestScenario :S3Integration testKeys, ({endpoint, testBucket}) ->
 
-  describe :S3Integration ->
+  test "ls returns array of key strings" ->
+    ls
+      bucket:   testBucket
+      endpoint: endpoint
+      quiet:    true
 
-    beforeAll ->
-      s3Client.send new PutObjectCommand
-        Bucket: testBucket
-        Key:    :test-folder/hello.txt
-        Body:   :hello-world
-
-    afterAll ->
-      s3Client.send new DeleteObjectCommand
-        Bucket: testBucket
-        Key:    :test-folder/hello.txt
-
-    test "ls lists objects from S3" ->
-      ls
-        bucket:   testBucket
-        endpoint: endpoint
-        quiet:    true
-
-      .then (keys) ->
+    .then (keys) ->
+      each key in-array testKeys
         assert.ok
-          :test-folder/hello.txt in keys
-          "" Expected test-folder/hello.txt in #{JSON.stringify keys}
+          key in keys
+          "" Expected #{key} in #{JSON.stringify keys}
 
-else
-  test "S3Integration skipped (no S3_ENDPOINT)" ->
+  test "S3P.list returns array of key strings" ->
+    S3P.list
+      bucket:   testBucket
+      endpoint: endpoint
+      quiet:    true
+
+    .then (keys) ->
+      assert.ok keys is Array
+      each key in-array testKeys
+        assert.ok
+          key in keys
+          "" Expected #{key} in #{JSON.stringify keys}

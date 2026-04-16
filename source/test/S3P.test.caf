@@ -1,6 +1,28 @@
 import &StandardImport, &TestLib
 
 describe
+  list: ->
+    test "returns array of key strings" ->
+      S3P.list
+        quiet: true
+        s3: mockS3
+          :alpha
+          :beta
+          :gamma
+
+      .then (keys) ->
+        assert.ok keys is Array
+        assert.eq keys, [] :alpha :beta :gamma
+
+    test "returns empty array for no items" ->
+      S3P.list
+        quiet: true
+        s3: mockS3()
+
+      .then (keys) ->
+        assert.ok keys is Array
+        assert.eq keys, []
+
   each: ->
     test :3-items ->
       S3Comprehensions.each
