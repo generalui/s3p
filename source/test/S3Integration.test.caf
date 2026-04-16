@@ -1,0 +1,40 @@
+import &StandardImport, &@aws-sdk/client-s3
+
+endpoint    = process.env.S3_ENDPOINT
+testBucket  = :s3p-test
+
+if endpoint
+  s3Client = new S3Client {}
+    region:         :us-east-1
+    endpoint
+    forcePathStyle: true
+    credentials:
+      accessKeyId:      process.env.AWS_ACCESS_KEY_ID     ? :testAccessKey
+      secretAccessKey:  process.env.AWS_SECRET_ACCESS_KEY  ? :testSecretKey
+
+  describe :S3Integration ->
+
+    beforeAll ->
+      s3Client.send new PutObjectCommand
+        Bucket: testBucket
+        Key:    :test-folder/hello.txt
+        Body:   :hello-world
+
+    afterAll ->
+      s3Client.send new DeleteObjectCommand
+        Bucket: testBucket
+        Key:    :test-folder/hello.txt
+
+    test "ls lists objects from S3" ->
+      ls
+        bucket:   testBucket
+        endpoint: endpoint
+        quiet:    true
+
+      .then (keys) ->
+        assert.ok
+          :test-folder/hello.txt in keys
+          "" Expected test-folder/hello.txt in #{JSON.stringify keys}
+
+else
+  test "S3Integration skipped (no S3_ENDPOINT)" ->

@@ -26,11 +26,17 @@ class S3 extends BaseClass
     IN: options:
       region: string, default: process.env.AWS_REGION
       useAccelerateEndpoint: boolean, default: false
+      endpoint: string, default: process.env.S3_ENDPOINT
+      forcePathStyle: boolean, default: true if endpoint is set
 
-  constructor: (options = []) ->
+  constructor: (options = {}) ->
+    endpoint = options.endpoint ? process.env.S3_ENDPOINT
+
     @awsSdkS3 = new S3Client merge
       region: process.env.AWS_REGION
-      {region, useAccelerateEndpoint} = options
+      if endpoint
+        {} endpoint, forcePathStyle: true
+      {region, useAccelerateEndpoint, forcePathStyle} = options
 
   @getter
     s3: ->

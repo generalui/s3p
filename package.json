@@ -55,7 +55,7 @@
     "build-watch": "nodemon -e js,ts,jsx,tsx,caf,coffee,json -i \"build/**\" -x npm run build",
     "clean": "rm -rf build/*",
     "nn": "nn build/* ",
-    "test": "jest",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "test-watch": "jest --watch"
   },
   "version": "3.6.1",
