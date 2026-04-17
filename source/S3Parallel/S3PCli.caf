@@ -186,6 +186,28 @@ cliCommands =
       bucket: :my-bucket to-bucket: :my-to-bucket
       "" Copy everything from my-bucket to my-to-bucket
 
+  delete:
+    description:
+      """
+        Delete all matching files from a bucket. Uses s3.listObjectsV2 and s3.deleteObject.
+
+        SAFETY: --confirm-delete-items-from-bucket MUST be provided and MUST exactly match --bucket. Without this, s3p refuses to proceed.
+    options: merge allCommandOptions, advancedOptionsForAll,
+      confirm-delete-items-from-bucket: []
+        :bucket-name
+        ""
+          REQUIRED. Must exactly match --bucket. Guards against accidental deletion.
+      dryrun:                   "" Will not modify anything. List everything that would be deleted.
+      pretend:                  "" alias for --dryrun
+      delete-concurrency:       advanced: true argument: :500 description: "" Maximum number of simultaneous delete operations.
+    args: standardFromArgs
+    examples:
+      bucket: :my-bucket confirm-delete-items-from-bucket: :my-bucket prefix: :old/
+      "" Delete every key under 'old/' from my-bucket.
+
+      bucket: :my-bucket confirm-delete-items-from-bucket: :my-bucket dryrun: true
+      "" Dry-run: list what would be deleted but delete nothing.
+
   each:
     description:  "" Create your own iteration. Specify a --map or --map-list option.
     options:      merge allCommandOptions, advancedOptionsForAll,

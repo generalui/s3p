@@ -213,6 +213,63 @@ class S3P
     @_copyWrapper options, (updatedOptions) =>
       S3C.eachPromises updatedOptions
 
+  ##
+    IN: options:
+      bucket:                         <String> required - bucket to delete FROM
+      confirmDeleteItemsFromBucket:   <String> required - must === bucket (safety)
+      prefix, filter, pattern, etc.   standard S3Comprehensions.each options
+      pretend:                        <Boolean> if true, lists but does NOT delete
+      deleteConcurrency:              <Number>  [500] max in-flight delete calls
+    OUT:
+      finalStats:
+        deletedFiles
+        deletedBytes
+        ...
+  @delete: (options) =>
+    options extract
+      bucket
+      confirmDeleteItemsFromBucket
+      dryrun
+      pretend = dryrun
+      verbose
+      stats
+      deleteConcurrency = 500
+      deletePwp
+      region, endpoint, useAccelerateEndpoint
+      s3
+
+    unless pretend || confirmDeleteItemsFromBucket == bucket
+      throw new Error ""
+        confirm-delete-items-from-bucket (#{confirmDeleteItemsFromBucket})
+        must exactly match bucket (#{bucket})
+        (hint: use --dryrun or --pretend to skip this check)
+
+    deletePwp ?= new PromiseWorkerPool deleteConcurrency
+    s3 ?= new &Lib/S3 {} region, endpoint, useAccelerateEndpoint
+
+    stats ?= {}
+    stats.deletedFiles = 0
+    stats.deletedBytes = 0
+
+    S3C.eachPromises merge options,
+      stats
+      map: ({Key, Size}) ->
+        deletePwp.queue ->
+          if pretend
+            Promise.then ->
+              log "#{if pretend then 'PRETEND ' else ''}delete s3://#{bucket}/#{Key} # #{humanByteSize Size}" if verbose
+              stats.deletedFiles++
+              stats.deletedBytes += Size
+          else
+            s3.delete {} bucket, key: Key
+            .then ->
+              log "delete s3://#{bucket}/#{Key} # #{humanByteSize Size}" if verbose
+              stats.deletedFiles++
+              stats.deletedBytes += Size
+
+    .then (info) ->
+      finalStats: S3P.getStatsWithHumanByteSizes merge info, stats
+
   @sync: (options) =>
     @_copyWrapper options, (options2) ->
       options2 extract

@@ -40,5 +40,6 @@ wrapCommandWithArgsProcessing = (command) ->
   compare:      wrapCommandWithArgsProcessing &S3P.compare
   cp:           wrapCommandWithArgsProcessing &S3P.copy
   sync:         wrapCommandWithArgsProcessing &S3P.sync
+  delete:       wrapCommandWithArgsProcessing &S3P.delete
   each:         wrapCommandWithArgsProcessing &S3Comprehensions.each
   map:          wrapCommandWithArgsProcessing &S3Comprehensions.map

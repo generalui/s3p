@@ -1,0 +1,125 @@
+import &StandardImport, &MinioTestHelper
+
+sourceObjects =
+  {} Key: :del/alpha.txt  Body: :AAAA
+  {} Key: :del/beta.txt   Body: :BB
+  {} Key: :del/gamma.txt  Body: :CCCCCCCC
+  {} Key: :keep/one.txt   Body: :XYZ
+
+setupTestScenario :delete sourceObjects, ({endpoint, testBucket}) ->
+
+  baseOptions = {}
+    bucket:   testBucket
+    endpoint: endpoint
+    quiet:    true
+
+  test "delete without confirm-delete-items-from-bucket throws" ->
+    assert.throws -> S3P.delete merge baseOptions, prefix: :del/
+
+  test "delete with wrong confirm-delete-items-from-bucket throws" ->
+    assert.throws ->
+      S3P.delete merge
+        baseOptions
+        prefix: :del/
+        confirmDeleteItemsFromBucket: :wrong-bucket
+
+  test "delete with matching confirm deletes the matching items" ->
+    # re-seed to guarantee keys exist (prior tests may have run first)
+    putTestObjects sourceObjects
+
+    .then ->
+      S3P.delete merge
+        baseOptions
+        prefix: :del/
+        confirmDeleteItemsFromBucket: testBucket
+
+    .then ({finalStats}) ->
+      assert.eq finalStats.deletedFiles, 3
+      assert.eq finalStats.deletedBytes, 4 + 2 + 8
+      listBucketKeys()
+
+    .then (keys) ->
+      assert.ok !(:del/alpha.txt in keys), "" del/alpha.txt should be gone
+      assert.ok !(:del/beta.txt  in keys), "" del/beta.txt should be gone
+      assert.ok !(:del/gamma.txt in keys), "" del/gamma.txt should be gone
+      assert.ok   :keep/one.txt  in keys,  "" keep/one.txt should remain
+
+  test "delete with filter only deletes matching items" ->
+    putTestObjects sourceObjects
+
+    .then ->
+      S3P.delete merge
+        baseOptions
+        prefix: :del/
+        filter: ({Size}) -> Size >= 4
+        confirmDeleteItemsFromBucket: testBucket
+
+    .then ({finalStats}) ->
+      assert.eq finalStats.deletedFiles, 2
+      listBucketKeys :del/
+
+    .then (keys) ->
+      assert.eq keys, [] :del/beta.txt
+
+  test "delete with pretend deletes nothing" ->
+    putTestObjects sourceObjects
+
+    .then ->
+      S3P.delete merge
+        baseOptions
+        prefix: :del/
+        pretend: true
+        confirmDeleteItemsFromBucket: testBucket
+
+    .then ({finalStats}) ->
+      assert.eq finalStats.deletedFiles, 3
+      listBucketKeys :del/
+
+    .then (keys) ->
+      assert.eq keys.sort(), [] :del/alpha.txt :del/beta.txt :del/gamma.txt
+
+  test "delete with pretend does NOT require confirm" ->
+    putTestObjects sourceObjects
+
+    .then ->
+      # no confirmDeleteItemsFromBucket — but pretend makes it safe
+      S3P.delete merge baseOptions, prefix: :del/, pretend: true
+
+    .then ({finalStats}) ->
+      assert.eq finalStats.deletedFiles, 3
+      listBucketKeys :del/
+    .then (keys) ->
+      assert.eq keys.sort(), [] :del/alpha.txt :del/beta.txt :del/gamma.txt
+
+  test "delete with dryrun does NOT require confirm" ->
+    putTestObjects sourceObjects
+
+    .then ->
+      S3P.delete merge baseOptions, prefix: :del/, dryrun: true
+
+    .then ({finalStats}) ->
+      assert.eq finalStats.deletedFiles, 3
+
+  test "delete with verbose logs each deleted key" ->
+    putTestObjects sourceObjects
+
+    .then ->
+      logged = []
+      originalLog = console.log
+      console.log = (args...) -> logged.push args.join ' '
+
+      S3P.delete merge
+        baseOptions
+        prefix:   :del/
+        verbose:  true
+        confirmDeleteItemsFromBucket: testBucket
+
+      .finally ->
+        console.log = originalLog
+
+      .then ->
+        combined = logged.join :\n
+        each key in-array [] :del/alpha.txt :del/beta.txt :del/gamma.txt
+          assert.ok
+            combined.indexOf(key) >= 0
+            "" expected log to include #{key}, got: #{combined}
