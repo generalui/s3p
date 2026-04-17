@@ -1,0 +1,64 @@
+import &StandardImport, &MinioTestHelper
+
+testObjects =
+  {} Key: :fruits/apple.txt    Body: :AAAA
+  {} Key: :fruits/banana.txt   Body: :BB
+  {} Key: :fruits/cherry.txt   Body: :CCCCCCCC
+  {} Key: :veggies/carrot.txt  Body: :DDDDDD
+  {} Key: :veggies/potato.txt  Body: :E
+
+testKeys = array {Key} in-array testObjects with Key
+
+setupTestScenario :summarize testObjects, ({endpoint, testBucket}) ->
+
+  baseOptions = {} bucket: testBucket, endpoint: endpoint, quiet: true
+
+  test "basic summarize returns totals" ->
+    summarize baseOptions
+
+    .then (result) ->
+      assert.eq result.items, 5
+      assert.eq result.size,  4 + 2 + 8 + 6 + 1
+      assert.eq result.maxSize, 8
+      assert.eq result.minSize, 1
+      assert.eq result.maxSizeKey, :fruits/cherry.txt
+      assert.eq result.minSizeKey, :veggies/potato.txt
+
+  test "prefix limits to matching keys" ->
+    summarize merge baseOptions, prefix: :fruits/
+
+    .then (result) ->
+      assert.eq result.items, 3
+      assert.eq result.size,  4 + 2 + 8
+
+  test "pattern filters keys by substring" ->
+    summarize merge baseOptions, pattern: :carrot
+
+    .then (result) ->
+      assert.eq result.matchingItems, 1
+      assert.eq result.items, 5
+
+  test "filter function limits by size" ->
+    summarize merge baseOptions, filter: ({Size}) -> Size >= 4
+
+    .then (result) ->
+      assert.eq result.matchingItems, 3
+
+  test "summarize-folders breaks out per-folder stats" ->
+    summarize merge baseOptions, summarizeFolders: true
+
+    .then (result) ->
+      assert.ok result.folders?,              "expected folders object"
+      assert.ok result.folders.fruits?,       "expected folders.fruits"
+      assert.ok result.folders.veggies?,      "expected folders.veggies"
+      assert.eq result.folders.fruits.files,  3
+      assert.eq result.folders.fruits.size,   4 + 2 + 8
+      assert.eq result.folders.veggies.files, 2
+      assert.eq result.folders.veggies.size,  6 + 1
+
+  test "empty prefix returns zero items" ->
+    summarize merge baseOptions, prefix: :nothing-here/
+
+    .then (result) ->
+      assert.eq result.items, 0
+      assert.eq result.size,  0

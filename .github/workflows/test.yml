@@ -1,20 +1,42 @@
 name: test
 on:
-  push:
+  pull_request:
     branches:
       - master
+  workflow_dispatch:
+
 jobs:
   test:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v4
+
+      - name: Start MinIO
+        run: |
+          docker run -d --name minio \
+            -p 9000:9000 \
+            -e MINIO_ROOT_USER=testAccessKey \
+            -e MINIO_ROOT_PASSWORD=testSecretKey \
+            minio/minio server /data
+          until curl -sf http://localhost:9000/minio/health/live; do sleep 1; done
+          docker exec minio mkdir -p /data/s3p-test
+
       - name: Use Node.js
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v4
         with:
-          node-version: 16.x
-      - name: Install NPM dependencies
+          node-version: 20
+
+      - name: Install dependencies
         run: npm ci
+
       - name: Build
         run: npm run build
+
       - name: Run tests
-        run: npm test
+        env:
+          S3_ENDPOINT: http://localhost:9000
+          AWS_ACCESS_KEY_ID: testAccessKey
+          AWS_SECRET_ACCESS_KEY: testSecretKey
+          AWS_REGION: us-east-1
+        run: npm run test:ci

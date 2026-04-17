@@ -55,7 +55,9 @@
     "build-watch": "nodemon -e js,ts,jsx,tsx,caf,coffee,json -i \"build/**\" -x npm run build",
     "clean": "rm -rf build/*",
     "nn": "nn build/* ",
-    "test": "jest",
+    "test": "S3_ENDPOINT=http://localhost:9000 AWS_ACCESS_KEY_ID=testAccessKey AWS_SECRET_ACCESS_KEY=testSecretKey AWS_REGION=us-east-1 npm run test:ci",
+    "test:ci": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "test:coverage": "S3_ENDPOINT=http://localhost:9000 AWS_ACCESS_KEY_ID=testAccessKey AWS_SECRET_ACCESS_KEY=testSecretKey AWS_REGION=us-east-1 NODE_OPTIONS=--experimental-vm-modules jest --coverage",
     "test-watch": "jest --watch"
   },
   "version": "3.6.1",

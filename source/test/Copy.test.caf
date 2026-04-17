@@ -1,0 +1,89 @@
+import &StandardImport, &MinioTestHelper
+
+sourceObjects =
+  {} Key: :src/alpha.txt  Body: :AAAA
+  {} Key: :src/beta.txt   Body: :BB
+  {} Key: :src/gamma.txt  Body: :CCCCCCCC
+
+sourceKeys = array {Key} in-array sourceObjects with Key
+
+setupTestScenario :cp sourceObjects, ({endpoint, testBucket}) ->
+
+  baseOptions = {}
+    bucket:   testBucket
+    toBucket: testBucket
+    endpoint: endpoint
+    quiet:    true
+
+  test "basic copy with addPrefix copies each source key" ->
+    cp merge baseOptions, prefix: :src/, addPrefix: :copy1/
+
+    .then ({finalStats}) ->
+      assert.eq finalStats.copiedFiles, 3
+      assert.eq finalStats.copiedBytes, 4 + 2 + 8
+      listBucketKeys :copy1/
+    .then (keys) ->
+      assert.eq keys.sort(),
+        array sourceKey in-array sourceKeys with "" copy1/#{sourceKey}
+
+  test "copy with toPrefix replaces the source prefix" ->
+    cp merge baseOptions, prefix: :src/, toPrefix: :copy2/
+
+    .then ({finalStats}) ->
+      assert.eq finalStats.copiedFiles, 3
+      listBucketKeys :copy2/
+    .then (keys) ->
+      assert.eq keys.sort(), [] :copy2/alpha.txt :copy2/beta.txt :copy2/gamma.txt
+
+  test "copy with toKey function transforms keys" ->
+    cp merge
+      baseOptions
+      prefix: :src/
+      toKey:  (key) ->
+        key
+        .replace /^src\//, :custom/
+        .replace /\.txt$/, :.bak
+
+    .then ({finalStats}) ->
+      assert.eq finalStats.copiedFiles, 3
+      listBucketKeys :custom/
+    .then (keys) ->
+      assert.eq keys.sort(), [] :custom/alpha.bak :custom/beta.bak :custom/gamma.bak
+
+  test "copy with filter only copies matching items" ->
+    cp merge
+      baseOptions
+      prefix:    :src/
+      toPrefix:  :filtered/
+      filter:    ({Size}) -> Size >= 4
+
+    .then ({finalStats}) ->
+      assert.eq finalStats.copiedFiles, 2
+      listBucketKeys :filtered/
+    .then (keys) ->
+      assert.eq keys.sort(), [] :filtered/alpha.txt :filtered/gamma.txt
+
+  test "copy with pattern only copies matching items" ->
+    cp merge
+      baseOptions
+      prefix:    :src/
+      toPrefix:  :patterned/
+      pattern:   :alpha
+
+    .then ({finalStats}) ->
+      assert.eq finalStats.copiedFiles, 1
+      listBucketKeys :patterned/
+    .then (keys) ->
+      assert.eq keys, [] :patterned/alpha.txt
+
+  test "copy with pretend copies nothing" ->
+    cp merge
+      baseOptions
+      prefix:   :src/
+      toPrefix: :pretended/
+      pretend:  true
+
+    .then ->
+      listBucketKeys :pretended/
+    .then (keys) ->
+      assert.eq keys, []

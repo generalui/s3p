@@ -1,0 +1,120 @@
+import &StandardImport, &@aws-sdk/client-s3
+
+fs   = &fs
+os   = &os
+path = &path
+
+endpoint    = process.env.S3_ENDPOINT
+testBucket  = :s3p-test
+
+s3Client =
+  if endpoint
+    new S3Client {}
+      region:         :us-east-1
+      endpoint
+      forcePathStyle: true
+      credentials:
+        accessKeyId:      process.env.AWS_ACCESS_KEY_ID     ? :testAccessKey
+        secretAccessKey:  process.env.AWS_SECRET_ACCESS_KEY  ? :testSecretKey
+
+## putTestObjects
+  IN: objects: array of {Key, Body} or just strings (used as both Key and Body)
+  OUT: Promise
+putTestObjects = (objects) ->
+  Promise.all array obj in-array objects
+    {Key, Body} = if obj is String then Key: obj, Body: obj else obj
+    s3Client.send new PutObjectCommand
+      Bucket: testBucket
+      Key:    Key
+      Body:   Body
+
+## deleteTestObjects
+  IN: keys: array of strings
+  OUT: Promise
+deleteTestObjects = (keys) ->
+  Promise.all array Key in-array keys
+    s3Client.send new DeleteObjectCommand
+      Bucket: testBucket
+      Key:    Key
+
+## listBucketKeys
+  IN: prefix: optional string - if provided, only keys starting with prefix
+  OUT: Promise<array of strings>
+listBucketKeys = (prefix) ->
+  s3Client.send new ListObjectsV2Command
+    Bucket: testBucket
+    Prefix: prefix
+  .then ({Contents}) -> array {Key} in-array (Contents ? []) with Key
+
+## headTestObject
+  IN: key: string
+  OUT: Promise<head-response>
+headTestObject = (Key) ->
+  s3Client.send new HeadObjectCommand
+    Bucket: testBucket
+    Key:    Key
+
+## deleteAllBucketObjects
+  Delete every object in the test bucket. Use as afterAll cleanup when tests
+  create dynamic destination keys.
+  OUT: Promise
+deleteAllBucketObjects = ->
+  listBucketKeys()
+  .then deleteTestObjects
+
+## setupTestScenario
+  Sets up a describe block with beforeAll/afterAll that creates and cleans up test objects.
+  IN:
+    name: string - describe block name
+    keys: array of strings - keys to create (body = key string)
+    fn: (testOptions) -> define tests inside this function
+  testOptions: {endpoint, testBucket}
+setupTestScenario = (name, keys, fn) ->
+  if endpoint
+    describe name, ->
+      beforeAll -> putTestObjects keys
+      afterAll  -> deleteAllBucketObjects()
+      fn {} endpoint, testBucket
+  else
+    test "#{name} skipped (no S3_ENDPOINT)" ->
+
+## makeTempDir
+  Create a unique temp directory. Use for cp --to-folder tests.
+  OUT: absolute path string
+makeTempDir = ->
+  fs.mkdtempSync path.join os.tmpdir(), :s3p-test-
+
+## removeTempDir
+  Recursively remove a temp directory.
+removeTempDir = (dir) ->
+  if dir && fs.existsSync dir
+    fs.rmSync dir, recursive: true, force: true
+
+## readTempFile
+  Read a file relative to a temp dir into a string.
+readTempFile = (dir, relPath) ->
+  fs.readFileSync
+    path.join dir, relPath
+    :utf8
+
+## writeTempFile
+  Write string content to a file relative to a temp dir, creating parents.
+writeTempFile = (dir, relPath, content) ->
+  full = path.join dir, relPath
+  fs.mkdirSync path.dirname(full), recursive: true
+  fs.writeFileSync full, content
+
+{}
+  endpoint
+  testBucket
+  s3Client
+  putTestObjects
+  deleteTestObjects
+  listBucketKeys
+  headTestObject
+  deleteAllBucketObjects
+  setupTestScenario
+  makeTempDir
+  removeTempDir
+  readTempFile
+  writeTempFile

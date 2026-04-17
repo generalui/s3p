@@ -1,0 +1,160 @@
+import &StandardImport, &MinioTestHelper
+
+testObjects =
+  {} Key: :r/one.txt    Body: :AA
+  {} Key: :r/two.txt    Body: :BBBB
+  {} Key: :r/three.txt  Body: :CCCCCCCC
+
+setupTestScenario :read-commands testObjects, ({endpoint, testBucket}) ->
+
+  baseOptions = {}
+    bucket:   testBucket
+    endpoint: endpoint
+    quiet:    true
+    prefix:   :r/
+
+  test "listBuckets returns bucket metadata" ->
+    # listBuckets CLI handler ignores passed options; relies on S3_ENDPOINT env var
+    listBuckets()
+    .then (buckets) ->
+      assert.ok buckets?, "expected buckets object"
+      assert.ok buckets[testBucket]?, "expected bucket to be present"
+
+  test "map with reduce sums sizes" ->
+    S3Comprehensions.map merge
+      baseOptions
+      map:    ({Size}) -> Size
+      reduce: (a, b) -> a + b
+
+    .then (totalBytes) ->
+      assert.eq totalBytes, 2 + 4 + 8
+
+  test "map with finally formats result" ->
+    S3Comprehensions.map merge
+      baseOptions
+      map:     ({Size}) -> Size
+      reduce:  (a, b) -> a + b
+      finally: (total) -> "" total=#{total}
+
+    .then (result) ->
+      assert.eq result, "total=14"
+
+  test "map returns default when no items" ->
+    S3Comprehensions.map merge
+      baseOptions
+      prefix:  :nothing-here/
+      map:     ({Size}) -> Size
+      reduce:  (a, b) -> a + b
+      default: :empty
+
+    .then (result) ->
+      assert.eq result, :empty
+
+  test "each invokes map for each item" ->
+    count = 0
+    totalBytes = 0
+    S3Comprehensions.each merge
+      baseOptions
+      map: ({Size}) ->
+        count++
+        totalBytes += Size
+
+    .then (stats) ->
+      assert.eq count, 3
+      assert.eq totalBytes, 2 + 4 + 8
+      assert.eq stats.items, 3
+
+  test "each with filter only maps matching items" ->
+    count = 0
+    S3Comprehensions.each merge
+      baseOptions
+      filter: ({Size}) -> Size >= 4
+      map:    -> count++
+
+    .then (stats) ->
+      assert.eq count, 2
+      assert.eq stats.matchingItems, 2
+      assert.eq stats.items, 3
+
+  test "ls with fromCli outputs Key only by default" ->
+    lines = []
+    ls merge
+      baseOptions
+      fromCli: true
+      output:  (v) -> lines.push v
+
+    .then ->
+      assert.eq lines.sort(), [] :r/one.txt :r/three.txt :r/two.txt
+
+  test "ls with fromCli + raw outputs JSON per item" ->
+    lines = []
+    ls merge
+      baseOptions
+      fromCli: true
+      raw:     true
+      output:  (v) -> lines.push v
+
+    .then ->
+      assert.eq lines.length, 3
+      parsed = array line in-array lines with JSON.parse line
+      keys   = array {Key} in-array parsed with Key
+      assert.eq keys.sort(), [] :r/one.txt :r/three.txt :r/two.txt
+
+  test "ls with fromCli + long outputs formatted line" ->
+    lines = []
+    ls merge
+      baseOptions
+      fromCli: true
+      long:    true
+      output:  (v) -> lines.push v
+
+    .then ->
+      assert.eq lines.length, 3
+      # every line should contain a size column and a Key
+      each line in-array lines
+        assert.match line, /\d{4}-\d{2}-\d{2}/,  "" expected date in: #{line}
+        assert.match line, /r\/(one|two|three)\.txt/, "" expected key in: #{line}
+
+  test "ls with fromCli returns info when verbose, null otherwise" ->
+    ls merge
+      baseOptions
+      fromCli: true
+      output:  ->
+    .then (result) ->
+      assert.eq result, null
+
+    .then ->
+      ls merge
+        baseOptions
+        fromCli: true
+        verbose: true
+        output:  ->
+
+    .then (result) ->
+      assert.ok result?,  "expected info object"
+      assert.eq result.items, 3
+
+  test "ls without fromCli + verbose merges info with items array" ->
+    # verbose path: returns merge(info, {items: <array of Keys>})
+    # (the 'items' field in info — a count — gets overwritten by the merged array)
+    ls merge
+      baseOptions
+      verbose: true
+
+    .then (result) ->
+      assert.ok result?
+      assert.ok Array.isArray result.items
+      assert.eq result.items.sort(), [] :r/one.txt :r/three.txt :r/two.txt
+      assert.ok result.duration?, "expected info.duration"
+
+  test "ls without fromCli + raw returns full item objects" ->
+    ls merge
+      baseOptions
+      raw: true
+
+    .then (items) ->
+      assert.ok Array.isArray items
+      assert.eq items.length, 3
+      each item in-array items
+        assert.ok item.Key?,  "expected Key on item"
+        assert.ok item.Size?, "expected Size on item"

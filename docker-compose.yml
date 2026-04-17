@@ -1,0 +1,16 @@
+services:
+  s3:
+    image: minio/minio
+    volumes:
+      - minio-data:/data
+    entrypoint: sh
+    command: -c 'mkdir -p /data/s3p-test && /usr/bin/minio server --console-address=0.0.0.0:9002 /data'
+    ports:
+      - '9000:9000'
+      - '9002:9002'
+    environment:
+      MINIO_ROOT_USER: testAccessKey
+      MINIO_ROOT_PASSWORD: testSecretKey
+
+volumes:
+  minio-data:

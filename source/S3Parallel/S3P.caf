@@ -36,8 +36,8 @@ class S3P
   ###########################################################
   @list: (options) =>
     S3C.each merge options,
-      returning: list = []
-      mapList: (l) -> array from-array l into list
+      returnValue: keys = []
+      mapList: (l) -> each {Key} from-array l into keys with keys.push Key
 
   @summarize: (options) =>
     options extract summarizeFolders
@@ -189,13 +189,13 @@ class S3P
           # compare
           # (item1, item2) -> item1.Size == item2.Size
 
-    .then (stats) ->
+    .then (info) ->
       cleanStats = (s) ->
         object v in s when v != 0
           if v is Object
             cleanStats v
           else v
-      cleanStats stats
+      cleanStats merge info, stats
 
   ###########################################################
     READ/WRITE Commands
@@ -320,7 +320,8 @@ class S3P
       # s3 options
       region
       useAccelerateEndpoint
-    s3 ?= new &Lib/S3 {} region, useAccelerateEndpoint
+      endpoint
+    s3 ?= new &Lib/S3 {} region, endpoint, useAccelerateEndpoint
 
     stats ?= {}
     stats.copiedBytes = 0

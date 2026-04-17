@@ -1,0 +1,33 @@
+import &StandardImport, &MinioTestHelper
+
+testKeys =
+  :test-folder/hello.txt
+  :test-folder/world.txt
+  :other/file.txt
+
+setupTestScenario :S3Integration testKeys, ({endpoint, testBucket}) ->
+
+  test "ls returns array of key strings" ->
+    ls
+      bucket:   testBucket
+      endpoint: endpoint
+      quiet:    true
+
+    .then (keys) ->
+      each key in-array testKeys
+        assert.ok
+          key in keys
+          "" Expected #{key} in #{JSON.stringify keys}
+
+  test "S3P.list returns array of key strings" ->
+    S3P.list
+      bucket:   testBucket
+      endpoint: endpoint
+      quiet:    true
+
+    .then (keys) ->
+      assert.ok keys is Array
+      each key in-array testKeys
+        assert.ok
+          key in keys
+          "" Expected #{key} in #{JSON.stringify keys}
