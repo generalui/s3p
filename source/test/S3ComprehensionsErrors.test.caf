@@ -1,0 +1,75 @@
+import &StandardImport, &TestLib
+
+mockFs = mockS3
+  :alpha
+  :beta
+
+describe
+  normalizeOptionsErrors: ->
+
+    test "when + filter is rejected" ->
+      assert.throws ->
+        S3Comprehensions.each
+          s3:     mockFs
+          quiet:  true
+          when:   -> true
+          filter: -> true
+
+    test "when + pattern is rejected" ->
+      assert.throws ->
+        S3Comprehensions.each
+          s3:      mockFs
+          quiet:   true
+          when:    -> true
+          pattern: /foo/
+
+    test "with + map is rejected" ->
+      assert.throws ->
+        S3Comprehensions.each
+          s3:    mockFs
+          quiet: true
+          with:  -> true
+          map:   -> true
+
+    test "toPrefix + addPrefix is rejected" ->
+      assert.throws ->
+        S3Comprehensions.each
+          s3:        mockFs
+          quiet:     true
+          toPrefix:  :new/
+          addPrefix: :new/
+
+  maxListRequests: ->
+    test "exceeded throws with info" ->
+      S3Comprehensions.each
+        s3:              mockFs
+        quiet:           true
+        maxListRequests: 1
+
+      .then -> throw new Error "expected to throw"
+      .catch (e) ->
+        assert.match e.message, /maxListRequestsReached/
+        assert.ok e.info?, "expected error.info"
+
+  eachPromises: ->
+    test "accumulates failed promises" ->
+      S3Comprehensions.eachPromises
+        s3:    mockFs
+        quiet: true
+        map:   ({Key}) ->
+          throw new Error "" boom on #{Key}
+
+      .then (result) ->
+        assert.ok result.failed?,           "expected result.failed"
+        assert.eq result.failed.length, 2,  "expected both keys to fail"
+
+    test "succeeds when map succeeds" ->
+      count = 0
+      S3Comprehensions.eachPromises
+        s3:    mockFs
+        quiet: true
+        map:   -> count++
+
+      .then (result) ->
+        assert.eq count, 2
+        assert.ok !result.failed

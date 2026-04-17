@@ -189,13 +189,13 @@ class S3P
           # compare
           # (item1, item2) -> item1.Size == item2.Size
 
-    .then (stats) ->
+    .then (info) ->
       cleanStats = (s) ->
         object v in s when v != 0
           if v is Object
             cleanStats v
           else v
-      cleanStats stats
+      cleanStats merge info, stats
 
   ###########################################################
     READ/WRITE Commands

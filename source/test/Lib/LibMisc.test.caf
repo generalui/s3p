@@ -25,14 +25,41 @@ each [input, output] in []
       output
 
 each [output, args...] in []
-    [] :s3://my-bucket/my-key :my-bucket null :my-key
+    [] :s3://my-bucket/my-key :my-bucket undefined :my-key
     [] :my-folder/my-key :my-bucket :my-folder :my-key
-    [] :my-folder/my-key null :my-folder :my-key
+    [] :my-folder/my-key undefined :my-folder :my-key
 
   test "createS3Url #{args.join ', '} >> #{output}" ->
     assert.eq
       createS3Url args...
       output
+
+each [input, bucket, prefix, region, folder] in []
+    [] :s3://mybucket/prefix/key.txt                               :mybucket :prefix/key.txt undefined     undefined
+    [] :s3://mybucket/                                             :mybucket ''               undefined     undefined
+    [] :s3://mybucket                                              :mybucket ''               undefined     undefined
+    [] :https://mybucket.s3.amazonaws.com/prefix/key               :mybucket :prefix/key      undefined     undefined
+    [] :https://mybucket.s3-us-west-2.amazonaws.com/prefix/key     :mybucket :prefix/key      :us-west-2 undefined
+    [] :https://s3-us-west-2.amazonaws.com/mybucket/prefix/key     :mybucket :prefix/key      :us-west-2 undefined
+    [] :my/local/path                                              undefined      undefined             undefined     :my/local/path
+
+  test "parseS3Url #{input}" ->
+    result = parseS3Url input
+    assert.eq result.bucket,  bucket
+    assert.eq result.prefix,  prefix
+    assert.eq result.region,  region
+    assert.eq result.folder,  folder
+
+test "processArgsIntoOptions with s3 src and local dst" ->
+  result = processArgsIntoOptions [] :s3://src-bucket/prefix :local/folder
+  assert.eq result.bucket,   :src-bucket
+  assert.eq result.prefix,   :prefix
+  assert.eq result.tofolder, :local/folder
+
+test "parseS3Url with non-string returns empty" ->
+  assert.eq parseS3Url(undefined),      {}
+  assert.eq parseS3Url(undefined), {}
+  assert.eq parseS3Url(42),        {}
 
 test "shellExec pwd" ->
   shellExec "pwd"

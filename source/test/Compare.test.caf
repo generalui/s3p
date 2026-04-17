@@ -1,0 +1,66 @@
+import &StandardImport, &MinioTestHelper
+
+## Scenario:
+  src/same.txt  : "XX"    (2 bytes)
+  src/diff.txt  : "YYYY"  (4 bytes)  — target is 8 bytes, source smaller
+  src/onlysrc   : "Z"     (1 byte)
+  dst/same.txt  : "XX"    (2 bytes)
+  dst/diff.txt  : "YYYYYYYY" (8 bytes)
+  dst/onlydst   : "Q"     (1 byte)
+
+sourceObjects =
+  {} Key: :src/same.txt      Body: :XX
+  {} Key: :src/diff.txt      Body: :YYYY
+  {} Key: :src/onlysrc.txt   Body: :Z
+  {} Key: :dst/same.txt      Body: :XX
+  {} Key: :dst/diff.txt      Body: :YYYYYYYY
+  {} Key: :dst/onlydst.txt   Body: :Q
+
+setupTestScenario :compare sourceObjects, ({endpoint, testBucket}) ->
+
+  baseOptions = {}
+    bucket:   testBucket
+    toBucket: testBucket
+    endpoint: endpoint
+    quiet:    true
+    prefix:   :src/
+    toPrefix: :dst/
+
+  test "compare returns counts for same/different/added/removed" ->
+    compare baseOptions
+
+    .then (result) ->
+      assert.ok result.counts?,   "expected result.counts"
+      assert.eq result.counts.same,          1  # src/same
+      assert.eq result.counts.needToReplace, 1  # src/diff vs dst/diff
+      assert.eq result.counts.needToCopy,    1  # src/onlysrc
+      assert.eq result.counts.needToDelete,  1  # dst/onlydst
+
+      assert.eq result.bytes.same,          2
+      assert.eq result.bytes.needToCopy,    1
+      assert.eq result.bytes.needToDelete,  1
+      assert.eq result.bytes.needToReplace, 8  # target size that would be replaced
+      assert.eq result.bytes.needToReplaceWith, 4  # source size replacing with
+
+  test "compare with toBucket missing throws" ->
+    noToBucketOptions = {}
+      bucket:   testBucket
+      endpoint: endpoint
+      quiet:    true
+    assert.throws -> compare noToBucketOptions
+
+  test "compare with filter only compares matching items" ->
+    compare merge baseOptions, filter: ({Key}) -> /same/.test Key
+
+    .then (result) ->
+      assert.eq result.counts.same, 1
+      # zero counts are stripped from the cleaned stats — just verify no unexpected non-zero
+      assert.ok !result.counts.needToCopy
+      assert.ok !result.counts.needToReplace
+
+  test "compare ignores items below a pattern" ->
+    compare merge baseOptions, pattern: :onlysrc
+
+    .then (result) ->
+      assert.eq result.counts.needToCopy, 1
+      assert.ok !result.counts.same

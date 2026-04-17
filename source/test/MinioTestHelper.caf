@@ -1,5 +1,9 @@
 import &StandardImport, &@aws-sdk/client-s3
 
+fs   = &fs
+os   = &os
+path = &path
+
 endpoint    = process.env.S3_ENDPOINT
 testBucket  = :s3p-test
 
@@ -74,6 +78,32 @@ setupTestScenario = (name, keys, fn) ->
   else
     test "#{name} skipped (no S3_ENDPOINT)" ->
 
+## makeTempDir
+  Create a unique temp directory. Use for cp --to-folder tests.
+  OUT: absolute path string
+makeTempDir = ->
+  fs.mkdtempSync path.join os.tmpdir(), :s3p-test-
+
+## removeTempDir
+  Recursively remove a temp directory.
+removeTempDir = (dir) ->
+  if dir && fs.existsSync dir
+    fs.rmSync dir, recursive: true, force: true
+
+## readTempFile
+  Read a file relative to a temp dir into a string.
+readTempFile = (dir, relPath) ->
+  fs.readFileSync
+    path.join dir, relPath
+    :utf8
+
+## writeTempFile
+  Write string content to a file relative to a temp dir, creating parents.
+writeTempFile = (dir, relPath, content) ->
+  full = path.join dir, relPath
+  fs.mkdirSync path.dirname(full), recursive: true
+  fs.writeFileSync full, content
+
 {}
   endpoint
   testBucket
@@ -84,3 +114,7 @@ setupTestScenario = (name, keys, fn) ->
   headTestObject
   deleteAllBucketObjects
   setupTestScenario
+  makeTempDir
+  removeTempDir
+  readTempFile
+  writeTempFile

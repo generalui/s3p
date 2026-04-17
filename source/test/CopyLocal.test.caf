@@ -1,0 +1,49 @@
+import &StandardImport, &MinioTestHelper
+
+path = &path
+
+sourceObjects =
+  {} Key: :local/alpha.txt   Body: :AAAA
+  {} Key: :local/beta.txt    Body: :BB
+  {} Key: :local/nested/c.txt Body: :CCCC
+
+setupTestScenario :cp-local sourceObjects, ({endpoint, testBucket}) ->
+
+  tempDir = null
+
+  beforeEach -> tempDir = makeTempDir()
+  afterEach  -> removeTempDir tempDir
+
+  test "cp S3 to local folder writes files" ->
+    cp
+      bucket:   testBucket
+      endpoint: endpoint
+      quiet:    true
+      prefix:   :local/
+      toFolder: tempDir
+
+    .then ({finalStats}) ->
+      assert.eq finalStats.copiedFiles, 3
+      assert.eq
+        readTempFile tempDir, :local/alpha.txt
+        :AAAA
+      assert.eq
+        readTempFile tempDir, :local/nested/c.txt
+        :CCCC
+
+  test "cp S3 to local honors filter" ->
+    cp merge
+      {}
+        bucket:   testBucket
+        endpoint: endpoint
+        quiet:    true
+        prefix:   :local/
+        toFolder: tempDir
+      filter: ({Size}) -> Size >= 4
+
+    .then ({finalStats}) ->
+      assert.eq finalStats.copiedFiles, 2  # alpha.txt (4) + nested/c.txt (4)
+
+  # Note: cp local→S3 (fromFolder without bucket) is not reachable via the API;
+  # the CLI wires LocalFileLister as the source lister but `s3p.cp({fromFolder, toBucket})`
+  # still tries to list an S3 bucket. See CLAUDE.md coverage report.
