@@ -33,6 +33,31 @@ deleteTestObjects = (keys) ->
       Bucket: testBucket
       Key:    Key
 
+## listBucketKeys
+  IN: prefix: optional string - if provided, only keys starting with prefix
+  OUT: Promise<array of strings>
+listBucketKeys = (prefix) ->
+  s3Client.send new ListObjectsV2Command
+    Bucket: testBucket
+    Prefix: prefix
+  .then ({Contents}) -> array {Key} in-array (Contents ? []) with Key
+
+## headTestObject
+  IN: key: string
+  OUT: Promise<head-response>
+headTestObject = (Key) ->
+  s3Client.send new HeadObjectCommand
+    Bucket: testBucket
+    Key:    Key
+
+## deleteAllBucketObjects
+  Delete every object in the test bucket. Use as afterAll cleanup when tests
+  create dynamic destination keys.
+  OUT: Promise
+deleteAllBucketObjects = ->
+  listBucketKeys()
+  .then deleteTestObjects
+
 ## setupTestScenario
   Sets up a describe block with beforeAll/afterAll that creates and cleans up test objects.
   IN:
@@ -44,7 +69,7 @@ setupTestScenario = (name, keys, fn) ->
   if endpoint
     describe name, ->
       beforeAll -> putTestObjects keys
-      afterAll  -> deleteTestObjects keys
+      afterAll  -> deleteAllBucketObjects()
       fn {} endpoint, testBucket
   else
     test "#{name} skipped (no S3_ENDPOINT)" ->
@@ -55,4 +80,7 @@ setupTestScenario = (name, keys, fn) ->
   s3Client
   putTestObjects
   deleteTestObjects
+  listBucketKeys
+  headTestObject
+  deleteAllBucketObjects
   setupTestScenario

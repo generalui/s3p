@@ -39,4 +39,4 @@ jobs:
           AWS_ACCESS_KEY_ID: testAccessKey
           AWS_SECRET_ACCESS_KEY: testSecretKey
           AWS_REGION: us-east-1
-        run: npm test
+        run: npm run test:ci

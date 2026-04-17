@@ -1,0 +1,85 @@
+import &StandardImport, &MinioTestHelper
+
+sourceObjects =
+  {} Key: :src/alpha.txt  Body: :AAAA
+  {} Key: :src/beta.txt   Body: :BB
+  {} Key: :src/gamma.txt  Body: :CCCCCCCC
+
+setupTestScenario :sync sourceObjects, ({endpoint, testBucket}) ->
+
+  baseOptions = {}
+    bucket:   testBucket
+    toBucket: testBucket
+    endpoint: endpoint
+    quiet:    true
+    prefix:   :src/
+    toPrefix: :dst/
+
+  test "sync to empty destination copies all files" ->
+    sync baseOptions
+
+    .then ({finalStats}) ->
+      assert.eq finalStats.copiedFiles,    3
+      assert.eq finalStats.copiedBytes,    4 + 2 + 8
+      assert.eq finalStats.unchangedFiles, 0
+      listBucketKeys :dst/
+    .then (keys) ->
+      assert.eq keys.sort(), [] :dst/alpha.txt :dst/beta.txt :dst/gamma.txt
+
+  test "sync with identical destination copies nothing" ->
+    putTestObjects []
+      {} Key: :identical/alpha.txt  Body: :AAAA
+      {} Key: :identical/beta.txt   Body: :BB
+      {} Key: :identical/gamma.txt  Body: :CCCCCCCC
+
+    .then ->
+      sync merge baseOptions, toPrefix: :identical/
+
+    .then ({finalStats}) ->
+      assert.eq finalStats.copiedFiles,    0
+      assert.eq finalStats.unchangedFiles, 3
+      assert.eq finalStats.unchangedBytes, 4 + 2 + 8
+
+  test "sync without overwrite leaves differing files in place" ->
+    putTestObjects []
+      {} Key: :diff/alpha.txt  Body: :ZZZZZZZZZZZZZZZZZZZZZZZZ
+      {} Key: :diff/beta.txt   Body: :BB
+      {} Key: :diff/gamma.txt  Body: :CCCCCCCC
+
+    .then ->
+      sync merge baseOptions, toPrefix: :diff/
+
+    .then ({finalStats}) ->
+      assert.eq finalStats.copiedFiles,    0
+      assert.eq finalStats.unchangedFiles, 2
+      assert.eq finalStats.toReplaceFiles, 1
+      assert.eq finalStats.replacedFiles,  0
+      headTestObject :diff/alpha.txt
+
+    .then ({ContentLength}) ->
+      assert.eq ContentLength, 24
+
+  test "sync with overwrite replaces differing files" ->
+    putTestObjects []
+      {} Key: :overwrite/alpha.txt  Body: :ZZZZZZZZZZZZZZZZZZZZZZZZ
+      {} Key: :overwrite/beta.txt   Body: :BB
+      {} Key: :overwrite/gamma.txt  Body: :CCCCCCCC
+
+    .then ->
+      sync merge baseOptions, toPrefix: :overwrite/, overwrite: true
+
+    .then ({finalStats}) ->
+      assert.eq finalStats.replacedFiles,  1
+      assert.eq finalStats.unchangedFiles, 2
+      headTestObject :overwrite/alpha.txt
+
+    .then ({ContentLength}) ->
+      assert.eq ContentLength, 4
+
+  test "sync pretend copies nothing" ->
+    sync merge baseOptions, toPrefix: :pretended/, pretend: true
+
+    .then ->
+      listBucketKeys :pretended/
+    .then (keys) ->
+      assert.eq keys, []
